@@ -60,7 +60,7 @@ function Dashboard() {
       (account === "all" || r.exchange_connection_id === account) && (mode === "all" || r.mode === mode) &&
       (pair === "all" || r.trading_pair === pair) && (strategy === "all" || r.strategy_id === strategy);
     const trades = q.data.trades.filter((t) => match(t) && (!t.closed_at || new Date(t.closed_at).getTime() >= cutoff));
-    const positions = q.data.positions.filter((p) => match({ ...p, strategy_id: strategy === "all" ? null : undefined }) || strategy !== "all");
+    const positions = q.data.positions.filter((p) => match({ ...p, strategy_id: undefined }) || (strategy !== "all" && match({ ...p, strategy_id: strategy })));
     const snaps = q.data.snaps.filter((s) => (account === "all" || s.exchange_connection_id === account) && (mode === "all" || s.mode === mode) && new Date(s.captured_at).getTime() >= cutoff);
     const orders = q.data.orders.filter((o) => match(o));
     const pairs = Array.from(new Set([...q.data.trades.map((t) => t.trading_pair), ...q.data.positions.map((p) => p.trading_pair)]));
