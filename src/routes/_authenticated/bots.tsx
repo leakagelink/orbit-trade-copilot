@@ -114,7 +114,7 @@ function Bots() {
   );
 }
 
-function NewBotDialog({ open, onOpenChange, data, onDone, preset }: { preset?: string; open: boolean; onOpenChange: (o: boolean) => void; data: Awaited<ReturnType<typeof load>>; onDone: () => void }) {
+function NewBotDialog({ open, onOpenChange, data, onDone, preset }: { preset?: string | undefined; open: boolean; onOpenChange: (o: boolean) => void; data: Awaited<ReturnType<typeof load>>; onDone: () => void }) {
   const valid = data.strategies.filter((s) => s.status === "validated" || s.status === "deployed");
   const [strategyId, setStrategyId] = useState(preset && valid.some((s) => s.id === preset) ? preset : "");
   const [connId, setConnId] = useState("none");
