@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { ArrowUpRight, ArrowDownRight, Bot, Sparkles } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, Bot, Sparkles, Lock, Wallet } from "lucide-react";
 import { ClientOnly } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/app-shell";
@@ -12,7 +12,9 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { usePlan } from "@/hooks/use-plan";
 import { CATEGORY_LABEL, MARKETS, marketOf, type MarketCategory } from "@/lib/markets";
 import { EXCHANGES, exchangeName } from "@/lib/exchanges";
 import { TIMEFRAMES } from "@/lib/strategy";
@@ -20,7 +22,7 @@ import { closeManualPosition, getMarketCandles, placeManualOrder, aiTradeIdea, t
 import { TvChart } from "@/components/tv-chart";
 import { fmtMoney } from "@/lib/metrics";
 
-const D = "Manual trading: crypto, forex and commodities with an AI trade idea.";
+const D = "Buy and sell crypto, forex and commodities from your wallet, with AI trade ideas on Pro.";
 export const Route = createFileRoute("/_authenticated/trade")({
   head: () => ({ meta: [{ title: "Trade — Quantra" }, { name: "description", content: D }, { property: "og:title", content: "Trade — Quantra" }, { property: "og:description", content: D }] }),
   validateSearch: (s: Record<string, unknown>): { symbol?: string } => (typeof s["symbol"] === "string" ? { symbol: s["symbol"] } : {}),
@@ -44,6 +46,9 @@ function TradePage() {
   const [busy, setBusy] = useState(false);
   const [ideaBusy, setIdeaBusy] = useState(false);
   const [idea, setIdea] = useState<TradeIdea | null>(null);
+  const [confirmAi, setConfirmAi] = useState(false);
+  const plan = usePlan();
+  const pro = plan.data?.pro ?? false;
 
   const getCandles = useServerFn(getMarketCandles);
   const place = useServerFn(placeManualOrder);
@@ -63,16 +68,23 @@ function TradePage() {
     },
   });
   const usable = useMemo(
-    () => (accounts.data ?? []).filter((c) => (nonCrypto ? c.exchange === "oanda" : c.exchange !== "oanda")),
-    [accounts.data, nonCrypto],
+    () => (accounts.data ?? []).filter((c) => (nonCrypto ? c.exchange === "oanda" && market.oanda : c.exchange !== "oanda")),
+    [accounts.data, nonCrypto, market.oanda],
   );
   const chosen = usable.find((c) => c.id === connId);
-  const needsOanda = nonCrypto && !chosen;
-  const canTrade = !needsOanda && !busy;
+  const isWallet = !chosen;
+  const canTrade = !busy;
+  const wallet = useQuery({
+    queryKey: ["wallet_balance"],
+    queryFn: async () => {
+      const { data } = await supabase.from("wallets").select("balance").maybeSingle();
+      return Number(data?.balance ?? 0);
+    },
+  });
 
   const candles = useQuery({
-    queryKey: ["trade_candles", symbol, tf, connId, paperEx],
-    queryFn: () => getCandles({ data: { symbol, timeframe: tf, connectionId: connId, paperExchange: paperEx as never } }),
+    queryKey: ["trade_candles", symbol, tf, chosen?.id ?? null, paperEx],
+    queryFn: () => getCandles({ data: { symbol, timeframe: tf, connectionId: chosen?.id ?? null, paperExchange: paperEx as never } }),
     refetchInterval: 30_000,
     retry: false,
   });
@@ -96,17 +108,19 @@ function TradePage() {
     const first = MARKETS.find((m) => m.category === c)!;
     setSymbol(first.symbol);
     setIdea(null);
-    if (c !== "crypto") setAccountId((accounts.data ?? []).find((a) => a.exchange === "oanda")?.id ?? "paper");
+    setAccountId("paper");
   }
 
-  async function submit() {
+  async function submit(o?: { side: "buy" | "sell"; sl: number | null; tp: number | null }) {
     if (!canTrade) return;
+    const s = o?.side ?? side;
     setBusy(true);
     try {
-      const r = await place({ data: { symbol, side, amount: Number(amount), sl: sl === "" ? null : Number(sl), tp: tp === "" ? null : Number(tp), connectionId: connId, paperExchange: paperEx as never } });
-      toast.success(`${side === "buy" ? "Bought" : "Sold"} ${r.qty.toPrecision(6)} ${symbol} @ ${r.price.toFixed(4)}`);
+      const r = await place({ data: { symbol, side: s, amount: Number(amount), sl: o ? o.sl : sl === "" ? null : Number(sl), tp: o ? o.tp : tp === "" ? null : Number(tp), connectionId: chosen?.id ?? null, paperExchange: paperEx as never } });
+      toast.success(`${s === "buy" ? "Bought" : "Sold"} ${r.qty.toPrecision(6)} ${symbol} @ ${r.price.toFixed(5)}`);
       setSl(""); setTp(""); setIdea(null);
       qc.invalidateQueries({ queryKey: ["manual_positions"] });
+      qc.invalidateQueries({ queryKey: ["wallet_balance"] });
     } catch (e) { toast.error(e instanceof Error ? e.message : "Order failed"); }
     setBusy(false);
   }
@@ -114,15 +128,16 @@ function TradePage() {
   async function close(id: string) {
     try {
       const r = await closePos({ data: { id } });
-      toast.success(`Closed @ ${r.exit.toFixed(4)} · net ${fmtMoney(r.pnl)}`);
+      toast.success(`Closed @ ${r.exit.toFixed(5)} · net ${fmtMoney(r.pnl)}`);
       qc.invalidateQueries({ queryKey: ["manual_positions"] });
+      qc.invalidateQueries({ queryKey: ["wallet_balance"] });
     } catch (e) { toast.error(e instanceof Error ? e.message : "Close failed"); }
   }
 
   async function analyze() {
     setIdeaBusy(true); setIdea(null);
     try {
-      const r = await getIdea({ data: { symbol, timeframe: tf, connectionId: connId, paperExchange: paperEx as never } });
+      const r = await getIdea({ data: { symbol, timeframe: tf, connectionId: chosen?.id ?? null, paperExchange: paperEx as never } });
       setIdea(r);
       if (r.entry != null && r.stop_loss != null) setSl(String(+r.stop_loss.toFixed(5)));
       if (r.entry != null && r.take_profit != null) setTp(String(+r.take_profit.toFixed(5)));
@@ -140,33 +155,41 @@ function TradePage() {
   return (
     <div>
       <PageHeader title="Trade" description={D} />
-      <div className="grid gap-4 p-4 xl:grid-cols-[1fr_340px]">
-        <div className="space-y-4">
+      <div className="grid gap-4 p-4 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="min-w-0 space-y-4">
           <div className="flex flex-wrap items-center gap-2">
             {(Object.keys(CATEGORY_LABEL) as MarketCategory[]).map((c) => (
               <Button key={c} size="sm" variant={cat === c ? "default" : "outline"} onClick={() => pickCat(c)}>{CATEGORY_LABEL[c]}</Button>
             ))}
             <Select value={symbol} onValueChange={(v) => { setSymbol(v); setIdea(null); }}>
-              <SelectTrigger className="w-52"><SelectValue /></SelectTrigger>
-              <SelectContent>{MARKETS.filter((m) => m.category === cat).map((m) => <SelectItem key={m.symbol} value={m.symbol}>{m.symbol} — {m.name}</SelectItem>)}</SelectContent>
+              <SelectTrigger className="w-64"><SelectValue /></SelectTrigger>
+              <SelectContent className="max-h-96">
+                {[...new Set(MARKETS.filter((m) => m.category === cat).map((m) => m.group ?? ""))].map((g) => (
+                  <SelectGroup key={g}>
+                    {g && <SelectLabel>{g}</SelectLabel>}
+                    {MARKETS.filter((m) => m.category === cat && (m.group ?? "") === g).map((m) => <SelectItem key={m.symbol} value={m.symbol}>{m.symbol} — {m.name}</SelectItem>)}
+                  </SelectGroup>
+                ))}
+              </SelectContent>
             </Select>
             <Select value={tf} onValueChange={(v) => setTf(v as Tf)}>
               <SelectTrigger className="w-24"><SelectValue /></SelectTrigger>
               <SelectContent>{TIMEFRAMES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
             </Select>
             {price != null && <span className="font-mono text-lg">{price.toLocaleString(undefined, { maximumFractionDigits: 5 })}</span>}
-            <Button size="sm" variant="outline" onClick={analyze} disabled={ideaBusy || needsOanda}>
-              <Sparkles className="mr-1 h-4 w-4" />{ideaBusy ? "Analyzing…" : "AI analyze"}
-            </Button>
+            {pro ? (
+              <Button size="sm" variant="outline" onClick={analyze} disabled={ideaBusy}>
+                <Sparkles className="mr-1 h-4 w-4" />{ideaBusy ? "Analyzing…" : "AI analyze"}
+              </Button>
+            ) : (
+              <Button size="sm" variant="outline" asChild>
+                <Link to="/plans"><Lock className="mr-1 h-3.5 w-3.5" />AI analyze · Pro</Link>
+              </Button>
+            )}
+            {nonCrypto && isWallet && <span className="text-xs text-muted-foreground">Prices: Yahoo Finance</span>}
           </div>
 
-          {needsOanda ? (
-            <div className="rounded-lg border bg-card p-6 text-sm">
-              <p className="font-medium">Forex & commodities need an OANDA account</p>
-              <p className="mt-1 text-muted-foreground">Create a free practice account at oanda.com, then add it on the Exchanges page (Practice account on). Crypto works without it.</p>
-              <Button className="mt-3" size="sm" asChild><Link to="/exchanges">Open Exchanges</Link></Button>
-            </div>
-          ) : candles.isLoading ? <Skeleton className="h-[420px]" /> : candles.data?.error ? (
+          {candles.isLoading ? <Skeleton className="h-[420px]" /> : candles.data?.error ? (
             <p className="rounded-lg border bg-card p-4 text-sm text-destructive">{candles.data.error}</p>
           ) : (
             <div className="rounded-lg border bg-card p-2">
@@ -189,6 +212,11 @@ function TradePage() {
                 {idea.stop_loss != null && <span className="text-loss">SL {idea.stop_loss}</span>}
                 {idea.take_profit != null && <span className="text-gain">TP {idea.take_profit}</span>}
               </div>
+              {idea.bias !== "neutral" && (
+                <Button size="sm" onClick={() => setConfirmAi(true)} disabled={busy || (idea.bias === "short" && liveCrypto)}>
+                  <Sparkles className="mr-1 h-4 w-4" />{idea.bias === "long" ? "Buy" : "Sell"} with AI levels
+                </Button>
+              )}
               <p className="text-xs text-muted-foreground">Not financial advice. The stop/target fields were filled for you — review before ordering.</p>
             </div>
           )}
@@ -203,7 +231,7 @@ function TradePage() {
                 <tbody>
                   {positions.data.map((p) => (
                     <tr key={p.id} className="border-t font-mono text-xs">
-                      <td className="px-4 py-2 font-sans text-sm">{p.trading_pair}<div className="text-xs text-muted-foreground">{exchangeName(p.exchange)} · {p.mode}</div></td>
+                      <td className="px-4 py-2 font-sans text-sm">{p.trading_pair}<div className="text-xs text-muted-foreground">{p.wallet_margin != null ? "Demo wallet" : `${exchangeName(p.exchange)} · ${p.mode}`}</div></td>
                       <td className={`px-4 py-2 ${p.side === "buy" ? "text-gain" : "text-loss"}`}>{p.side}</td>
                       <td className="px-4 py-2">{Number(p.quantity).toPrecision(6)}</td>
                       <td className="px-4 py-2">{Number(p.entry_price).toFixed(5)}</td>
@@ -232,12 +260,19 @@ function TradePage() {
               <Select value={accountId} onValueChange={setAccountId}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {!nonCrypto && <SelectItem value="paper">Paper (simulated)</SelectItem>}
+                  <SelectItem value="paper">Demo wallet</SelectItem>
                   {usable.map((c) => <SelectItem key={c.id} value={c.id}>{c.label}{c.is_testnet ? " (testnet)" : ""}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
-            {accountId === "paper" && !nonCrypto && (
+            {isWallet && (
+              <div className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2 text-xs">
+                <span className="flex items-center gap-1.5 text-muted-foreground"><Wallet className="h-3.5 w-3.5" />Wallet balance</span>
+                <span className="font-mono">{fmtMoney(wallet.data ?? 0, "USD")}</span>
+                <Link to="/wallet" className="text-primary hover:underline">Deposit</Link>
+              </div>
+            )}
+            {isWallet && !nonCrypto && (
               <div className="space-y-1.5">
                 <Label className="text-xs">Paper prices from</Label>
                 <Select value={paperEx} onValueChange={setPaperEx}>
@@ -247,28 +282,47 @@ function TradePage() {
               </div>
             )}
             <div className="space-y-1.5">
-              <Label className="text-xs">{nonCrypto ? "Units" : "Amount (quote, e.g. USDT)"}</Label>
+              <Label className="text-xs">{chosen?.exchange === "oanda" ? "Units" : isWallet ? "Amount (USD)" : "Amount (quote, e.g. USDT)"}</Label>
               <Input type="number" min={0} step="any" value={amount} onChange={(e) => setAmount(e.target.value)} className="font-mono" />
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1.5"><Label className="text-xs">Stop loss</Label><Input type="number" min={0} step="any" value={sl} onChange={(e) => setSl(e.target.value)} className="font-mono" placeholder="optional" /></div>
               <div className="space-y-1.5"><Label className="text-xs">Take profit</Label><Input type="number" min={0} step="any" value={tp} onChange={(e) => setTp(e.target.value)} className="font-mono" placeholder="optional" /></div>
             </div>
-            <Button className="w-full" disabled={!canTrade || sellBlocked || !(Number(amount) > 0)} variant={side === "buy" ? "default" : "destructive"} onClick={submit}>
-              {busy ? "Placing…" : `${side === "buy" ? "Buy" : "Sell"} ${symbol}${accountId === "paper" ? " (paper)" : ""}`}
+            <Button className="w-full" disabled={!canTrade || sellBlocked || !(Number(amount) > 0)} variant={side === "buy" ? "default" : "destructive"} onClick={() => submit()}>
+              {busy ? "Placing…" : `${side === "buy" ? "Buy" : "Sell"} ${symbol}${isWallet ? " (demo)" : ""}`}
             </Button>
-            {accountId !== "paper" && <p className="text-xs text-muted-foreground">Real order on {chosen ? exchangeName(chosen.exchange) : "your exchange"}{chosen?.is_testnet ? " (testnet)" : ""}. SL/TP are checked every minute (crypto) or held by OANDA (forex/commodities).</p>}
+            {!isWallet && <p className="text-xs text-muted-foreground">Real order on {chosen ? exchangeName(chosen.exchange) : "your exchange"}{chosen?.is_testnet ? " (testnet)" : ""}. SL/TP are checked every minute (crypto) or held by OANDA (forex/commodities).</p>}
           </div>
 
           <div className="space-y-2 rounded-lg border bg-card p-4 text-sm">
             <div className="flex items-center gap-2 font-medium"><Bot className="h-4 w-4 text-primary" />AI strategy for {symbol}</div>
             <p className="text-xs text-muted-foreground">Ask the assistant to design an automated strategy for this market, then attach it to a bot.</p>
-            <Button size="sm" variant="outline" asChild>
-              <Link to="/assistant" search={{ prompt: `Design a trading strategy for ${symbol} on the ${tf} timeframe with clear entry and exit rules and a stop loss.` }}>Ask the AI</Link>
-            </Button>
+            {pro ? (
+              <Button size="sm" variant="outline" asChild>
+                <Link to="/assistant" search={{ prompt: `Design a trading strategy for ${symbol} on the ${tf} timeframe with clear entry and exit rules and a stop loss.` }}>Ask the AI</Link>
+              </Button>
+            ) : (
+              <Button size="sm" variant="outline" asChild><Link to="/plans"><Lock className="mr-1 h-3.5 w-3.5" />Upgrade to Pro</Link></Button>
+            )}
           </div>
         </div>
       </div>
+      <AlertDialog open={confirmAi} onOpenChange={setConfirmAi}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{idea?.bias === "long" ? "Buy" : "Sell"} {symbol} with the AI's levels?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {isWallet ? `${fmtMoney(Number(amount), "USD")} from your demo wallet` : `${amount} on ${chosen ? exchangeName(chosen.exchange) : "your account"} — a real order`}
+              {idea?.stop_loss != null ? ` · stop loss ${idea.stop_loss}` : ""}{idea?.take_profit != null ? ` · take profit ${idea.take_profit}` : ""}. Executed at the current market price.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => idea && submit({ side: idea.bias === "long" ? "buy" : "sell", sl: idea.stop_loss, tp: idea.take_profit })}>Place trade</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

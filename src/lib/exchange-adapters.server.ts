@@ -29,8 +29,56 @@ const split = (pair: string) => { const [b, q] = pair.toUpperCase().split("/"); 
 const TF_MS: Record<string, number> = { "1m": 60e3, "5m": 300e3, "15m": 900e3, "30m": 1800e3, "1h": 3600e3, "4h": 14400e3, "1d": 86400e3 };
 export const timeframeMs = (tf: string) => TF_MS[tf] ?? 3600e3;
 
+// ---- Yahoo Finance (public chart API, no key) — forex & commodities prices for the demo wallet ----
+const Y_INT: Record<string, [string, string]> = {
+  "1m": ["1m", "5d"], "5m": ["5m", "1mo"], "15m": ["15m", "1mo"], "30m": ["30m", "1mo"], "1h": ["60m", "6mo"], "4h": ["60m", "2y"], "1d": ["1d", "5y"],
+};
+export async function yahooChart(ticker: string, tf: string, limit = 300): Promise<Candle[]> {
+  const [interval, range] = Y_INT[tf] ?? ["60m", "6mo"];
+  const path = `/v8/finance/chart/${encodeURIComponent(ticker)}?interval=${interval}&range=${range}`;
+  const init = { headers: { "User-Agent": "Mozilla/5.0 (compatible; Quantra/1.0)", Accept: "application/json" } };
+  let j;
+  try { j = await getJson(`https://query1.finance.yahoo.com${path}`, init); }
+  catch { j = await getJson(`https://query2.finance.yahoo.com${path}`, init); }
+  const r = j?.chart?.result?.[0];
+  if (!r?.timestamp) throw new Error(`Yahoo Finance has no data for ${ticker}`);
+  const qt = r.indicators.quote[0];
+  let out: Candle[] = [];
+  (r.timestamp as number[]).forEach((ts, i) => {
+    const c = qt.close[i];
+    if (c == null || qt.open[i] == null) return;
+    out.push({ t: ts * 1000, o: qt.open[i], h: qt.high[i] ?? c, l: qt.low[i] ?? c, c, v: qt.volume?.[i] ?? 0 });
+  });
+  if (tf === "4h") {
+    const agg = new Map<number, Candle>();
+    for (const k of out) {
+      const t = Math.floor(k.t / 14400e3) * 14400e3;
+      const a = agg.get(t);
+      if (!a) agg.set(t, { ...k, t });
+      else { a.h = Math.max(a.h, k.h); a.l = Math.min(a.l, k.l); a.c = k.c; a.v += k.v; }
+    }
+    out = [...agg.values()];
+  }
+  return out.slice(-limit);
+}
+
+/** Converts 1 unit of a market's quote currency to USD (1 for USD/USDT quotes). */
+export async function quoteToUsd(symbol: string, price: number): Promise<number> {
+  const { quoteUsdSource } = await import("./markets");
+  const src = quoteUsdSource(symbol, price);
+  if (typeof src === "number") return src;
+  const cs = await yahooChart(src, "1h", 2);
+  return cs.at(-1)!.c;
+}
+
 /** Returns candles oldest → newest. The last candle may still be forming. */
 export async function fetchCandles(exchange: string, pair: string, tf: string, testnet: boolean, limit = 300): Promise<Candle[]> {
+  if (exchange === "yahoo") {
+    const { yahooTicker } = await import("./markets");
+    const t = yahooTicker(pair);
+    if (!t) throw new Error(`${pair} has no Yahoo Finance price feed`);
+    return yahooChart(t, tf, limit);
+  }
   const { b, q } = split(pair);
   const n = (x: unknown) => Number(x);
   switch (exchange) {

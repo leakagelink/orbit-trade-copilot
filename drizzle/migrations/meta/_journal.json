@@ -22,6 +22,20 @@
       "when": 1793262133934,
       "tag": "0002_positions_external_ref",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793268825609,
+      "tag": "0003_wallet_and_plan_gating",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793268881128,
+      "tag": "0004_positions_wallet_margin",
+      "breakpoints": true
     }
   ]
 }

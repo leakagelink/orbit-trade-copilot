@@ -653,6 +653,7 @@ export type Database = {
           unrealized_pnl: number
           updated_at: string
           user_id: string
+          wallet_margin: number | null
         }
         Insert: {
           bot_id?: string | null
@@ -674,6 +675,7 @@ export type Database = {
           unrealized_pnl?: number
           updated_at?: string
           user_id: string
+          wallet_margin?: number | null
         }
         Update: {
           bot_id?: string | null
@@ -695,6 +697,7 @@ export type Database = {
           unrealized_pnl?: number
           updated_at?: string
           user_id?: string
+          wallet_margin?: number | null
         }
         Relationships: [
           {
@@ -852,10 +855,14 @@ export type Database = {
       }
       subscriptions: {
         Row: {
+          cancel_at_period_end: boolean
           created_at: string
           current_period_end: string | null
+          customer_ref: string | null
+          environment: string | null
           id: string
           plan: string
+          price_id: string | null
           provider: string | null
           provider_ref: string | null
           status: string
@@ -863,10 +870,14 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          cancel_at_period_end?: boolean
           created_at?: string
           current_period_end?: string | null
+          customer_ref?: string | null
+          environment?: string | null
           id?: string
           plan?: string
+          price_id?: string | null
           provider?: string | null
           provider_ref?: string | null
           status?: string
@@ -874,10 +885,14 @@ export type Database = {
           user_id: string
         }
         Update: {
+          cancel_at_period_end?: boolean
           created_at?: string
           current_period_end?: string | null
+          customer_ref?: string | null
+          environment?: string | null
           id?: string
           plan?: string
+          price_id?: string | null
           provider?: string | null
           provider_ref?: string | null
           status?: string
@@ -1074,17 +1089,85 @@ export type Database = {
         }
         Relationships: []
       }
+      wallet_transactions: {
+        Row: {
+          amount: number
+          balance_after: number
+          created_at: string
+          id: string
+          kind: string
+          note: string | null
+          position_id: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          balance_after: number
+          created_at?: string
+          id?: string
+          kind: string
+          note?: string | null
+          position_id?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          balance_after?: number
+          created_at?: string
+          id?: string
+          kind?: string
+          note?: string | null
+          position_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      wallets: {
+        Row: {
+          balance: number
+          created_at: string
+          currency: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          created_at?: string
+          currency?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          created_at?: string
+          currency?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      has_pro_access: { Args: { _uid: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
         Returns: boolean
+      }
+      wallet_apply: {
+        Args: {
+          _amount: number
+          _kind: string
+          _note: string
+          _position: string
+          _user: string
+        }
+        Returns: number
       }
     }
     Enums: {

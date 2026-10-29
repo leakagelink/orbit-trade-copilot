@@ -20,9 +20,11 @@ import { Route as AuthenticatedBacktestsRouteImport } from './routes/_authentica
 import { Route as AuthenticatedBotsRouteImport } from './routes/_authenticated/bots'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedExchangesRouteImport } from './routes/_authenticated/exchanges'
+import { Route as AuthenticatedPlansRouteImport } from './routes/_authenticated/plans'
 import { Route as AuthenticatedRiskRouteImport } from './routes/_authenticated/risk'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedTradeRouteImport } from './routes/_authenticated/trade'
+import { Route as AuthenticatedWalletRouteImport } from './routes/_authenticated/wallet'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as AuthenticatedStrategiesIndexRouteImport } from './routes/_authenticated/strategies.index'
 import { Route as AuthenticatedStrategiesIdRouteImport } from './routes/_authenticated/strategies.$id'
@@ -82,6 +84,11 @@ const AuthenticatedExchangesRoute = AuthenticatedExchangesRouteImport.update({
   path: '/exchanges',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPlansRoute = AuthenticatedPlansRouteImport.update({
+  id: '/plans',
+  path: '/plans',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedRiskRoute = AuthenticatedRiskRouteImport.update({
   id: '/risk',
   path: '/risk',
@@ -95,6 +102,11 @@ const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
 const AuthenticatedTradeRoute = AuthenticatedTradeRouteImport.update({
   id: '/trade',
   path: '/trade',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedWalletRoute = AuthenticatedWalletRouteImport.update({
+  id: '/wallet',
+  path: '/wallet',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const ApiChatRoute = ApiChatRouteImport.update({
@@ -131,9 +143,11 @@ export interface FileRoutesByFullPath {
   '/bots': typeof AuthenticatedBotsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/exchanges': typeof AuthenticatedExchangesRoute
+  '/plans': typeof AuthenticatedPlansRoute
   '/risk': typeof AuthenticatedRiskRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/trade': typeof AuthenticatedTradeRoute
+  '/wallet': typeof AuthenticatedWalletRoute
   '/api/chat': typeof ApiChatRoute
   '/strategies/$id': typeof AuthenticatedStrategiesIdRoute
   '/strategies/': typeof AuthenticatedStrategiesIndexRoute
@@ -150,9 +164,11 @@ export interface FileRoutesByTo {
   '/bots': typeof AuthenticatedBotsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/exchanges': typeof AuthenticatedExchangesRoute
+  '/plans': typeof AuthenticatedPlansRoute
   '/risk': typeof AuthenticatedRiskRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/trade': typeof AuthenticatedTradeRoute
+  '/wallet': typeof AuthenticatedWalletRoute
   '/api/chat': typeof ApiChatRoute
   '/strategies/$id': typeof AuthenticatedStrategiesIdRoute
   '/strategies': typeof AuthenticatedStrategiesIndexRoute
@@ -171,9 +187,11 @@ export interface FileRoutesById {
   '/_authenticated/bots': typeof AuthenticatedBotsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/exchanges': typeof AuthenticatedExchangesRoute
+  '/_authenticated/plans': typeof AuthenticatedPlansRoute
   '/_authenticated/risk': typeof AuthenticatedRiskRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/trade': typeof AuthenticatedTradeRoute
+  '/_authenticated/wallet': typeof AuthenticatedWalletRoute
   '/api/chat': typeof ApiChatRoute
   '/_authenticated/strategies/$id': typeof AuthenticatedStrategiesIdRoute
   '/_authenticated/strategies/': typeof AuthenticatedStrategiesIndexRoute
@@ -192,9 +210,11 @@ export interface FileRouteTypes {
     | '/bots'
     | '/dashboard'
     | '/exchanges'
+    | '/plans'
     | '/risk'
     | '/settings'
     | '/trade'
+    | '/wallet'
     | '/api/chat'
     | '/strategies/$id'
     | '/strategies/'
@@ -211,9 +231,11 @@ export interface FileRouteTypes {
     | '/bots'
     | '/dashboard'
     | '/exchanges'
+    | '/plans'
     | '/risk'
     | '/settings'
     | '/trade'
+    | '/wallet'
     | '/api/chat'
     | '/strategies/$id'
     | '/strategies'
@@ -231,9 +253,11 @@ export interface FileRouteTypes {
     | '/_authenticated/bots'
     | '/_authenticated/dashboard'
     | '/_authenticated/exchanges'
+    | '/_authenticated/plans'
     | '/_authenticated/risk'
     | '/_authenticated/settings'
     | '/_authenticated/trade'
+    | '/_authenticated/wallet'
     | '/api/chat'
     | '/_authenticated/strategies/$id'
     | '/_authenticated/strategies/'
@@ -329,6 +353,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedExchangesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/plans': {
+      id: '/_authenticated/plans'
+      path: '/plans'
+      fullPath: '/plans'
+      preLoaderRoute: typeof AuthenticatedPlansRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/risk': {
       id: '/_authenticated/risk'
       path: '/risk'
@@ -348,6 +379,13 @@ declare module '@tanstack/react-router' {
       path: '/trade'
       fullPath: '/trade'
       preLoaderRoute: typeof AuthenticatedTradeRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/wallet': {
+      id: '/_authenticated/wallet'
+      path: '/wallet'
+      fullPath: '/wallet'
+      preLoaderRoute: typeof AuthenticatedWalletRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/api/chat': {
@@ -388,9 +426,11 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedBotsRoute: typeof AuthenticatedBotsRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedExchangesRoute: typeof AuthenticatedExchangesRoute
+  AuthenticatedPlansRoute: typeof AuthenticatedPlansRoute
   AuthenticatedRiskRoute: typeof AuthenticatedRiskRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedTradeRoute: typeof AuthenticatedTradeRoute
+  AuthenticatedWalletRoute: typeof AuthenticatedWalletRoute
   AuthenticatedStrategiesIdRoute: typeof AuthenticatedStrategiesIdRoute
   AuthenticatedStrategiesIndexRoute: typeof AuthenticatedStrategiesIndexRoute
 }
@@ -402,9 +442,11 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedBotsRoute: AuthenticatedBotsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedExchangesRoute: AuthenticatedExchangesRoute,
+  AuthenticatedPlansRoute: AuthenticatedPlansRoute,
   AuthenticatedRiskRoute: AuthenticatedRiskRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedTradeRoute: AuthenticatedTradeRoute,
+  AuthenticatedWalletRoute: AuthenticatedWalletRoute,
   AuthenticatedStrategiesIdRoute: AuthenticatedStrategiesIdRoute,
   AuthenticatedStrategiesIndexRoute: AuthenticatedStrategiesIndexRoute,
 }

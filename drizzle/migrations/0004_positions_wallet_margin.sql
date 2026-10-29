@@ -1,0 +1,2 @@
+alter table public.positions add column if not exists wallet_margin numeric(28,8);
+comment on column public.positions.wallet_margin is 'USD reserved from the demo wallet when the position opened; null when not wallet-funded';

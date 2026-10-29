@@ -34,6 +34,8 @@ export async function handleChat(request: Request) {
   const supabase = userClient(token);
   const { data: claims, error: authErr } = await supabase.auth.getClaims(token);
   if (authErr || !claims?.claims?.sub) return new Response("Unauthorized", { status: 401 });
+  const { hasPro } = await import("./plan.server");
+  if (!(await hasPro(supabase, claims.claims.sub))) return new Response("The AI assistant needs a Pro plan", { status: 402 });
 
   const body = (await request.json()) as { messages?: UIMessage[]; sessionId?: string };
   const messages = Array.isArray(body.messages) ? body.messages.slice(-40) : [];

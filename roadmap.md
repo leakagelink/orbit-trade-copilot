@@ -44,5 +44,13 @@
 - [x] OANDA adapter (forex + commodities, practice account support)
 - [x] AI trade idea from live data + "Ask the AI" strategy link
 
+## Wallet, markets & plans
+- [x] Demo wallet: deposit / withdraw (virtual USD), funds manual trades, history
+- [x] All major/cross/exotic forex pairs + metals, energy, grains, softs, livestock via Yahoo Finance
+- [x] AI one-click trade with the AI's stop/target (Pro, user confirms)
+- [x] Free vs Pro: Free = manual trading + wallet; Pro = AI, strategies, bots, backtests, analytics (enforced on server + database)
+- [ ] Pro checkout (Stripe) — waiting for the user to confirm Stripe setup and the Pro price
+- [ ] Real-money wallet — not possible without broker/money-transmitter licences; real money trades via the user's own broker
+
 ## Phase 6
 See the specification: engine integration, paper/live trading, backtesting, risk engine, billing, admin.

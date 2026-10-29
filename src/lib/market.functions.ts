@@ -13,7 +13,9 @@ export const getCandles = createServerFn({ method: "POST" })
       timeframe: z.enum(TIMEFRAMES),
     }).parse(input),
   )
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    const { requirePro } = await import("./plan.server");
+    await requirePro(context.supabase, context.userId);
     const { fetchCandles } = await import("./exchange-adapters.server");
     try {
       return { candles: await fetchCandles(data.exchange, data.pair, data.timeframe, false, 300), error: null };
