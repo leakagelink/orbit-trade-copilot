@@ -12,7 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { walletDeposit, walletWithdraw, WALLET_MAX_DEPOSIT } from "@/lib/wallet.functions";
-import { fmtMoney } from "@/lib/metrics";
+import { fmtMoney as fmtM } from "@/lib/metrics";
+const fmtMoney = (v: number) => fmtM(v, "USD");
 
 const D = "Your demo wallet: deposit, withdraw and fund manual trades.";
 export const Route = createFileRoute("/_authenticated/wallet")({

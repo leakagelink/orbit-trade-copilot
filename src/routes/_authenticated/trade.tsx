@@ -268,7 +268,7 @@ function TradePage() {
             {isWallet && (
               <div className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2 text-xs">
                 <span className="flex items-center gap-1.5 text-muted-foreground"><Wallet className="h-3.5 w-3.5" />Wallet balance</span>
-                <span className="font-mono">{fmtMoney(wallet.data ?? 0)}</span>
+                <span className="font-mono">{fmtMoney(wallet.data ?? 0, "USD")}</span>
                 <Link to="/wallet" className="text-primary hover:underline">Deposit</Link>
               </div>
             )}
@@ -313,7 +313,7 @@ function TradePage() {
           <AlertDialogHeader>
             <AlertDialogTitle>{idea?.bias === "long" ? "Buy" : "Sell"} {symbol} with the AI's levels?</AlertDialogTitle>
             <AlertDialogDescription>
-              {isWallet ? `${fmtMoney(Number(amount))} from your demo wallet` : `${amount} on ${chosen ? exchangeName(chosen.exchange) : "your account"} — a real order`}
+              {isWallet ? `${fmtMoney(Number(amount), "USD")} from your demo wallet` : `${amount} on ${chosen ? exchangeName(chosen.exchange) : "your account"} — a real order`}
               {idea?.stop_loss != null ? ` · stop loss ${idea.stop_loss}` : ""}{idea?.take_profit != null ? ` · take profit ${idea.take_profit}` : ""}. Executed at the current market price.
             </AlertDialogDescription>
           </AlertDialogHeader>
