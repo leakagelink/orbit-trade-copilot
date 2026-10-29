@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Area, ComposedChart, ResponsiveContainer, Scatter, Tooltip, XAxis, YAxis } from "recharts";
+import { Area, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { getCandles } from "@/lib/market.functions";
 import { computeAll, evalRules, type Candle } from "@/lib/indicators";
 import type { StrategyConfig } from "@/lib/strategy";
@@ -41,9 +41,10 @@ export function SignalPreview({ cfg }: { cfg: StrategyConfig }) {
   });
   const cs = q.data?.candles ?? [];
   const marks = useMemo(() => (cs.length ? simulateSignals(cfg, cs) : []), [cfg, cs]);
-  const data = cs.map((c, i) => ({ i, t: c.t, price: c.c }));
-  const entries = marks.filter((x) => x.kind === "entry").map((x) => ({ i: x.i, price: x.price }));
-  const exits = marks.filter((x) => x.kind === "exit").map((x) => ({ i: x.i, price: x.price }));
+  const byI = new Map(marks.map((x) => [x.i, x]));
+  const data = cs.map((c, i) => ({ i, t: c.t, price: c.c, entry: byI.get(i)?.kind === "entry" ? c.c : null, exit: byI.get(i)?.kind === "exit" ? c.c : null }));
+  const entries = marks.filter((x) => x.kind === "entry");
+  const exits = marks.filter((x) => x.kind === "exit");
   const last = cs[cs.length - 1];
 
   return (
@@ -61,11 +62,11 @@ export function SignalPreview({ cfg }: { cfg: StrategyConfig }) {
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={data} margin={{ left: 0, right: 8, top: 8, bottom: 0 }}>
                 <XAxis dataKey="i" type="number" domain={[0, Math.max(data.length - 1, 1)]} hide />
-                <YAxis dataKey="price" domain={["auto", "auto"]} width={70} tick={{ fontSize: 11 }} />
+                <YAxis domain={["auto", "auto"]} width={70} tick={{ fontSize: 11 }} />
                 <Tooltip formatter={(v: number) => v.toLocaleString()} labelFormatter={(i: number) => (data[i] ? new Date(data[i].t).toLocaleString() : "")} />
                 <Area dataKey="price" type="monotone" stroke="var(--primary)" fill="var(--primary)" fillOpacity={0.08} dot={false} isAnimationActive={false} />
-                <Scatter name="Entry" data={entries} dataKey="price" fill="var(--gain)" isAnimationActive={false} />
-                <Scatter name="Exit" data={exits} dataKey="price" fill="var(--loss)" isAnimationActive={false} />
+                <Line dataKey="entry" stroke="none" dot={{ r: 4, fill: "var(--gain)", stroke: "var(--gain)" }} activeDot={false} isAnimationActive={false} />
+                <Line dataKey="exit" stroke="none" dot={{ r: 4, fill: "var(--loss)", stroke: "var(--loss)" }} activeDot={false} isAnimationActive={false} />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
