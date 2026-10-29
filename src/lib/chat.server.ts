@@ -13,8 +13,8 @@ const SYSTEM = `You are Quantra's AI trading assistant for an algorithmic crypto
 - Be concise and structured.`;
 
 function userClient(token: string) {
-  const url = process.env.SUPABASE_URL!;
-  const key = process.env.SUPABASE_PUBLISHABLE_KEY!;
+  const url = process.env["SUPABASE_URL"]!;
+  const key = process.env["SUPABASE_PUBLISHABLE_KEY"]!;
   return createClient<Database>(url, key, {
     auth: { persistSession: false, autoRefreshToken: false, storage: undefined },
     global: {
@@ -41,7 +41,7 @@ export async function handleChat(request: Request) {
   const { data: session } = await supabase.from("ai_sessions").select("id,title").eq("id", body.sessionId).maybeSingle();
   if (!session) return new Response("Conversation not found", { status: 404 });
 
-  const apiKey = process.env.LOVABLE_API_KEY;
+  const apiKey = process.env["LOVABLE_API_KEY"];
   if (!apiKey) return new Response("AI is not configured", { status: 500 });
 
   const runIdFetch = createLovableAiGatewayRunIdFetch(getLovableAiGatewayRunId(request));

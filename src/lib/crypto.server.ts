@@ -5,7 +5,7 @@ const b64 = (buf: ArrayBuffer | Uint8Array) => btoa(String.fromCharCode(...new U
 const unb64 = (s: string) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 
 async function getKey() {
-  const secret = process.env.CREDENTIALS_ENCRYPTION_KEY;
+  const secret = process.env["CREDENTIALS_ENCRYPTION_KEY"];
   if (!secret) throw new Error("Credential encryption key is not configured");
   const raw = await crypto.subtle.digest("SHA-256", enc.encode(secret));
   return crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["encrypt", "decrypt"]);
