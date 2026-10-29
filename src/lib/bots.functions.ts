@@ -8,6 +8,8 @@ export const startPaperBot = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
+    const { requirePro } = await import("./plan.server");
+    await requirePro(context.supabase, context.userId);
     const { data: bot } = await context.supabase.from("trading_bots").select("id,mode,strategies(config)").eq("id", data.id).maybeSingle();
     if (!bot) throw new Error("Bot not found");
     if (bot.mode !== "paper") throw new Error("Live trading is not enabled yet");
@@ -24,6 +26,8 @@ export const enableLiveTrading = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid(), confirm: z.literal("LIVE") }).parse(input))
   .handler(async ({ data, context }) => {
+    const { requirePro } = await import("./plan.server");
+    await requirePro(context.supabase, context.userId);
     const { data: bot } = await context.supabase.from("trading_bots").select("id,exchange,exchange_connection_id,strategies(config)").eq("id", data.id).maybeSingle();
     if (!bot) throw new Error("Bot not found");
     if (!["binance", "bybit", "okx", "kucoin"].includes(bot.exchange)) throw new Error("Live trading is not supported on this exchange yet");

@@ -18,9 +18,14 @@ export async function runEngineTick() {
     .in("status", ["paper_trading", "running"]);
   if (error) throw new Error(error.message);
   const results: { bot: string; result: string }[] = [];
+  const pro = new Map<string, boolean>();
+  for (const u of new Set((bots ?? []).map((b) => b.user_id as string))) {
+    const { data: ok } = await db.rpc("has_pro_access", { _uid: u });
+    pro.set(u, ok === true);
+  }
   for (const bot of bots ?? []) {
     try {
-      results.push({ bot: bot.id, result: await tickBot(db, bot) });
+      results.push({ bot: bot.id, result: await tickBot(db, bot, pro.get(bot.user_id) === true) });
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       await logTo(db, bot, `Tick failed: ${msg}`, undefined, "error");
@@ -52,7 +57,7 @@ async function venueFor(db: Admin, bot: Row): Promise<Venue | string> {
   return { live: true, testnet: conn.is_testnet, creds: await decryptJson<Creds>(sealed.ciphertext, sealed.iv), connId: conn.id };
 }
 
-async function tickBot(db: Admin, bot: Row): Promise<string> {
+async function tickBot(db: Admin, bot: Row, pro: boolean): Promise<string> {
   const log = (m: string, d?: object, l = "info") => logTo(db, bot, m, d, l);
   const halt = async (status: "paused" | "error", reason: string) => {
     await db.from("trading_bots").update({ status, status_reason: reason }).eq("id", bot.id);
@@ -91,6 +96,13 @@ async function tickBot(db: Admin, bot: Row): Promise<string> {
     else if (exitSig) reason = "exit_signal";
     if (reason) await closePosition(db, bot, venue, p, live, reason);
     else await db.from("positions").update({ current_price: live, unrealized_pnl: (live - Number(p.entry_price)) * Number(p.quantity) }).eq("id", p.id);
+  }
+
+  // Free plan: bots never open new trades. Existing positions keep their exits managed, then the bot pauses.
+  if (!pro) {
+    const { count } = await db.from("positions").select("id", { count: "exact", head: true }).eq("bot_id", bot.id).eq("is_open", true);
+    if (!count) return halt("paused", "Pro plan inactive — upgrade to run bots");
+    return "plan inactive: managing exits only";
   }
 
   if (dll != null) {

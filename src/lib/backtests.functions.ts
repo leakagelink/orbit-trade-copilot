@@ -17,6 +17,8 @@ export const runBacktestFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => input.parse(i))
   .handler(async ({ data, context }) => {
+    const { requirePro } = await import("./plan.server");
+    await requirePro(context.supabase, context.userId);
     const { data: s } = await context.supabase.from("strategies").select("id,config,current_version").eq("id", data.strategyId).maybeSingle();
     if (!s) throw new Error("Strategy not found");
     const cfg = s.config as unknown as StrategyConfig;
