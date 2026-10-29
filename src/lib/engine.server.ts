@@ -134,11 +134,11 @@ async function snapshots(db: Admin, users: string[]) {
   for (const u of users) {
     const [b, t, p] = await Promise.all([
       db.from("trading_bots").select("allocated_capital").eq("user_id", u).eq("mode", "paper").neq("status", "draft"),
-      db.from("trades").select("realized_pnl").eq("user_id", u).eq("mode", "paper"),
+      db.from("trades").select("realized_pnl,fees").eq("user_id", u).eq("mode", "paper"),
       db.from("positions").select("unrealized_pnl,entry_price,quantity").eq("user_id", u).eq("mode", "paper").eq("is_open", true),
     ]);
     const cap = (b.data ?? []).reduce((a, x) => a + Number(x.allocated_capital), 0);
-    const real = (t.data ?? []).reduce((a, x) => a + Number(x.realized_pnl), 0);
+    const real = (t.data ?? []).reduce((a, x) => a + Number(x.realized_pnl) - Number(x.fees), 0);
     const unreal = (p.data ?? []).reduce((a, x) => a + Number(x.unrealized_pnl), 0);
     const inUse = (p.data ?? []).reduce((a, x) => a + Number(x.entry_price) * Number(x.quantity), 0);
     await db.from("portfolio_snapshots").insert({ user_id: u, mode: "paper", total_value: cap + real + unreal, available_capital: cap + real - inUse, unrealized_pnl: unreal });

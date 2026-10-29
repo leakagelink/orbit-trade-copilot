@@ -56,3 +56,34 @@ export function fmtMoney(v: number | null, ccy = "USDT") {
   if (v == null) return "—";
   return `${v < 0 ? "-" : ""}${Math.abs(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${ccy}`;
 }
+
+export interface AnalyticsTrade { realized_pnl: number | string; fees: number | string; closed_at: string | null; bot_id: string | null; strategy_id: string | null; trading_pair: string }
+
+/** Per-group performance (by bot, strategy or pair) from closed trades; PnL is net of fees. */
+export function groupStats(trades: AnalyticsTrade[], key: (t: AnalyticsTrade) => string | null) {
+  const groups = new Map<string, number[]>();
+  for (const t of trades) {
+    if (!t.closed_at) continue;
+    const k = key(t) ?? "—";
+    (groups.get(k) ?? groups.set(k, []).get(k)!).push(n(t.realized_pnl) - n(t.fees));
+  }
+  return [...groups.entries()].map(([k, xs]) => {
+    const wins = xs.filter((x) => x > 0), losses = xs.filter((x) => x <= 0);
+    const gw = wins.reduce((a, b) => a + b, 0), gl = -losses.reduce((a, b) => a + b, 0);
+    return {
+      key: k, trades: xs.length, net: gw - gl,
+      winRate: (wins.length / xs.length) * 100,
+      profitFactor: gl > 0 ? gw / gl : null,
+      avgWin: wins.length ? gw / wins.length : null,
+      avgLoss: losses.length ? -gl / losses.length : null,
+      best: Math.max(...xs), worst: Math.min(...xs),
+    };
+  }).sort((a, b) => b.net - a.net);
+}
+
+/** Net PnL per calendar month (UTC), oldest first. */
+export function monthlyPnl(trades: AnalyticsTrade[]) {
+  const m = new Map<string, number>();
+  for (const t of trades) if (t.closed_at) { const k = t.closed_at.slice(0, 7); m.set(k, (m.get(k) ?? 0) + n(t.realized_pnl) - n(t.fees)); }
+  return [...m.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([month, pnl]) => ({ month, pnl }));
+}
