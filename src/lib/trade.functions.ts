@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { MARKETS } from "./markets";
+import { MARKETS, marketOf } from "./markets";
 import { TIMEFRAMES } from "./strategy";
 
 const symbol = z.string().refine((s) => MARKETS.some((m) => m.symbol === s), "Unknown market");
@@ -10,6 +10,9 @@ const venue = z.object({
   paperExchange: z.enum(["binance", "bybit", "okx", "kucoin", "coinbase"]).default("binance"),
 });
 
+/** Demo-wallet price source: Yahoo Finance for forex & commodities, the chosen crypto exchange for crypto. */
+const priceSource = (sym: string, paperExchange: string) => (marketOf(sym)?.category === "crypto" ? paperExchange : "yahoo");
+
 async function account(userId: string, connectionId: string | null, paperExchange: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { loadAccount } = await import("./manual.server");
@@ -17,7 +20,7 @@ async function account(userId: string, connectionId: string | null, paperExchang
 }
 
 async function candlesFor(userId: string, connectionId: string | null, paperExchange: string, sym: string, tf: string) {
-  const { a } = await account(userId, connectionId, paperExchange);
+  const { a } = await account(userId, connectionId, priceSource(sym, paperExchange));
   const ad = await import("./exchange-adapters.server");
   return a.exchange === "oanda" ? ad.oandaCandles(a.creds!, a.testnet, sym, tf, 500) : ad.fetchCandles(a.exchange, sym, tf, a.testnet, 500);
 }
@@ -42,9 +45,10 @@ export const placeManualOrder = createServerFn({ method: "POST" })
     }).parse(i),
   )
   .handler(async ({ data, context }) => {
-    const { db, a } = await account(context.userId, data.connectionId, data.paperExchange);
-    const cat = MARKETS.find((m) => m.symbol === data.symbol)!.category;
-    if (cat !== "crypto" && a.exchange !== "oanda") throw new Error("Forex and commodities trade through an OANDA account");
+    const { db, a } = await account(context.userId, data.connectionId, priceSource(data.symbol, data.paperExchange));
+    const m = marketOf(data.symbol)!, cat = m.category;
+    if (cat !== "crypto" && a.connId && a.exchange !== "oanda") throw new Error("Forex and commodities trade through the demo wallet or an OANDA account");
+    if (a.exchange === "oanda" && !m.oanda) throw new Error(`${data.symbol} is not available on OANDA — use the demo wallet`);
     if (cat === "crypto" && a.exchange === "oanda") throw new Error("Pick a crypto exchange account (or paper) for crypto");
     if (a.exchange === "oanda" && !Number.isInteger(data.amount)) throw new Error("OANDA trades whole units");
     const { openManual } = await import("./manual.server");
@@ -75,11 +79,13 @@ const ideaSchema = z.object({
 });
 export type TradeIdea = z.infer<typeof ideaSchema> & { price: number };
 
-// AI trade idea from real candles + computed indicators. Advisory only; never places orders.
+// AI trade idea from real candles + computed indicators (Pro plan). Never places orders itself — the user confirms.
 export const aiTradeIdea = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => venue.extend({ symbol, timeframe: z.enum(TIMEFRAMES) }).parse(i))
   .handler(async ({ data, context }): Promise<TradeIdea> => {
+    const { requirePro } = await import("./plan.server");
+    await requirePro(context.supabase, context.userId);
     const cs = await candlesFor(context.userId, data.connectionId, data.paperExchange, data.symbol, data.timeframe);
     if (cs.length < 60) throw new Error("Not enough market data");
     const { computeIndicator } = await import("./indicators");
