@@ -740,6 +740,33 @@ export type Database = {
         }
         Relationships: []
       }
+      risk_settings: {
+        Row: {
+          max_daily_loss: number | null
+          max_open_exposure: number | null
+          max_total_positions: number | null
+          trading_halted: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          max_daily_loss?: number | null
+          max_open_exposure?: number | null
+          max_total_positions?: number | null
+          trading_halted?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          max_daily_loss?: number | null
+          max_open_exposure?: number | null
+          max_total_positions?: number | null
+          trading_halted?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       strategies: {
         Row: {
           config: Json

@@ -8,6 +8,13 @@
       "when": 1793253862630,
       "tag": "0000_phase1_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793261152628,
+      "tag": "0001_risk_settings",
+      "breakpoints": true
     }
   ]
 }
