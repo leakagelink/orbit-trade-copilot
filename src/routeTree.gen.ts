@@ -19,7 +19,6 @@ import { Route as AuthenticatedBotsRouteImport } from './routes/_authenticated/b
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedExchangesRouteImport } from './routes/_authenticated/exchanges'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
-import { Route as AuthenticatedStrategiesRouteImport } from './routes/_authenticated/strategies'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 
 const IndexRoute = IndexRouteImport.update({
@@ -71,11 +70,6 @@ const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedStrategiesRoute = AuthenticatedStrategiesRouteImport.update({
-  id: '/strategies',
-  path: '/strategies',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
 const ApiChatRoute = ApiChatRouteImport.update({
   id: '/api/chat',
   path: '/api/chat',
@@ -92,7 +86,6 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/exchanges': typeof AuthenticatedExchangesRoute
   '/settings': typeof AuthenticatedSettingsRoute
-  '/strategies': typeof AuthenticatedStrategiesRoute
   '/api/chat': typeof ApiChatRoute
 }
 export interface FileRoutesByTo {
@@ -105,7 +98,6 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/exchanges': typeof AuthenticatedExchangesRoute
   '/settings': typeof AuthenticatedSettingsRoute
-  '/strategies': typeof AuthenticatedStrategiesRoute
   '/api/chat': typeof ApiChatRoute
 }
 export interface FileRoutesById {
@@ -120,7 +112,6 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/exchanges': typeof AuthenticatedExchangesRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
-  '/_authenticated/strategies': typeof AuthenticatedStrategiesRoute
   '/api/chat': typeof ApiChatRoute
 }
 export interface FileRouteTypes {
@@ -135,7 +126,6 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/exchanges'
     | '/settings'
-    | '/strategies'
     | '/api/chat'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -148,7 +138,6 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/exchanges'
     | '/settings'
-    | '/strategies'
     | '/api/chat'
   id:
     | '__root__'
@@ -162,7 +151,6 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/exchanges'
     | '/_authenticated/settings'
-    | '/_authenticated/strategies'
     | '/api/chat'
   fileRoutesById: FileRoutesById
 }
@@ -247,13 +235,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/strategies': {
-      id: '/_authenticated/strategies'
-      path: '/strategies'
-      fullPath: '/strategies'
-      preLoaderRoute: typeof AuthenticatedStrategiesRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/api/chat': {
       id: '/api/chat'
       path: '/api/chat'
@@ -270,7 +251,6 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedExchangesRoute: typeof AuthenticatedExchangesRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
-  AuthenticatedStrategiesRoute: typeof AuthenticatedStrategiesRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -279,7 +259,6 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedExchangesRoute: AuthenticatedExchangesRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
-  AuthenticatedStrategiesRoute: AuthenticatedStrategiesRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
