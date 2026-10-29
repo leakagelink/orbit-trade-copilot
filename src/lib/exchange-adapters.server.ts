@@ -122,3 +122,21 @@ export async function fetchBalances(exchange: string, c: Creds, testnet: boolean
   }
   throw new Error(`No adapter for ${exchange}`);
 }
+
+/** Historical candles between start and end (closed only). Binance paginates up to 5000 candles; others return their latest page. */
+export async function fetchHistory(exchange: string, pair: string, tf: string, start: number, end: number): Promise<Candle[]> {
+  const tfMs = timeframeMs(tf);
+  const closed = (cs: Candle[]) => cs.filter((c) => c.t >= start && c.t + tfMs <= end);
+  if (exchange !== "binance") return closed(await fetchCandles(exchange, pair, tf, false, 1000));
+  const { b, q } = split(pair);
+  const out: Candle[] = [];
+  let from = Math.max(start, end - tfMs * 5000);
+  while (from < end && out.length < 5000) {
+    const rows = await getJson(`https://api.binance.com/api/v3/klines?symbol=${b}${q}&interval=${tf}&startTime=${from}&limit=1000`);
+    if (!rows.length) break;
+    for (const r of rows as unknown[][]) out.push({ t: +r[0]!, o: +r[1]!, h: +r[2]!, l: +r[3]!, c: +r[4]!, v: +r[5]! });
+    from = out[out.length - 1]!.t + tfMs;
+    if (rows.length < 1000) break;
+  }
+  return closed(out);
+}

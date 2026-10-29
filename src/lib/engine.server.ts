@@ -81,7 +81,7 @@ async function tickBot(db: Admin, bot: any): Promise<string> {
     const key = `${bot.id}:exit:${p.id}`;
     const fill = live * (1 - SLIP);
     const fees = fill * qty * FEE + entry * qty * FEE;
-    const pnl = (fill - entry) * qty - fees;
+    const pnl = (fill - entry) * qty; // gross; fees stored separately
     const { data: ord, error } = await db.from("orders").insert({
       user_id: bot.user_id, bot_id: bot.id, exchange: bot.exchange, trading_pair: bot.trading_pair, side: "sell",
       order_type: "market", quantity: qty, filled_quantity: qty, avg_fill_price: fill, status: "filled", mode: "paper", idempotency_key: key,
@@ -93,14 +93,14 @@ async function tickBot(db: Admin, bot: any): Promise<string> {
       side: "buy", quantity: qty, entry_price: entry, exit_price: fill, fees, slippage: live * SLIP * qty, realized_pnl: pnl,
       mode: "paper", opened_at: p.opened_at, closed_at: nowIso, close_reason: reason,
     });
-    await log(`Closed ${bot.trading_pair} at ${fill.toFixed(4)} (${reason}), PnL ${pnl.toFixed(2)}`, { reason, pnl });
+    await log(`Closed ${bot.trading_pair} at ${fill.toFixed(4)} (${reason}), net PnL ${(pnl - fees).toFixed(2)}`, { reason, pnl });
   }
 
   // Daily loss limit guard.
   if (dll != null) {
     const start = new Date(); start.setUTCHours(0, 0, 0, 0);
-    const { data: today } = await db.from("trades").select("realized_pnl").eq("bot_id", bot.id).gte("closed_at", start.toISOString());
-    const pnl = (today ?? []).reduce((a, t) => a + Number(t.realized_pnl), 0);
+    const { data: today } = await db.from("trades").select("realized_pnl,fees").eq("bot_id", bot.id).gte("closed_at", start.toISOString());
+    const pnl = (today ?? []).reduce((a, t) => a + Number(t.realized_pnl) - Number(t.fees), 0);
     if (pnl <= -(capital * dll) / 100) {
       await db.from("trading_bots").update({ status: "paused", status_reason: "Daily loss limit reached" }).eq("id", bot.id);
       await log(`Paused: daily loss limit reached (${pnl.toFixed(2)})`, undefined, "warn");
@@ -110,6 +110,8 @@ async function tickBot(db: Admin, bot: any): Promise<string> {
 
   const { count } = await db.from("positions").select("id", { count: "exact", head: true }).eq("bot_id", bot.id).eq("is_open", true);
   if ((count ?? 0) >= maxPos || !evalRules(cfg.entry, series, i)) return "no entry";
+  const block = await accountRiskBlock(db, bot.user_id, (capital * sizePct) / 100);
+  if (block) { await log(`Entry skipped: ${block}`, undefined, "warn"); return `risk: ${block}`; }
 
   const key = `${bot.id}:entry:${candleT}`;
   const fill = live * (1 + SLIP);
@@ -141,4 +143,22 @@ async function snapshots(db: Admin, users: string[]) {
     const inUse = (p.data ?? []).reduce((a, x) => a + Number(x.entry_price) * Number(x.quantity), 0);
     await db.from("portfolio_snapshots").insert({ user_id: u, mode: "paper", total_value: cap + real + unreal, available_capital: cap + real - inUse, unrealized_pnl: unreal });
   }
+}
+
+/** Account-wide limits from risk_settings. Returns a reason when a new entry must be blocked. */
+async function accountRiskBlock(db: Admin, userId: string, newCost: number): Promise<string | null> {
+  const { data: r } = await db.from("risk_settings").select("*").eq("user_id", userId).maybeSingle();
+  if (!r) return null;
+  if (r.trading_halted) return "trading halted (emergency stop)";
+  const { data: pos } = await db.from("positions").select("entry_price,quantity").eq("user_id", userId).eq("is_open", true);
+  if (r.max_total_positions != null && (pos?.length ?? 0) >= r.max_total_positions) return "account max open positions reached";
+  const exposure = (pos ?? []).reduce((a, p) => a + Number(p.entry_price) * Number(p.quantity), 0);
+  if (r.max_open_exposure != null && exposure + newCost > Number(r.max_open_exposure)) return "account max exposure reached";
+  if (r.max_daily_loss != null) {
+    const start = new Date(); start.setUTCHours(0, 0, 0, 0);
+    const { data: t } = await db.from("trades").select("realized_pnl,fees").eq("user_id", userId).gte("closed_at", start.toISOString());
+    const pnl = (t ?? []).reduce((a, x) => a + Number(x.realized_pnl) - Number(x.fees), 0);
+    if (pnl <= -Number(r.max_daily_loss)) return "account daily loss limit reached";
+  }
+  return null;
 }
