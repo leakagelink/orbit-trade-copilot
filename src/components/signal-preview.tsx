@@ -64,9 +64,9 @@ export function SignalPreview({ cfg }: { cfg: StrategyConfig }) {
                 <XAxis dataKey="i" type="number" domain={[0, Math.max(data.length - 1, 1)]} hide />
                 <YAxis domain={["auto", "auto"]} width={70} tick={{ fontSize: 11 }} />
                 <Tooltip formatter={(v: number) => v.toLocaleString()} labelFormatter={(i: number) => (data[i] ? new Date(data[i].t).toLocaleString() : "")} />
-                <Area dataKey="price" type="monotone" stroke="var(--primary)" fill="var(--primary)" fillOpacity={0.08} dot={false} isAnimationActive={false} />
-                <Line dataKey="entry" stroke="none" dot={{ r: 4, fill: "var(--gain)", stroke: "var(--gain)" }} activeDot={false} isAnimationActive={false} />
-                <Line dataKey="exit" stroke="none" dot={{ r: 4, fill: "var(--loss)", stroke: "var(--loss)" }} activeDot={false} isAnimationActive={false} />
+                <Area dataKey="price" type="monotone" stroke="var(--primary)" fill="var(--primary)" fillOpacity={0.08} dot={false} activeDot={false} isAnimationActive={false} />
+                <Line dataKey="entry" stroke="none" dot={(pr: { cx?: number; cy?: number; index?: number; payload?: { entry: number | null } }) => pr.payload?.entry == null || pr.cx == null || pr.cy == null ? <g key={pr.index} /> : <circle key={pr.index} cx={pr.cx} cy={pr.cy} r={5} fill="var(--gain)" />} activeDot={false} isAnimationActive={false} />
+                <Line dataKey="exit" stroke="none" dot={(pr: { cx?: number; cy?: number; index?: number; payload?: { exit: number | null } }) => pr.payload?.exit == null || pr.cx == null || pr.cy == null ? <g key={pr.index} /> : <circle key={pr.index} cx={pr.cx} cy={pr.cy} r={5} fill="var(--loss)" />} activeDot={false} isAnimationActive={false} />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
