@@ -22,6 +22,7 @@ import { EXCHANGES, exchangeName } from "@/lib/exchanges";
 const D = "Configure automated trading bots with capital, sizing and risk limits.";
 export const Route = createFileRoute("/_authenticated/bots")({
   head: () => ({ meta: [{ title: "Trading Bots — Quantra" }, { name: "description", content: D }, { property: "og:title", content: "Trading Bots — Quantra" }, { property: "og:description", content: D }] }),
+  validateSearch: (s: Record<string, unknown>): { strategy?: string } => (typeof s["strategy"] === "string" ? { strategy: s["strategy"] } : {}),
   component: Bots,
 });
 
@@ -43,7 +44,8 @@ async function load() {
 function Bots() {
   const qc = useQueryClient();
   const q = useQuery({ queryKey: ["bots"], queryFn: load });
-  const [open, setOpen] = useState(false);
+  const { strategy: preset } = Route.useSearch();
+  const [open, setOpen] = useState(!!preset);
   const [logsFor, setLogsFor] = useState<{ id: string; name: string } | null>(null);
   const refresh = () => qc.invalidateQueries({ queryKey: ["bots"] });
   const start = useServerFn(startPaperBot);
@@ -106,15 +108,15 @@ function Bots() {
           </div>
         )}
       </div>
-      {q.data && <NewBotDialog open={open} onOpenChange={setOpen} data={q.data} onDone={refresh} />}
+      {q.data && <NewBotDialog open={open} onOpenChange={setOpen} data={q.data} preset={preset} onDone={refresh} />}
       <LogsSheet bot={logsFor} onClose={() => setLogsFor(null)} />
     </div>
   );
 }
 
-function NewBotDialog({ open, onOpenChange, data, onDone }: { open: boolean; onOpenChange: (o: boolean) => void; data: Awaited<ReturnType<typeof load>>; onDone: () => void }) {
+function NewBotDialog({ open, onOpenChange, data, onDone, preset }: { preset?: string; open: boolean; onOpenChange: (o: boolean) => void; data: Awaited<ReturnType<typeof load>>; onDone: () => void }) {
   const valid = data.strategies.filter((s) => s.status === "validated" || s.status === "deployed");
-  const [strategyId, setStrategyId] = useState("");
+  const [strategyId, setStrategyId] = useState(preset && valid.some((s) => s.id === preset) ? preset : "");
   const [connId, setConnId] = useState("none");
   const [exchange, setExchange] = useState("binance");
   const [timeframe, setTimeframe] = useState("1h");
