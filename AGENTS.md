@@ -14,4 +14,5 @@
 - Orders, positions, trades and snapshots are read-only for users; only server code writes them — prevents fabricated trading records.
 - Strategy validation lives in `src/lib/strategy.ts` and is shared by UI and server — one source of truth for deploy eligibility.
 - AI chat streams through `/api/chat` (server route, bearer-verified) and persists to `ai_sessions` — keeps the AI key and prompts server-side.
-- Bot start/execution is intentionally disabled until a persistent trading engine exists — bots must not run from the browser.
+- Bots execute only in `src/lib/engine.server.ts`, invoked by the cron route `/api/public/engine/tick`; the engine is paper-only and pauses live bots — bots never run from the browser and live orders need an explicit later phase.
+- Exchange I/O goes through `src/lib/exchange-adapters.server.ts` (Web Crypto HMAC, fetch only) and indicator math lives in pure `src/lib/indicators.ts` — Workers-safe and testable.
