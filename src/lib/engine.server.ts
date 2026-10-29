@@ -28,6 +28,8 @@ export async function runEngineTick() {
       results.push({ bot: bot.id, result: `error: ${msg}` });
     }
   }
+  const { manageManualPositions } = await import("./manual.server");
+  await manageManualPositions(db);
   if (new Date().getUTCMinutes() % 15 === 0) await snapshots(db, [...new Set((bots ?? []).map((b) => b.user_id))]);
   return results;
 }
@@ -183,7 +185,11 @@ export async function emergencyCloseAll(userId: string) {
   let closed = 0; const failed: string[] = [];
   for (const p of open ?? []) {
     const bot = p.trading_bots;
-    if (!bot) continue;
+    if (!bot) {
+      try { const { closeManual } = await import("./manual.server"); await closeManual(db, p, "emergency_stop"); closed++; }
+      catch (e) { failed.push(`${p.trading_pair}: ${e instanceof Error ? e.message : e}`); }
+      continue;
+    }
     try {
       const venue = await venueFor(db, bot);
       if (typeof venue === "string") throw new Error(venue);
@@ -199,7 +205,7 @@ export async function emergencyCloseAll(userId: string) {
 }
 
 /** Account-wide limits from risk_settings. Returns a reason when a new entry must be blocked. */
-async function accountRiskBlock(db: Admin, userId: string, newCost: number): Promise<string | null> {
+export async function accountRiskBlock(db: Admin, userId: string, newCost: number): Promise<string | null> {
   const { data: r } = await db.from("risk_settings").select("*").eq("user_id", userId).maybeSingle();
   if (!r) return null;
   if (r.trading_halted) return "trading halted (emergency stop)";

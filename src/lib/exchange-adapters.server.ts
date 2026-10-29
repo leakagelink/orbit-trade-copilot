@@ -117,6 +117,10 @@ export async function fetchBalances(exchange: string, c: Creds, testnet: boolean
       }
       return nz([...acc.values()]);
     }
+    case "oanda": {
+      const a = await oandaSummary(c, testnet);
+      return [{ asset: a.currency, free: a.balance, locked: 0 }];
+    }
     case "coinbase":
       throw new Error("Coinbase key verification is not supported yet (Coinbase uses a different key format). Market data works.");
   }
@@ -264,4 +268,51 @@ export async function placeMarketOrder(exchange: string, c: Creds, testnet: bool
     }
   }
   throw new Error(`Live trading is not supported on ${exchange}`);
+}
+
+// ───────────── OANDA (forex + commodities CFDs). apiKey = token, apiSecret = account ID ─────────────
+const oHost = (practice: boolean) => (practice ? "https://api-fxpractice.oanda.com" : "https://api-fxtrade.oanda.com");
+const oInst = (pair: string) => pair.toUpperCase().replace("/", "_");
+async function oanda(c: Creds, practice: boolean, path: string, init?: RequestInit) {
+  return getJson(oHost(practice) + path, { ...init, headers: { Authorization: `Bearer ${c.apiKey}`, "Content-Type": "application/json", "Accept-Datetime-Format": "UNIX" } });
+}
+
+export async function oandaCandles(c: Creds, practice: boolean, pair: string, tf: string, count = 300): Promise<Candle[]> {
+  const g: Record<string, string> = { "1m": "M1", "5m": "M5", "15m": "M15", "30m": "M30", "1h": "H1", "4h": "H4", "1d": "D" };
+  const j = await oanda(c, practice, `/v3/instruments/${oInst(pair)}/candles?granularity=${g[tf] ?? "H1"}&count=${count}&price=M`);
+  return (j.candles as { time: string; volume: number; mid: { o: string; h: string; l: string; c: string } }[]).map((x) => ({
+    t: Math.round(Number(x.time) * 1000), o: +x.mid.o, h: +x.mid.h, l: +x.mid.l, c: +x.mid.c, v: x.volume,
+  }));
+}
+
+export async function oandaSummary(c: Creds, practice: boolean) {
+  const j = await oanda(c, practice, `/v3/accounts/${c.apiSecret}/summary`);
+  return { balance: +j.account.balance, nav: +j.account.NAV, currency: j.account.currency as string, unrealized: +j.account.unrealizedPL };
+}
+
+/** Market order in units (positive buy / negative sell) with broker-side SL/TP. */
+export async function oandaMarketOrder(c: Creds, practice: boolean, pair: string, units: number, sl: number | null, tp: number | null) {
+  const inst = oInst(pair);
+  const meta = await oanda(c, practice, `/v3/accounts/${c.apiSecret}/instruments?instruments=${inst}`);
+  const prec = Number(meta.instruments?.[0]?.displayPrecision ?? 5);
+  const order: Record<string, unknown> = { type: "MARKET", instrument: inst, units: String(Math.trunc(units)), timeInForce: "FOK", positionFill: "DEFAULT" };
+  if (sl != null) order["stopLossOnFill"] = { price: sl.toFixed(prec) };
+  if (tp != null) order["takeProfitOnFill"] = { price: tp.toFixed(prec) };
+  const j = await oanda(c, practice, `/v3/accounts/${c.apiSecret}/orders`, { method: "POST", body: JSON.stringify({ order }) });
+  const fill = j.orderFillTransaction;
+  if (!fill?.tradeOpened) throw new Error(`OANDA: ${j.orderCancelTransaction?.reason ?? "order not filled"}`);
+  return { tradeId: String(fill.tradeOpened.tradeID), price: +fill.price, units: Math.abs(+fill.tradeOpened.units), orderId: String(fill.orderID ?? fill.id), fee: Math.abs(+(fill.commission ?? 0)) + Math.abs(+(fill.halfSpreadCost ?? 0)) };
+}
+
+export async function oandaTrade(c: Creds, practice: boolean, tradeId: string) {
+  const j = await oanda(c, practice, `/v3/accounts/${c.apiSecret}/trades/${tradeId}`);
+  const t = j.trade;
+  return { state: t.state as string, price: +t.price, exit: t.averageClosePrice != null ? +t.averageClosePrice : null, realized: +(t.realizedPL ?? 0), unrealized: +(t.unrealizedPL ?? 0), fees: Math.abs(+(t.financing ?? 0)) };
+}
+
+export async function oandaCloseTrade(c: Creds, practice: boolean, tradeId: string) {
+  const j = await oanda(c, practice, `/v3/accounts/${c.apiSecret}/trades/${tradeId}/close`, { method: "PUT", body: "{}" });
+  const f = j.orderFillTransaction;
+  if (!f) throw new Error(`OANDA: ${j.orderCancelTransaction?.reason ?? "close failed"}`);
+  return { price: +f.price, realized: +(f.pl ?? 0), fee: Math.abs(+(f.commission ?? 0)) + Math.abs(+(f.financing ?? 0)) };
 }

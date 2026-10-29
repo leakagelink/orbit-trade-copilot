@@ -1,0 +1,2 @@
+ALTER TABLE public.positions ADD COLUMN IF NOT EXISTS external_ref text;
+COMMENT ON COLUMN public.positions.external_ref IS 'Broker-side position/trade id (e.g. OANDA trade id) used to close the position';

@@ -156,12 +156,12 @@ function CredentialsDialog({ meta, connectionId, onClose, onDone }: { meta: Exch
                 <div className="flex-1 space-y-1.5"><Label>Account type</Label>
                   <Select value={accountType} onValueChange={(v) => setAccountType(v as "spot" | "futures")}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="spot">Spot</SelectItem><SelectItem value="futures">Futures</SelectItem></SelectContent></Select>
                 </div>
-                {meta?.supportsTestnet && <div className="flex items-end gap-2 pb-2"><Switch id="tn" checked={testnet} onCheckedChange={setTestnet} /><Label htmlFor="tn">Testnet</Label></div>}
+                {meta?.supportsTestnet && <div className="flex items-end gap-2 pb-2"><Switch id="tn" checked={testnet} onCheckedChange={setTestnet} /><Label htmlFor="tn">{meta?.id === "oanda" ? "Practice account" : "Testnet"}</Label></div>}
               </div>
             </>
           )}
-          <div className="space-y-1.5"><Label htmlFor="apiKey">API key</Label><Input id="apiKey" name="apiKey" required minLength={8} className="font-mono" /></div>
-          <div className="space-y-1.5"><Label htmlFor="apiSecret">API secret</Label><Input id="apiSecret" name="apiSecret" type="password" required minLength={8} className="font-mono" /></div>
+          <div className="space-y-1.5"><Label htmlFor="apiKey">{meta?.id === "oanda" ? "API token" : "API key"}</Label><Input id="apiKey" name="apiKey" required minLength={8} className="font-mono" /></div>
+          <div className="space-y-1.5"><Label htmlFor="apiSecret">{meta?.id === "oanda" ? "Account ID (e.g. 101-004-1234567-001)" : "API secret"}</Label><Input id="apiSecret" name="apiSecret" type={meta?.id === "oanda" ? "text" : "password"} required minLength={8} className="font-mono" /></div>
           {meta?.needsPassphrase && <div className="space-y-1.5"><Label htmlFor="passphrase">API passphrase</Label><Input id="passphrase" name="passphrase" type="password" required className="font-mono" /></div>}
           <DialogFooter><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button disabled={busy}>{busy ? "Saving…" : "Save"}</Button></DialogFooter>
         </form>
