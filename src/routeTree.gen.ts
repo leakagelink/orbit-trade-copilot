@@ -14,10 +14,13 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as AuthenticatedAnalyticsRouteImport } from './routes/_authenticated/analytics'
 import { Route as AuthenticatedAssistantRouteImport } from './routes/_authenticated/assistant'
+import { Route as AuthenticatedBacktestsRouteImport } from './routes/_authenticated/backtests'
 import { Route as AuthenticatedBotsRouteImport } from './routes/_authenticated/bots'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedExchangesRouteImport } from './routes/_authenticated/exchanges'
+import { Route as AuthenticatedRiskRouteImport } from './routes/_authenticated/risk'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as AuthenticatedStrategiesIndexRouteImport } from './routes/_authenticated/strategies.index'
@@ -48,9 +51,19 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
   path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAnalyticsRoute = AuthenticatedAnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedAssistantRoute = AuthenticatedAssistantRouteImport.update({
   id: '/assistant',
   path: '/assistant',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedBacktestsRoute = AuthenticatedBacktestsRouteImport.update({
+  id: '/backtests',
+  path: '/backtests',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedBotsRoute = AuthenticatedBotsRouteImport.update({
@@ -66,6 +79,11 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
 const AuthenticatedExchangesRoute = AuthenticatedExchangesRouteImport.update({
   id: '/exchanges',
   path: '/exchanges',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedRiskRoute = AuthenticatedRiskRouteImport.update({
+  id: '/risk',
+  path: '/risk',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
@@ -101,10 +119,13 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/analytics': typeof AuthenticatedAnalyticsRoute
   '/assistant': typeof AuthenticatedAssistantRoute
+  '/backtests': typeof AuthenticatedBacktestsRoute
   '/bots': typeof AuthenticatedBotsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/exchanges': typeof AuthenticatedExchangesRoute
+  '/risk': typeof AuthenticatedRiskRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/api/chat': typeof ApiChatRoute
   '/strategies/$id': typeof AuthenticatedStrategiesIdRoute
@@ -116,10 +137,13 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/analytics': typeof AuthenticatedAnalyticsRoute
   '/assistant': typeof AuthenticatedAssistantRoute
+  '/backtests': typeof AuthenticatedBacktestsRoute
   '/bots': typeof AuthenticatedBotsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/exchanges': typeof AuthenticatedExchangesRoute
+  '/risk': typeof AuthenticatedRiskRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/api/chat': typeof ApiChatRoute
   '/strategies/$id': typeof AuthenticatedStrategiesIdRoute
@@ -133,10 +157,13 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/_authenticated/analytics': typeof AuthenticatedAnalyticsRoute
   '/_authenticated/assistant': typeof AuthenticatedAssistantRoute
+  '/_authenticated/backtests': typeof AuthenticatedBacktestsRoute
   '/_authenticated/bots': typeof AuthenticatedBotsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/exchanges': typeof AuthenticatedExchangesRoute
+  '/_authenticated/risk': typeof AuthenticatedRiskRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/api/chat': typeof ApiChatRoute
   '/_authenticated/strategies/$id': typeof AuthenticatedStrategiesIdRoute
@@ -150,10 +177,13 @@ export interface FileRouteTypes {
     | '/auth'
     | '/forgot-password'
     | '/reset-password'
+    | '/analytics'
     | '/assistant'
+    | '/backtests'
     | '/bots'
     | '/dashboard'
     | '/exchanges'
+    | '/risk'
     | '/settings'
     | '/api/chat'
     | '/strategies/$id'
@@ -165,10 +195,13 @@ export interface FileRouteTypes {
     | '/auth'
     | '/forgot-password'
     | '/reset-password'
+    | '/analytics'
     | '/assistant'
+    | '/backtests'
     | '/bots'
     | '/dashboard'
     | '/exchanges'
+    | '/risk'
     | '/settings'
     | '/api/chat'
     | '/strategies/$id'
@@ -181,10 +214,13 @@ export interface FileRouteTypes {
     | '/auth'
     | '/forgot-password'
     | '/reset-password'
+    | '/_authenticated/analytics'
     | '/_authenticated/assistant'
+    | '/_authenticated/backtests'
     | '/_authenticated/bots'
     | '/_authenticated/dashboard'
     | '/_authenticated/exchanges'
+    | '/_authenticated/risk'
     | '/_authenticated/settings'
     | '/api/chat'
     | '/_authenticated/strategies/$id'
@@ -239,11 +275,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/analytics': {
+      id: '/_authenticated/analytics'
+      path: '/analytics'
+      fullPath: '/analytics'
+      preLoaderRoute: typeof AuthenticatedAnalyticsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/assistant': {
       id: '/_authenticated/assistant'
       path: '/assistant'
       fullPath: '/assistant'
       preLoaderRoute: typeof AuthenticatedAssistantRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/backtests': {
+      id: '/_authenticated/backtests'
+      path: '/backtests'
+      fullPath: '/backtests'
+      preLoaderRoute: typeof AuthenticatedBacktestsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/bots': {
@@ -265,6 +315,13 @@ declare module '@tanstack/react-router' {
       path: '/exchanges'
       fullPath: '/exchanges'
       preLoaderRoute: typeof AuthenticatedExchangesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/risk': {
+      id: '/_authenticated/risk'
+      path: '/risk'
+      fullPath: '/risk'
+      preLoaderRoute: typeof AuthenticatedRiskRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/settings': {
@@ -306,20 +363,26 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAnalyticsRoute: typeof AuthenticatedAnalyticsRoute
   AuthenticatedAssistantRoute: typeof AuthenticatedAssistantRoute
+  AuthenticatedBacktestsRoute: typeof AuthenticatedBacktestsRoute
   AuthenticatedBotsRoute: typeof AuthenticatedBotsRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedExchangesRoute: typeof AuthenticatedExchangesRoute
+  AuthenticatedRiskRoute: typeof AuthenticatedRiskRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedStrategiesIdRoute: typeof AuthenticatedStrategiesIdRoute
   AuthenticatedStrategiesIndexRoute: typeof AuthenticatedStrategiesIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAnalyticsRoute: AuthenticatedAnalyticsRoute,
   AuthenticatedAssistantRoute: AuthenticatedAssistantRoute,
+  AuthenticatedBacktestsRoute: AuthenticatedBacktestsRoute,
   AuthenticatedBotsRoute: AuthenticatedBotsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedExchangesRoute: AuthenticatedExchangesRoute,
+  AuthenticatedRiskRoute: AuthenticatedRiskRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedStrategiesIdRoute: AuthenticatedStrategiesIdRoute,
   AuthenticatedStrategiesIndexRoute: AuthenticatedStrategiesIndexRoute,

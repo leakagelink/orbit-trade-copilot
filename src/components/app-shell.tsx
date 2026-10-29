@@ -1,4 +1,4 @@
-import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { FlaskConical, ChartColumn, ShieldAlert, Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, type ReactNode } from "react";
 import {
@@ -14,6 +14,9 @@ const NAV = [
   { to: "/assistant", label: "AI Assistant", icon: MessageSquareText },
   { to: "/strategies", label: "Strategies", icon: Blocks },
   { to: "/bots", label: "Trading Bots", icon: Bot },
+  { to: "/backtests", label: "Backtests", icon: FlaskConical },
+  { to: "/analytics", label: "Analytics", icon: ChartColumn },
+  { to: "/risk", label: "Risk", icon: ShieldAlert },
   { to: "/exchanges", label: "Exchanges", icon: Cable },
   { to: "/settings", label: "Settings", icon: Settings },
 ] as const;
