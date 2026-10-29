@@ -17,7 +17,7 @@ const connectSchema = credsSchema.extend({
 });
 
 const PENDING_NOTE =
-  "Credentials stored encrypted. Click "Verify" to test the keys and load balances.";
+  "Credentials stored encrypted. Click Verify to test the keys and load balances.";
 
 export const connectExchange = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
