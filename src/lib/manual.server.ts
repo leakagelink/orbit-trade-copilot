@@ -71,7 +71,7 @@ export async function openManual(db: Admin, userId: string, a: Account, inp: Ope
     user_id: userId, exchange: a.exchange, exchange_connection_id: a.connId, trading_pair: inp.symbol, side: inp.side, quantity: qty,
     entry_price: fill, current_price: price, mode: live ? "live" : "paper", unrealized_pnl: -fee, stop_loss: inp.sl, take_profit: inp.tp, external_ref: extRef,
   }).select("id").single();
-  await db.from("audit_logs").insert({ user_id: userId, action: "trade.manual_open", entity_type: "position", entity_id: pos?.id, details: { symbol: inp.symbol, side: inp.side, amount: inp.amount, live, entry_fee: fee } });
+  await db.from("audit_logs").insert({ user_id: userId, action: "trade.manual_open", entity_type: "position", entity_id: pos?.id ?? null, details: { symbol: inp.symbol, side: inp.side, amount: inp.amount, live, entry_fee: fee } });
   return { positionId: pos?.id, price: fill, qty };
 }
 
@@ -121,7 +121,7 @@ export async function manageManualPositions(db: Admin) {
     try {
       const a = await loadAccount(db, p.user_id, p.exchange_connection_id, p.exchange);
       if (a.exchange === "oanda") {
-        const t = await oandaTrade(a.creds!, a.testnet, p.external_ref);
+        const t = await oandaTrade(a.creds!, a.testnet, p.external_ref ?? "");
         if (t.state === "CLOSED") await closeManual(db, p, "broker_closed");
         else await db.from("positions").update({ unrealized_pnl: t.unrealized }).eq("id", p.id);
         continue;
