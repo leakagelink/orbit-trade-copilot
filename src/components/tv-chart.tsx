@@ -22,6 +22,7 @@ export function TvChart({ candles, lines = [], height = 420 }: { candles: Candle
   useEffect(() => {
     let disposed = false;
     (async () => {
+      try {
       const lw = await import("lightweight-charts");
       if (disposed || !el.current) return;
       const fg = cssVar("--muted-foreground"), grid = cssVar("--border"), gain = cssVar("--gain"), loss = cssVar("--loss");
@@ -38,6 +39,7 @@ export function TvChart({ candles, lines = [], height = 420 }: { candles: Candle
       chart.priceScale("vol").applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
       api.current = { chart, series, volume, lines: [] };
       el.current.dispatchEvent(new Event("tv-ready"));
+      } catch (e) { console.error("TvChart init failed:", e); }
     })();
     return () => { disposed = true; api.current?.chart.remove(); api.current = null; };
   }, []);
