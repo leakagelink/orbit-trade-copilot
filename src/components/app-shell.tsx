@@ -147,7 +147,9 @@ export function AppShell({ children }: { children: ReactNode }) {
 function PlanGate({ children }: { children: ReactNode }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const plan = usePlan();
-  if (canOpen(path, true) && !plan.isLoading && !canOpen(path, plan.data?.pro ?? false)) {
+  const free = canOpen(path, false);
+  if (!free && plan.isLoading) return null;
+  if (!free && !plan.data?.pro) {
     return (
       <div className="mx-auto max-w-lg px-6 py-16 text-center">
         <div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-lg bg-primary/15"><Crown className="h-6 w-6 text-primary" /></div>
