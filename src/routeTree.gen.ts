@@ -20,6 +20,8 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedExchangesRouteImport } from './routes/_authenticated/exchanges'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
+import { Route as AuthenticatedStrategiesIndexRouteImport } from './routes/_authenticated/strategies.index'
+import { Route as AuthenticatedStrategiesIdRouteImport } from './routes/_authenticated/strategies.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -75,6 +77,18 @@ const ApiChatRoute = ApiChatRouteImport.update({
   path: '/api/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedStrategiesIndexRoute =
+  AuthenticatedStrategiesIndexRouteImport.update({
+    id: '/strategies/',
+    path: '/strategies/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedStrategiesIdRoute =
+  AuthenticatedStrategiesIdRouteImport.update({
+    id: '/strategies/$id',
+    path: '/strategies/$id',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -87,6 +101,8 @@ export interface FileRoutesByFullPath {
   '/exchanges': typeof AuthenticatedExchangesRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/api/chat': typeof ApiChatRoute
+  '/strategies/$id': typeof AuthenticatedStrategiesIdRoute
+  '/strategies/': typeof AuthenticatedStrategiesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -99,6 +115,8 @@ export interface FileRoutesByTo {
   '/exchanges': typeof AuthenticatedExchangesRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/api/chat': typeof ApiChatRoute
+  '/strategies/$id': typeof AuthenticatedStrategiesIdRoute
+  '/strategies': typeof AuthenticatedStrategiesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -113,6 +131,8 @@ export interface FileRoutesById {
   '/_authenticated/exchanges': typeof AuthenticatedExchangesRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/api/chat': typeof ApiChatRoute
+  '/_authenticated/strategies/$id': typeof AuthenticatedStrategiesIdRoute
+  '/_authenticated/strategies/': typeof AuthenticatedStrategiesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -127,6 +147,8 @@ export interface FileRouteTypes {
     | '/exchanges'
     | '/settings'
     | '/api/chat'
+    | '/strategies/$id'
+    | '/strategies/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -139,6 +161,8 @@ export interface FileRouteTypes {
     | '/exchanges'
     | '/settings'
     | '/api/chat'
+    | '/strategies/$id'
+    | '/strategies'
   id:
     | '__root__'
     | '/'
@@ -152,6 +176,8 @@ export interface FileRouteTypes {
     | '/_authenticated/exchanges'
     | '/_authenticated/settings'
     | '/api/chat'
+    | '/_authenticated/strategies/$id'
+    | '/_authenticated/strategies/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -242,6 +268,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiChatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/strategies/': {
+      id: '/_authenticated/strategies/'
+      path: '/strategies'
+      fullPath: '/strategies/'
+      preLoaderRoute: typeof AuthenticatedStrategiesIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/strategies/$id': {
+      id: '/_authenticated/strategies/$id'
+      path: '/strategies/$id'
+      fullPath: '/strategies/$id'
+      preLoaderRoute: typeof AuthenticatedStrategiesIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -251,6 +291,8 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedExchangesRoute: typeof AuthenticatedExchangesRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedStrategiesIdRoute: typeof AuthenticatedStrategiesIdRoute
+  AuthenticatedStrategiesIndexRoute: typeof AuthenticatedStrategiesIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -259,6 +301,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedExchangesRoute: AuthenticatedExchangesRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedStrategiesIdRoute: AuthenticatedStrategiesIdRoute,
+  AuthenticatedStrategiesIndexRoute: AuthenticatedStrategiesIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
