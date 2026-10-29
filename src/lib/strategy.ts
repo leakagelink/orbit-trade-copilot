@@ -107,7 +107,7 @@ export function validateStrategy(cfg: StrategyConfig): ValidationIssue[] {
       if (!Number.isFinite(v) || v <= 0 || v > 500)
         issues.push({ path: `indicators.${i}.${k}`, message: `${ind.id}.${k} must be between 0 and 500` });
     }
-    if (ind.type === "MACD" && ind.params.fast >= ind.params.slow)
+    if (ind.type === "MACD" && (ind.params["fast"] ?? 0) >= (ind.params["slow"] ?? 0))
       issues.push({ path: `indicators.${i}`, message: "MACD fast period must be shorter than slow period" });
   });
 

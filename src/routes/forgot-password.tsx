@@ -28,7 +28,7 @@ function Forgot() {
     const email = String(new FormData(e.currentTarget).get("email"));
     const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/reset-password` });
     setBusy(false);
-    if (error) return toast.error(error.message);
+    if (error) return void toast.error(error.message);
     setSent(true);
   }
   return (

@@ -64,7 +64,7 @@ function AuthPage() {
     setBusy(true);
     const { error } = await supabase.auth.signInWithPassword({ email: String(f.get("email")), password: String(f.get("password")) });
     setBusy(false);
-    if (error) return toast.error(error.message);
+    if (error) return void toast.error(error.message);
     navigate({ to: safePath(search.redirect) as "/dashboard" });
   }
 
@@ -72,7 +72,7 @@ function AuthPage() {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
     const password = String(f.get("password"));
-    if (password.length < 8) return toast.error("Password must be at least 8 characters");
+    if (password.length < 8) return void toast.error("Password must be at least 8 characters");
     setBusy(true);
     const email = String(f.get("email"));
     const { error } = await supabase.auth.signUp({
@@ -81,7 +81,7 @@ function AuthPage() {
       options: { emailRedirectTo: window.location.origin + "/dashboard", data: { display_name: String(f.get("name")) } },
     });
     setBusy(false);
-    if (error) return toast.error(error.message);
+    if (error) return void toast.error(error.message);
     setSent(email);
   }
 
