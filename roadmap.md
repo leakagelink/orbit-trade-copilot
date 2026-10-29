@@ -26,5 +26,10 @@
 - [x] Live price chart with buy/sell signal preview on the strategy page
 - [x] One-click "Deploy to bot" opens the bot form with the strategy pre-selected
 
-## Phase 4–6
+## Phase 4
+- [x] Backtesting on historical prices (fees, slippage, SL/TP, Sharpe, drawdown)
+- [x] Analytics by bot / strategy / pair + monthly PnL
+- [x] Account risk limits + emergency stop (enforced by the engine)
+
+## Phase 5–6
 See the specification: engine integration, paper/live trading, backtesting, risk engine, billing, admin.
