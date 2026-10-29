@@ -653,6 +653,7 @@ export type Database = {
           unrealized_pnl: number
           updated_at: string
           user_id: string
+          wallet_margin: number | null
         }
         Insert: {
           bot_id?: string | null
@@ -674,6 +675,7 @@ export type Database = {
           unrealized_pnl?: number
           updated_at?: string
           user_id: string
+          wallet_margin?: number | null
         }
         Update: {
           bot_id?: string | null
@@ -695,6 +697,7 @@ export type Database = {
           unrealized_pnl?: number
           updated_at?: string
           user_id?: string
+          wallet_margin?: number | null
         }
         Relationships: [
           {
