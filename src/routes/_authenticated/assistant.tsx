@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
 
 const D = "Chat with the AI about strategies, indicators and risk parameters.";
 export const Route = createFileRoute("/_authenticated/assistant")({
-  validateSearch: z.object({ session: z.string().uuid().optional() }),
+  validateSearch: z.object({ session: z.string().uuid().optional(), prompt: z.string().max(1000).optional() }),
   head: () => ({ meta: [{ title: "AI Assistant — Quantra" }, { name: "description", content: D }, { property: "og:title", content: "AI Assistant — Quantra" }, { property: "og:description", content: D }] }),
   component: Assistant,
 });
@@ -108,7 +108,8 @@ function extractStrategy(text: string): StrategyConfig | null {
 
 function Chat({ sessionId, initial, onSaved }: { sessionId: string; initial: UIMessage[]; onSaved: () => void }) {
   const navigate = useNavigate();
-  const [input, setInput] = useState("");
+  const { prompt } = Route.useSearch();
+  const [input, setInput] = useState(prompt ?? "");
   const transport = useMemo(() => new DefaultChatTransport({
     api: "/api/chat",
     body: { sessionId },

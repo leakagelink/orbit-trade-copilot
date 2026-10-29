@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, type ReactNode } from "react";
 import {
   LayoutDashboard, Bot, Cable, Blocks, Settings, LogOut, Moon, Sun, Menu, MessageSquareText, Activity,
-  FlaskConical, ChartColumn, ShieldAlert,
+  FlaskConical, ChartColumn, ShieldAlert, CandlestickChart,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ const NAV = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/assistant", label: "AI Assistant", icon: MessageSquareText },
   { to: "/strategies", label: "Strategies", icon: Blocks },
+  { to: "/trade", label: "Trade", icon: CandlestickChart },
   { to: "/bots", label: "Trading Bots", icon: Bot },
   { to: "/backtests", label: "Backtests", icon: FlaskConical },
   { to: "/analytics", label: "Analytics", icon: ChartColumn },

@@ -22,6 +22,7 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedExchangesRouteImport } from './routes/_authenticated/exchanges'
 import { Route as AuthenticatedRiskRouteImport } from './routes/_authenticated/risk'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as AuthenticatedTradeRouteImport } from './routes/_authenticated/trade'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as AuthenticatedStrategiesIndexRouteImport } from './routes/_authenticated/strategies.index'
 import { Route as AuthenticatedStrategiesIdRouteImport } from './routes/_authenticated/strategies.$id'
@@ -91,6 +92,11 @@ const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedTradeRoute = AuthenticatedTradeRouteImport.update({
+  id: '/trade',
+  path: '/trade',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const ApiChatRoute = ApiChatRouteImport.update({
   id: '/api/chat',
   path: '/api/chat',
@@ -127,6 +133,7 @@ export interface FileRoutesByFullPath {
   '/exchanges': typeof AuthenticatedExchangesRoute
   '/risk': typeof AuthenticatedRiskRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/trade': typeof AuthenticatedTradeRoute
   '/api/chat': typeof ApiChatRoute
   '/strategies/$id': typeof AuthenticatedStrategiesIdRoute
   '/strategies/': typeof AuthenticatedStrategiesIndexRoute
@@ -145,6 +152,7 @@ export interface FileRoutesByTo {
   '/exchanges': typeof AuthenticatedExchangesRoute
   '/risk': typeof AuthenticatedRiskRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/trade': typeof AuthenticatedTradeRoute
   '/api/chat': typeof ApiChatRoute
   '/strategies/$id': typeof AuthenticatedStrategiesIdRoute
   '/strategies': typeof AuthenticatedStrategiesIndexRoute
@@ -165,6 +173,7 @@ export interface FileRoutesById {
   '/_authenticated/exchanges': typeof AuthenticatedExchangesRoute
   '/_authenticated/risk': typeof AuthenticatedRiskRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/_authenticated/trade': typeof AuthenticatedTradeRoute
   '/api/chat': typeof ApiChatRoute
   '/_authenticated/strategies/$id': typeof AuthenticatedStrategiesIdRoute
   '/_authenticated/strategies/': typeof AuthenticatedStrategiesIndexRoute
@@ -185,6 +194,7 @@ export interface FileRouteTypes {
     | '/exchanges'
     | '/risk'
     | '/settings'
+    | '/trade'
     | '/api/chat'
     | '/strategies/$id'
     | '/strategies/'
@@ -203,6 +213,7 @@ export interface FileRouteTypes {
     | '/exchanges'
     | '/risk'
     | '/settings'
+    | '/trade'
     | '/api/chat'
     | '/strategies/$id'
     | '/strategies'
@@ -222,6 +233,7 @@ export interface FileRouteTypes {
     | '/_authenticated/exchanges'
     | '/_authenticated/risk'
     | '/_authenticated/settings'
+    | '/_authenticated/trade'
     | '/api/chat'
     | '/_authenticated/strategies/$id'
     | '/_authenticated/strategies/'
@@ -331,6 +343,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/trade': {
+      id: '/_authenticated/trade'
+      path: '/trade'
+      fullPath: '/trade'
+      preLoaderRoute: typeof AuthenticatedTradeRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/api/chat': {
       id: '/api/chat'
       path: '/api/chat'
@@ -371,6 +390,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedExchangesRoute: typeof AuthenticatedExchangesRoute
   AuthenticatedRiskRoute: typeof AuthenticatedRiskRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedTradeRoute: typeof AuthenticatedTradeRoute
   AuthenticatedStrategiesIdRoute: typeof AuthenticatedStrategiesIdRoute
   AuthenticatedStrategiesIndexRoute: typeof AuthenticatedStrategiesIndexRoute
 }
@@ -384,6 +404,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedExchangesRoute: AuthenticatedExchangesRoute,
   AuthenticatedRiskRoute: AuthenticatedRiskRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedTradeRoute: AuthenticatedTradeRoute,
   AuthenticatedStrategiesIdRoute: AuthenticatedStrategiesIdRoute,
   AuthenticatedStrategiesIndexRoute: AuthenticatedStrategiesIndexRoute,
 }
