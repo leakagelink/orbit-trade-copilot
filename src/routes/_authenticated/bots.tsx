@@ -2,9 +2,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { startPaperBot } from "@/lib/bots.functions";
+import { startPaperBot, enableLiveTrading, switchToPaper } from "@/lib/bots.functions";
 import { toast } from "sonner";
-import { Bot, Pause, Play, Plus, Square, Trash2, ScrollText } from "lucide-react";
+import { Bot, Pause, Play, Plus, Square, Trash2, ScrollText, Zap, Undo2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader, EmptyState } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
@@ -29,7 +29,7 @@ export const Route = createFileRoute("/_authenticated/bots")({
 const STATUS: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   draft: "secondary", backtesting: "outline", paper_trading: "default", running: "default", paused: "outline", stopped: "outline", error: "destructive",
 };
-const ENGINE_NOTE = "Bots run in paper mode on our servers, checked once a minute against live market prices. No real orders are placed. Live trading comes in a later phase.";
+const ENGINE_NOTE = "Bots run on our servers and are checked once a minute. Paper bots simulate orders; LIVE bots place real market orders on your exchange. Stop losses are checked every minute, not instantly — test on a testnet account first.";
 
 async function load() {
   const [b, s, c] = await Promise.all([
@@ -49,6 +49,12 @@ function Bots() {
   const [logsFor, setLogsFor] = useState<{ id: string; name: string } | null>(null);
   const refresh = () => qc.invalidateQueries({ queryKey: ["bots"] });
   const start = useServerFn(startPaperBot);
+  const toPaper = useServerFn(switchToPaper);
+  const [liveFor, setLiveFor] = useState<{ id: string; name: string } | null>(null);
+  async function backToPaper(id: string) {
+    try { await toPaper({ data: { id } }); toast.success("Bot switched back to paper (stopped)"); } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+    refresh();
+  }
   async function startBot(id: string) {
     try { await start({ data: { id } }); toast.success("Paper trading started"); } catch (e) { toast.error(e instanceof Error ? e.message : "Could not start"); }
     refresh();
@@ -93,7 +99,12 @@ function Bots() {
                       <td className="px-4 py-3"><Badge variant={STATUS[b.status]}>{b.status.replace("_", " ")}</Badge>{b.status_reason && <div className="mt-1 max-w-48 text-xs text-muted-foreground">{b.status_reason}</div>}{b.last_heartbeat_at && <div className="mt-1 text-xs text-muted-foreground">checked {new Date(b.last_heartbeat_at).toLocaleTimeString()}</div>}</td>
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-1">
-                          <Tooltip><TooltipTrigger asChild><span><Button size="icon" variant="ghost" aria-label="Start paper trading" disabled={b.status === "paper_trading" || b.mode !== "paper"} onClick={() => startBot(b.id)}><Play className="h-4 w-4" /></Button></span></TooltipTrigger><TooltipContent>Start paper trading</TooltipContent></Tooltip>
+                          <Tooltip><TooltipTrigger asChild><span><Button size="icon" variant="ghost" aria-label="Start paper trading" disabled={b.status === "paper_trading" || b.status === "running"} onClick={() => (b.mode === "live" ? setLiveFor({ id: b.id, name: b.name }) : startBot(b.id))}><Play className="h-4 w-4" /></Button></span></TooltipTrigger><TooltipContent>{b.mode === "live" ? "Resume live trading" : "Start paper trading"}</TooltipContent></Tooltip>
+                          {b.mode === "paper" ? (
+                            <Tooltip><TooltipTrigger asChild><Button size="icon" variant="ghost" aria-label="Go live" disabled={!b.exchange_connection_id} onClick={() => setLiveFor({ id: b.id, name: b.name })}><Zap className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent>{b.exchange_connection_id ? "Switch to LIVE trading" : "Attach a trading account to go live"}</TooltipContent></Tooltip>
+                          ) : (
+                            <Tooltip><TooltipTrigger asChild><Button size="icon" variant="ghost" aria-label="Back to paper" onClick={() => backToPaper(b.id)}><Undo2 className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent>Back to paper mode</TooltipContent></Tooltip>
+                          )}
                           <Button size="icon" variant="ghost" aria-label="Pause" disabled={!["running", "paper_trading"].includes(b.status)} onClick={() => setStatus(b.id, "paused", "Bot paused by user")}><Pause className="h-4 w-4" /></Button>
                           <Button size="icon" variant="ghost" aria-label="Stop" disabled={["stopped", "draft"].includes(b.status)} onClick={() => setStatus(b.id, "stopped", "Bot stopped by user")}><Square className="h-4 w-4" /></Button>
                           <Button size="icon" variant="ghost" aria-label="Logs" onClick={() => setLogsFor({ id: b.id, name: b.name })}><ScrollText className="h-4 w-4" /></Button>
@@ -110,6 +121,7 @@ function Bots() {
       </div>
       {q.data && <NewBotDialog open={open} onOpenChange={setOpen} data={q.data} preset={preset} onDone={refresh} />}
       <LogsSheet bot={logsFor} onClose={() => setLogsFor(null)} />
+      <GoLiveDialog bot={liveFor} onClose={() => setLiveFor(null)} onDone={refresh} />
     </div>
   );
 }
@@ -210,5 +222,35 @@ function LogsSheet({ bot, onClose }: { bot: { id: string; name: string } | null;
         </div>
       </SheetContent>
     </Sheet>
+  );
+}
+
+function GoLiveDialog({ bot, onClose, onDone }: { bot: { id: string; name: string } | null; onClose: () => void; onDone: () => void }) {
+  const enable = useServerFn(enableLiveTrading);
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  async function go() {
+    setBusy(true);
+    try {
+      const r = await enable({ data: { id: bot!.id, confirm: "LIVE" } });
+      toast.success(r.testnet ? "Live trading enabled on testnet" : "LIVE trading enabled — real money");
+      onDone(); onClose(); setText("");
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Could not enable live trading"); }
+    setBusy(false);
+  }
+  return (
+    <Dialog open={!!bot} onOpenChange={(o) => { if (!o) { onClose(); setText(""); } }}>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Go live with {bot?.name}?</DialogTitle><DialogDescription>This bot will place real market orders on your exchange using its trading account.</DialogDescription></DialogHeader>
+        <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+          <li>Use a <span className="text-foreground">testnet</span> account first.</li>
+          <li>Stop loss and take profit are checked once a minute, so fills can be worse than the set level.</li>
+          <li>The bot spends its position size in the quote coin (e.g. USDT) — make sure the balance is there.</li>
+          <li>Account limits and the emergency stop on the Risk page apply.</li>
+        </ul>
+        <div className="space-y-1.5"><Label>Type LIVE to confirm</Label><Input value={text} onChange={(e) => setText(e.target.value)} className="font-mono" autoComplete="off" /></div>
+        <DialogFooter><Button variant="ghost" onClick={onClose}>Cancel</Button><Button variant="destructive" disabled={text !== "LIVE" || busy} onClick={go}>{busy ? "Enabling…" : "Enable live trading"}</Button></DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

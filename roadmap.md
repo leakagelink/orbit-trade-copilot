@@ -31,5 +31,13 @@
 - [x] Analytics by bot / strategy / pair + monthly PnL
 - [x] Account risk limits + emergency stop (enforced by the engine)
 
-## Phase 5–6
+## Phase 5
+- [x] Live market orders (Binance, Bybit, OKX, KuCoin; testnet for Binance/Bybit/OKX)
+- [x] Go Live with typed confirmation, Back to paper
+- [x] Automatic SL/TP/exit management for live positions (checked every minute)
+- [x] Emergency stop: close everything
+- [ ] Zerodha / Upstox — blocked: needs a paid Kite Connect / Upstox developer app
+- [ ] Coinbase live orders — different key format
+
+## Phase 6
 See the specification: engine integration, paper/live trading, backtesting, risk engine, billing, admin.

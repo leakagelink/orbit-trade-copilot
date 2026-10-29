@@ -1,11 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
+import { emergencyStop } from "@/lib/bots.functions";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import { OctagonX, ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/app-shell";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -20,6 +23,16 @@ export const Route = createFileRoute("/_authenticated/risk")({
 function Risk() {
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
+  const stopAll = useServerFn(emergencyStop);
+  async function closeEverything() {
+    setBusy(true);
+    try {
+      const r = await stopAll();
+      if (r.failed.length) toast.error(`Closed ${r.closed}; could not close: ${r.failed.join("; ")}`); else toast.success(`All bots stopped; ${r.closed} position(s) closed`);
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Emergency stop failed"); }
+    setBusy(false);
+    qc.invalidateQueries();
+  }
   const q = useQuery({
     queryKey: ["risk"],
     queryFn: async () => {
@@ -66,7 +79,16 @@ function Risk() {
             <OctagonX className={`mt-0.5 h-5 w-5 ${halted ? "text-destructive" : "text-muted-foreground"}`} />
             <div><div className="font-medium">{halted ? "Trading halted" : "Emergency stop"}</div><p className="text-sm text-muted-foreground">{halted ? "No bot can open new trades. Open trades still close on their stop loss, take profit or exit rules." : "Instantly block every bot from opening new trades."}</p></div>
           </div>
-          <Button variant={halted ? "outline" : "destructive"} disabled={busy} onClick={() => save({ trading_halted: !halted })}>{halted ? "Resume trading" : "Halt all trading"}</Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant={halted ? "outline" : "secondary"} disabled={busy} onClick={() => save({ trading_halted: !halted })}>{halted ? "Resume trading" : "Halt new trades"}</Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild><Button variant="destructive" disabled={busy}>Close everything</Button></AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader><AlertDialogTitle>Emergency stop?</AlertDialogTitle><AlertDialogDescription>Stops every bot, halts new trades and sells every open position now at market price — including live positions on your exchange.</AlertDialogDescription></AlertDialogHeader>
+                <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction className={buttonVariants({ variant: "destructive" })} onClick={closeEverything}>Stop and close all</AlertDialogAction></AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-3">
