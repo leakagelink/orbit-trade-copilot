@@ -155,8 +155,8 @@ function TradePage() {
   return (
     <div>
       <PageHeader title="Trade" description={D} />
-      <div className="grid gap-4 p-4 xl:grid-cols-[1fr_340px]">
-        <div className="space-y-4">
+      <div className="grid gap-4 p-4 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="min-w-0 space-y-4">
           <div className="flex flex-wrap items-center gap-2">
             {(Object.keys(CATEGORY_LABEL) as MarketCategory[]).map((c) => (
               <Button key={c} size="sm" variant={cat === c ? "default" : "outline"} onClick={() => pickCat(c)}>{CATEGORY_LABEL[c]}</Button>
@@ -231,7 +231,7 @@ function TradePage() {
                 <tbody>
                   {positions.data.map((p) => (
                     <tr key={p.id} className="border-t font-mono text-xs">
-                      <td className="px-4 py-2 font-sans text-sm">{p.trading_pair}<div className="text-xs text-muted-foreground">{exchangeName(p.exchange)} · {p.mode}</div></td>
+                      <td className="px-4 py-2 font-sans text-sm">{p.trading_pair}<div className="text-xs text-muted-foreground">{p.wallet_margin != null ? "Demo wallet" : `${exchangeName(p.exchange)} · ${p.mode}`}</div></td>
                       <td className={`px-4 py-2 ${p.side === "buy" ? "text-gain" : "text-loss"}`}>{p.side}</td>
                       <td className="px-4 py-2">{Number(p.quantity).toPrecision(6)}</td>
                       <td className="px-4 py-2">{Number(p.entry_price).toFixed(5)}</td>
