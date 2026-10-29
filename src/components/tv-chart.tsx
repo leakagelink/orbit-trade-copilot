@@ -4,12 +4,14 @@ import type { Candle } from "@/lib/indicators";
 
 export interface PriceLineSpec { price: number; color: string; title: string }
 
+const FALLBACK: Record<string, string> = { "--gain": "#4ade80", "--loss": "#f87171", "--primary": "#22c55e", "--border": "#2a2f3a", "--muted-foreground": "#9aa3b2" };
 function cssVar(name: string) {
   const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-  // lightweight-charts needs a color it can parse; oklch() is converted via a canvas.
   const ctx = document.createElement("canvas").getContext("2d")!;
+  ctx.fillStyle = "#000001";
   ctx.fillStyle = v || "#888";
-  return ctx.fillStyle as string;
+  const out = ctx.fillStyle as string;
+  return out === "#000001" || /oklch|oklab|color\(/.test(out) ? (FALLBACK[name] ?? "#9aa3b2") : out;
 }
 
 export function TvChart({ candles, lines = [], height = 420 }: { candles: Candle[]; lines?: PriceLineSpec[]; height?: number }) {
