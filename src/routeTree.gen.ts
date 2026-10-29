@@ -22,6 +22,7 @@ import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticat
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as AuthenticatedStrategiesIndexRouteImport } from './routes/_authenticated/strategies.index'
 import { Route as AuthenticatedStrategiesIdRouteImport } from './routes/_authenticated/strategies.$id'
+import { Route as ApiPublicEngineTickRouteImport } from './routes/api/public/engine/tick'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -89,6 +90,11 @@ const AuthenticatedStrategiesIdRoute =
     path: '/strategies/$id',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiPublicEngineTickRoute = ApiPublicEngineTickRouteImport.update({
+  id: '/api/public/engine/tick',
+  path: '/api/public/engine/tick',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -103,6 +109,7 @@ export interface FileRoutesByFullPath {
   '/api/chat': typeof ApiChatRoute
   '/strategies/$id': typeof AuthenticatedStrategiesIdRoute
   '/strategies/': typeof AuthenticatedStrategiesIndexRoute
+  '/api/public/engine/tick': typeof ApiPublicEngineTickRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -117,6 +124,7 @@ export interface FileRoutesByTo {
   '/api/chat': typeof ApiChatRoute
   '/strategies/$id': typeof AuthenticatedStrategiesIdRoute
   '/strategies': typeof AuthenticatedStrategiesIndexRoute
+  '/api/public/engine/tick': typeof ApiPublicEngineTickRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -133,6 +141,7 @@ export interface FileRoutesById {
   '/api/chat': typeof ApiChatRoute
   '/_authenticated/strategies/$id': typeof AuthenticatedStrategiesIdRoute
   '/_authenticated/strategies/': typeof AuthenticatedStrategiesIndexRoute
+  '/api/public/engine/tick': typeof ApiPublicEngineTickRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -149,6 +158,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/strategies/$id'
     | '/strategies/'
+    | '/api/public/engine/tick'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -163,6 +173,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/strategies/$id'
     | '/strategies'
+    | '/api/public/engine/tick'
   id:
     | '__root__'
     | '/'
@@ -178,6 +189,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/_authenticated/strategies/$id'
     | '/_authenticated/strategies/'
+    | '/api/public/engine/tick'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -187,6 +199,7 @@ export interface RootRouteChildren {
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   ApiChatRoute: typeof ApiChatRoute
+  ApiPublicEngineTickRoute: typeof ApiPublicEngineTickRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -282,6 +295,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStrategiesIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/engine/tick': {
+      id: '/api/public/engine/tick'
+      path: '/api/public/engine/tick'
+      fullPath: '/api/public/engine/tick'
+      preLoaderRoute: typeof ApiPublicEngineTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -315,6 +335,7 @@ const rootRouteChildren: RootRouteChildren = {
   ForgotPasswordRoute: ForgotPasswordRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   ApiChatRoute: ApiChatRoute,
+  ApiPublicEngineTickRoute: ApiPublicEngineTickRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
