@@ -2,14 +2,13 @@ import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, type ReactNode } from "react";
 import {
-  LayoutDashboard, Bot, Cable, Sparkles as _unused, Blocks, Settings, LogOut, Moon, Sun, Menu, MessageSquareText, Activity,
+  LayoutDashboard, Bot, Cable, Blocks, Settings, LogOut, Moon, Sun, Menu, MessageSquareText, Activity,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
-void _unused;
 const NAV = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/assistant", label: "AI Assistant", icon: MessageSquareText },
