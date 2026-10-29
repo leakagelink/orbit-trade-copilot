@@ -18,6 +18,7 @@ import {
   type Condition, type IndicatorType, type StrategyConfig,
 } from "@/lib/strategy";
 import { saveStrategyVersion } from "@/lib/strategies.api";
+import { SignalPreview } from "@/components/signal-preview";
 
 export const Route = createFileRoute("/_authenticated/strategies/$id")({
   head: () => ({ meta: [{ title: "Strategy builder — Quantra" }, { name: "description", content: "Edit indicators, entry/exit rules and risk for your strategy." }, { property: "og:title", content: "Strategy builder — Quantra" }, { property: "og:description", content: "Edit indicators, entry/exit rules and risk for your strategy." }] }),
@@ -89,13 +90,14 @@ function Builder() {
           <>
             <Button variant="ghost" asChild><Link to="/strategies"><ArrowLeft className="mr-1 h-4 w-4" />All strategies</Link></Button>
             <Tooltip><TooltipTrigger asChild><span><Button variant="outline" disabled><FlaskConical className="mr-1 h-4 w-4" />Backtest</Button></span></TooltipTrigger><TooltipContent>Backtesting engine arrives in Phase 4</TooltipContent></Tooltip>
-            <Tooltip><TooltipTrigger asChild><span><Button variant="outline" disabled={issues.length > 0} asChild={issues.length === 0}>{issues.length === 0 ? <Link to="/bots"><Rocket className="mr-1 h-4 w-4" />Deploy to bot</Link> : <><Rocket className="mr-1 h-4 w-4" />Deploy to bot</>}</Button></span></TooltipTrigger><TooltipContent>{issues.length ? "Fix validation issues first" : "Attach this strategy to a bot"}</TooltipContent></Tooltip>
+            <Tooltip><TooltipTrigger asChild><span><Button variant="outline" disabled={issues.length > 0} asChild={issues.length === 0}>{issues.length === 0 ? <Link to="/bots" search={{ strategy: id }}><Rocket className="mr-1 h-4 w-4" />Deploy to bot</Link> : <><Rocket className="mr-1 h-4 w-4" />Deploy to bot</>}</Button></span></TooltipTrigger><TooltipContent>{issues.length ? "Fix validation issues first" : "Attach this strategy to a bot"}</TooltipContent></Tooltip>
             <Button onClick={save} disabled={busy}>{busy ? "Saving…" : "Save new version"}</Button>
           </>
         }
       />
       <div className="grid gap-6 p-6 xl:grid-cols-[1fr_320px]">
         <div className="space-y-6">
+          <Section title="Live signal preview"><SignalPreview cfg={cfg} /></Section>
           <Section title="General">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5"><Label>Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} /></div>

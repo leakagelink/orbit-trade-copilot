@@ -22,5 +22,9 @@
 - [ ] Coinbase key verification (different key format)
 - [ ] Live order placement (later phase, needs explicit safeguards)
 
-## Phase 3–6
+## Phase 3
+- [x] Live price chart with buy/sell signal preview on the strategy page
+- [x] One-click "Deploy to bot" opens the bot form with the strategy pre-selected
+
+## Phase 4–6
 See the specification: engine integration, paper/live trading, backtesting, risk engine, billing, admin.
