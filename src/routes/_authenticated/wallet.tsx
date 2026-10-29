@@ -47,7 +47,7 @@ function WalletPage() {
 
   async function run(kind: "deposit" | "withdraw") {
     const n = Number(amount);
-    if (!(n > 0)) return toast.error("Enter an amount");
+    if (!(n > 0)) { toast.error("Enter an amount"); return; }
     setBusy(kind);
     try {
       const r = await (kind === "deposit" ? deposit : withdraw)({ data: { amount: n } });
