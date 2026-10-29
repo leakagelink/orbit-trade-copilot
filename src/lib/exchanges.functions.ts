@@ -106,7 +106,7 @@ export const verifyExchange = createServerFn({ method: "POST" })
       const balances = await fetchBalances(own.exchange, creds, own.is_testnet);
       const now = new Date().toISOString();
       await supabaseAdmin.from("exchange_connections").update({
-        status: "connected", last_error: null, last_synced_at: now, permissions: { verified_at: now, balances: balances.slice(0, 50) },
+        status: "connected", last_error: null, last_synced_at: now, permissions: { verified_at: now, balances: balances.slice(0, 50) } as unknown as never,
       }).eq("id", data.id);
       return { ok: true as const, assets: balances.length };
     } catch (e) {

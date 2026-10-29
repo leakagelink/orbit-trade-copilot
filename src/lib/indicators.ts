@@ -39,11 +39,11 @@ export function rsi(closes: number[], p: number): Series {
   const out: Series = new Array(closes.length).fill(null);
   if (closes.length <= p) return out;
   let g = 0, l = 0;
-  for (let i = 1; i <= p; i++) { const d = closes[i] - closes[i - 1]; if (d > 0) g += d; else l -= d; }
+  for (let i = 1; i <= p; i++) { const d = closes[i]! - closes[i - 1]!; if (d > 0) g += d; else l -= d; }
   g /= p; l /= p;
   out[p] = l === 0 ? 100 : 100 - 100 / (1 + g / l);
   for (let i = p + 1; i < closes.length; i++) {
-    const d = closes[i] - closes[i - 1];
+    const d = closes[i]! - closes[i - 1]!;
     g = (g * (p - 1) + Math.max(d, 0)) / p;
     l = (l * (p - 1) + Math.max(-d, 0)) / p;
     out[i] = l === 0 ? 100 : 100 - 100 / (1 + g / l);
@@ -52,12 +52,12 @@ export function rsi(closes: number[], p: number): Series {
 }
 
 function atr(cs: Candle[], p: number): Series {
-  const tr = cs.map((c, i) => (i === 0 ? c.h - c.l : Math.max(c.h - c.l, Math.abs(c.h - cs[i - 1].c), Math.abs(c.l - cs[i - 1].c))));
+  const tr = cs.map((c, i) => (i === 0 ? c.h - c.l : Math.max(c.h - c.l, Math.abs(c.h - cs[i - 1]!.c), Math.abs(c.l - cs[i - 1]!.c))));
   const out: Series = new Array(cs.length).fill(null);
   if (cs.length < p) return out;
   let a = tr.slice(0, p).reduce((x, y) => x + y, 0) / p;
   out[p - 1] = a;
-  for (let i = p; i < cs.length; i++) { a = (a * (p - 1) + tr[i]) / p; out[i] = a; }
+  for (let i = p; i < cs.length; i++) { a = (a * (p - 1) + tr[i]!) / p; out[i] = a; }
   return out;
 }
 
@@ -116,7 +116,7 @@ export function computeAll(cfg: StrategyConfig, cs: Candle[]): SeriesMap {
 }
 
 function val(op: string, m: SeriesMap, i: number): number | null {
-  if (m[op]) return m[op][i] ?? null;
+  const s = m[op]; if (s) return s[i] ?? null;
   const n = Number(op);
   return Number.isFinite(n) ? n : null;
 }
