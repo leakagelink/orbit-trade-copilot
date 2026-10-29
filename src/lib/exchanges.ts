@@ -16,6 +16,7 @@ export const EXCHANGES: ExchangeMeta[] = [
   { id: "okx", name: "OKX", kind: "crypto", market: "Spot / Swap", orderTypes: ["market", "limit", "trigger", "trailing"], supportsTestnet: true, needsPassphrase: true, available: true },
   { id: "kucoin", name: "KuCoin", kind: "crypto", market: "Spot", orderTypes: ["market", "limit", "stop"], supportsTestnet: false, needsPassphrase: true, available: true },
   { id: "coinbase", name: "Coinbase Advanced", kind: "crypto", market: "Spot", orderTypes: ["market", "limit", "stop_limit"], supportsTestnet: false, needsPassphrase: false, available: true },
+  { id: "oanda", name: "OANDA", kind: "broker", market: "Forex / Commodities", orderTypes: ["MARKET", "LIMIT", "STOP"], supportsTestnet: true, needsPassphrase: false, available: true },
   { id: "zerodha", name: "Zerodha Kite", kind: "broker", market: "NSE / BSE", orderTypes: ["MARKET", "LIMIT", "SL", "SL-M"], supportsTestnet: false, needsPassphrase: false, available: false },
   { id: "upstox", name: "Upstox", kind: "broker", market: "NSE / BSE", orderTypes: ["MARKET", "LIMIT", "SL"], supportsTestnet: false, needsPassphrase: false, available: false },
 ];

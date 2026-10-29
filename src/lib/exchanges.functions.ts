@@ -24,7 +24,7 @@ export const connectExchange = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => connectSchema.parse(input))
   .handler(async ({ data, context }) => {
     const meta = EXCHANGES.find((e) => e.id === data.exchange);
-    if (!meta || !meta.available || meta.kind !== "crypto") throw new Error("This exchange is not supported yet");
+    if (!meta || !meta.available || (meta.kind !== "crypto" && meta.id !== "oanda")) throw new Error("This exchange is not supported yet");
     if (meta.needsPassphrase && !data.passphrase) throw new Error(`${meta.name} requires an API passphrase`);
     const { encryptJson } = await import("./crypto.server");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
