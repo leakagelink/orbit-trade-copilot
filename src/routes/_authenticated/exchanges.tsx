@@ -103,7 +103,7 @@ function Exchanges() {
   );
 }
 
-function CredentialsDialog({ meta, connectionId, onClose, onDone }: { meta: ExchangeMeta | null; connectionId?: string; onClose: () => void; onDone: () => void }) {
+function CredentialsDialog({ meta, connectionId, onClose, onDone }: { meta: ExchangeMeta | null; connectionId?: string | undefined; onClose: () => void; onDone: () => void }) {
   const connect = useServerFn(connectExchange);
   const update = useServerFn(updateExchangeCredentials);
   const [busy, setBusy] = useState(false);

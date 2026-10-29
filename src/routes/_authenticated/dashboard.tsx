@@ -35,7 +35,7 @@ async function fetchAll() {
   return { trades: trades.data!, positions: positions.data!, snaps: snaps.data!, bots: bots.data!, strategies: strategies.data!, orders: orders.data!, conns: conns.data! };
 }
 
-function Stat({ label, value, tone }: { label: string; value: string; tone?: "gain" | "loss" }) {
+function Stat({ label, value, tone }: { label: string; value: string; tone?: "gain" | "loss" | undefined }) {
   return (
     <div className="bg-card p-4">
       <div className="text-xs text-muted-foreground">{label}</div>
@@ -56,7 +56,7 @@ function Dashboard() {
   const view = useMemo(() => {
     if (!q.data) return null;
     const cutoff = period === "all" ? 0 : Date.now() - Number(period) * 86_400_000;
-    const match = (r: { exchange_connection_id: string | null; mode: string; trading_pair?: string; strategy_id?: string | null }) =>
+    const match = (r: { exchange_connection_id: string | null; mode: string; trading_pair?: string; strategy_id?: string | null | undefined }) =>
       (account === "all" || r.exchange_connection_id === account) && (mode === "all" || r.mode === mode) &&
       (pair === "all" || r.trading_pair === pair) && (strategy === "all" || r.strategy_id === strategy);
     const trades = q.data.trades.filter((t) => match(t) && (!t.closed_at || new Date(t.closed_at).getTime() >= cutoff));
