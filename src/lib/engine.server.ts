@@ -163,8 +163,6 @@ async function closePosition(db: Admin, bot: Row, venue: Venue, p: Row, price: n
   }
   const nowIso = new Date().toISOString();
   const entryFee = venue.live ? 0 : entry * qty * FEE;
-  const { data: buy } = await db.from("bot_logs").select("data").eq("bot_id", bot.id).contains("data", { order: undefined } as never).limit(0);
-  void buy;
   const pnl = (fill - entry) * qty; // gross; fees stored separately
   await db.from("orders").update({ status: "filled", quantity: qty, filled_quantity: qty, avg_fill_price: fill, exchange_order_id: exOrderId }).eq("id", ord.id);
   await db.from("positions").update({ is_open: false, closed_at: nowIso, current_price: fill, unrealized_pnl: 0 }).eq("id", p.id);
