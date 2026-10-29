@@ -24,8 +24,6 @@ async function getJson(url: string, init?: RequestInit) {
   return body as any; // eslint-disable-line @typescript-eslint/no-explicit-any
 }
 
-const [base, quote] = ["", ""];
-void base; void quote;
 const split = (pair: string) => { const [b, q] = pair.toUpperCase().split("/"); return { b: b!, q: q! }; };
 
 const TF_MS: Record<string, number> = { "1m": 60e3, "5m": 300e3, "15m": 900e3, "30m": 1800e3, "1h": 3600e3, "4h": 14400e3, "1d": 86400e3 };

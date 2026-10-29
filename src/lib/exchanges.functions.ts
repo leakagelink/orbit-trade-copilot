@@ -17,7 +17,7 @@ const connectSchema = credsSchema.extend({
 });
 
 const PENDING_NOTE =
-  "Credentials stored encrypted. Live validation, balance and permission sync run once the trading engine adapter is connected (Phase 2).";
+  "Credentials stored encrypted. Click Verify to test the keys and load balances.";
 
 export const connectExchange = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -87,4 +87,31 @@ export const disconnectExchange = createServerFn({ method: "POST" })
     await context.supabase.from("exchange_connections").update({ status: "disconnected", last_error: null }).eq("id", data.id);
     await context.supabase.from("audit_logs").insert({ user_id: context.userId, action: "exchange.disconnect", entity_type: "exchange_connection", entity_id: data.id });
     return { ok: true };
+  });
+
+// Signed read-only call to the exchange: proves the keys work and caches balances.
+export const verifyExchange = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: own } = await context.supabase.from("exchange_connections").select("id,exchange,is_testnet").eq("id", data.id).maybeSingle();
+    if (!own) throw new Error("Connection not found");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { decryptJson } = await import("./crypto.server");
+    const { fetchBalances } = await import("./exchange-adapters.server");
+    const { data: sealed } = await supabaseAdmin.from("connection_credentials").select("ciphertext,iv").eq("connection_id", data.id).maybeSingle();
+    if (!sealed) throw new Error("No stored keys — update keys first");
+    try {
+      const creds = await decryptJson<{ apiKey: string; apiSecret: string; passphrase?: string }>(sealed.ciphertext, sealed.iv);
+      const balances = await fetchBalances(own.exchange, creds, own.is_testnet);
+      const now = new Date().toISOString();
+      await supabaseAdmin.from("exchange_connections").update({
+        status: "connected", last_error: null, last_synced_at: now, permissions: { verified_at: now, balances: balances.slice(0, 50) } as unknown as never,
+      }).eq("id", data.id);
+      return { ok: true as const, assets: balances.length };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      await supabaseAdmin.from("exchange_connections").update({ status: "error", last_error: msg.slice(0, 500) }).eq("id", data.id);
+      return { ok: false as const, error: msg };
+    }
   });

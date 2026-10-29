@@ -15,5 +15,12 @@
 - [x] Settings screen
 - [x] Tests for strategy validation and metrics
 
-## Phase 2–6
+## Phase 2
+- [x] Exchange adapters (market data for 5 exchanges; key verification for Binance, Bybit, OKX, KuCoin)
+- [x] Scheduled paper-trading engine (every minute) + indicators
+- [x] Start bots in paper mode, verify exchange keys
+- [ ] Coinbase key verification (different key format)
+- [ ] Live order placement (later phase, needs explicit safeguards)
+
+## Phase 3–6
 See the specification: engine integration, paper/live trading, backtesting, risk engine, billing, admin.

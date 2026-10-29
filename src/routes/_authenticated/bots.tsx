@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { startPaperBot } from "@/lib/bots.functions";
 import { toast } from "sonner";
 import { Bot, Pause, Play, Plus, Square, Trash2, ScrollText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,7 +28,7 @@ export const Route = createFileRoute("/_authenticated/bots")({
 const STATUS: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   draft: "secondary", backtesting: "outline", paper_trading: "default", running: "default", paused: "outline", stopped: "outline", error: "destructive",
 };
-const ENGINE_NOTE = "Bot execution needs the trading engine (Phase 2–3). Bots never run from your browser.";
+const ENGINE_NOTE = "Bots run in paper mode on our servers, checked once a minute against live market prices. No real orders are placed. Live trading comes in a later phase.";
 
 async function load() {
   const [b, s, c] = await Promise.all([
@@ -44,6 +46,11 @@ function Bots() {
   const [open, setOpen] = useState(false);
   const [logsFor, setLogsFor] = useState<{ id: string; name: string } | null>(null);
   const refresh = () => qc.invalidateQueries({ queryKey: ["bots"] });
+  const start = useServerFn(startPaperBot);
+  async function startBot(id: string) {
+    try { await start({ data: { id } }); toast.success("Paper trading started"); } catch (e) { toast.error(e instanceof Error ? e.message : "Could not start"); }
+    refresh();
+  }
 
   async function setStatus(id: string, status: "paused" | "stopped", msg: string) {
     const { data: u } = await supabase.auth.getUser();
@@ -81,10 +88,10 @@ function Bots() {
                       <td className="px-4 py-3"><Badge variant={b.mode === "live" ? "destructive" : "outline"}>{b.mode}</Badge></td>
                       <td className="px-4 py-3 font-mono text-xs">{Number(b.allocated_capital).toLocaleString()}</td>
                       <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{cfg ? `size ${Number(cfg.position_size_pct)}% · SL ${cfg.stop_loss_pct ?? "—"}% · TP ${cfg.take_profit_pct ?? "—"}% · max ${Number(cfg.max_exposure_pct)}%` : "—"}</td>
-                      <td className="px-4 py-3"><Badge variant={STATUS[b.status]}>{b.status.replace("_", " ")}</Badge></td>
+                      <td className="px-4 py-3"><Badge variant={STATUS[b.status]}>{b.status.replace("_", " ")}</Badge>{b.status_reason && <div className="mt-1 max-w-48 text-xs text-muted-foreground">{b.status_reason}</div>}{b.last_heartbeat_at && <div className="mt-1 text-xs text-muted-foreground">checked {new Date(b.last_heartbeat_at).toLocaleTimeString()}</div>}</td>
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-1">
-                          <Tooltip><TooltipTrigger asChild><span><Button size="icon" variant="ghost" disabled aria-label="Start"><Play className="h-4 w-4" /></Button></span></TooltipTrigger><TooltipContent>{ENGINE_NOTE}</TooltipContent></Tooltip>
+                          <Tooltip><TooltipTrigger asChild><span><Button size="icon" variant="ghost" aria-label="Start paper trading" disabled={b.status === "paper_trading" || b.mode !== "paper"} onClick={() => startBot(b.id)}><Play className="h-4 w-4" /></Button></span></TooltipTrigger><TooltipContent>Start paper trading</TooltipContent></Tooltip>
                           <Button size="icon" variant="ghost" aria-label="Pause" disabled={!["running", "paper_trading"].includes(b.status)} onClick={() => setStatus(b.id, "paused", "Bot paused by user")}><Pause className="h-4 w-4" /></Button>
                           <Button size="icon" variant="ghost" aria-label="Stop" disabled={["stopped", "draft"].includes(b.status)} onClick={() => setStatus(b.id, "stopped", "Bot stopped by user")}><Square className="h-4 w-4" /></Button>
                           <Button size="icon" variant="ghost" aria-label="Logs" onClick={() => setLogsFor({ id: b.id, name: b.name })}><ScrollText className="h-4 w-4" /></Button>

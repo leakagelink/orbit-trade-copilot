@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Cable, KeyRound, Plus, ShieldCheck, Unplug } from "lucide-react";
+import { Cable, KeyRound, Plus, RefreshCw, ShieldCheck, Unplug } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader, EmptyState } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EXCHANGES, exchangeName, type ExchangeMeta } from "@/lib/exchanges";
-import { connectExchange, disconnectExchange, updateExchangeCredentials } from "@/lib/exchanges.functions";
+import { connectExchange, disconnectExchange, updateExchangeCredentials, verifyExchange } from "@/lib/exchanges.functions";
 
 const D = "Connect your crypto exchange accounts. API secrets are encrypted on the server.";
 export const Route = createFileRoute("/_authenticated/exchanges")({
@@ -40,6 +40,16 @@ function Exchanges() {
   const [reconnect, setReconnect] = useState<{ id: string; exchange: string } | null>(null);
   const [toDisconnect, setToDisconnect] = useState<string | null>(null);
   const disconnect = useServerFn(disconnectExchange);
+  const verify = useServerFn(verifyExchange);
+  const [verifying, setVerifying] = useState<string | null>(null);
+  async function runVerify(id: string) {
+    setVerifying(id);
+    try {
+      const r = await verify({ data: { id } });
+      if (r.ok) toast.success(`Keys verified — ${r.assets} assets with a balance`); else toast.error(r.error);
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Verification failed"); }
+    setVerifying(null); refresh();
+  }
   const refresh = () => qc.invalidateQueries({ queryKey: ["exchange_connections"] });
 
   return (
@@ -62,9 +72,11 @@ function Exchanges() {
                   <div>
                     <div className="flex items-center gap-2"><span className="font-medium">{c.label}</span><Badge variant={STATUS_VARIANT[c.status]}>{c.status}</Badge>{c.is_testnet && <Badge variant="outline">testnet</Badge>}</div>
                     <div className="mt-1 font-mono text-xs text-muted-foreground">{exchangeName(c.exchange)} · {c.account_type} · key {c.api_key_hint ?? "—"}</div>
+                    {(() => { const bal = (c.permissions as { balances?: { asset: string; free: number; locked: number }[] } | null)?.balances; return c.status === "connected" && bal ? <p className="mt-1 font-mono text-xs">{bal.length ? bal.slice(0, 6).map((b) => `${b.asset} ${+(b.free + b.locked).toPrecision(6)}`).join(" · ") : "No balances"}{c.last_synced_at && <span className="text-muted-foreground"> · synced {new Date(c.last_synced_at).toLocaleString()}</span>}</p> : null; })()}
                     {c.last_error && <p className="mt-1 max-w-xl text-xs text-muted-foreground">{c.last_error}</p>}
                   </div>
                   <div className="flex gap-2">
+                    {c.status !== "disconnected" && <Button size="sm" variant="outline" disabled={verifying === c.id} onClick={() => runVerify(c.id)}><RefreshCw className={`mr-1 h-3.5 w-3.5 ${verifying === c.id ? "animate-spin" : ""}`} />Verify</Button>}
                     <Button size="sm" variant="outline" onClick={() => setReconnect({ id: c.id, exchange: c.exchange })}><KeyRound className="mr-1 h-3.5 w-3.5" />{c.status === "disconnected" ? "Reconnect" : "Update keys"}</Button>
                     {c.status !== "disconnected" && <Button size="sm" variant="ghost" onClick={() => setToDisconnect(c.id)}><Unplug className="mr-1 h-3.5 w-3.5" />Disconnect</Button>}
                   </div>
