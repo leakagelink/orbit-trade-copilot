@@ -140,3 +140,128 @@ export async function fetchHistory(exchange: string, pair: string, tf: string, s
   }
   return closed(out);
 }
+
+// ───────────── Live order execution (spot, market orders only) ─────────────
+export interface Fill { orderId: string; qty: number; avgPrice: number; feeQuote: number }
+
+const decimals = (step: number) => { const s = step.toString(); return s.includes("e-") ? Number(s.split("e-")[1]) : (s.split(".")[1]?.length ?? 0); };
+export const floorToStep = (qty: number, step: number) => { if (!(step > 0)) return qty; const d = decimals(step); return Number((Math.floor(qty / step + 1e-9) * step).toFixed(d)); };
+
+/** Base-quantity step size for the pair, used to round sell quantities down. */
+export async function getStepSize(exchange: string, pair: string, testnet: boolean): Promise<number> {
+  const { b, q } = split(pair);
+  switch (exchange) {
+    case "binance": {
+      const host = testnet ? "https://testnet.binance.vision" : "https://api.binance.com";
+      const j = await getJson(`${host}/api/v3/exchangeInfo?symbol=${b}${q}`);
+      const f = (j.symbols?.[0]?.filters ?? []).find((x: { filterType: string }) => x.filterType === "LOT_SIZE");
+      return Number(f?.stepSize ?? 0);
+    }
+    case "bybit": {
+      const host = testnet ? "https://api-testnet.bybit.com" : "https://api.bybit.com";
+      const j = await getJson(`${host}/v5/market/instruments-info?category=spot&symbol=${b}${q}`);
+      return Number(j.result?.list?.[0]?.lotSizeFilter?.basePrecision ?? 0);
+    }
+    case "okx": {
+      const j = await getJson(`https://www.okx.com/api/v5/public/instruments?instType=SPOT&instId=${b}-${q}`);
+      return Number(j.data?.[0]?.lotSz ?? 0);
+    }
+    case "kucoin": {
+      const j = await getJson(`https://api.kucoin.com/api/v2/symbols/${b}-${q}`);
+      return Number(j.data?.baseIncrement ?? 0);
+    }
+  }
+  throw new Error(`Live trading is not supported on ${exchange}`);
+}
+
+const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Market order. Buys spend `amount` of the quote currency; sells sell `amount` of the base currency.
+ * Returns the net base quantity received (after base-currency fees) for buys.
+ */
+export async function placeMarketOrder(exchange: string, c: Creds, testnet: boolean, pair: string, side: "buy" | "sell", amount: number, clientId: string): Promise<Fill> {
+  const { b, q } = split(pair);
+  const amt = side === "buy" ? amount.toFixed(2) : String(amount);
+  switch (exchange) {
+    case "binance": {
+      const host = testnet ? "https://testnet.binance.vision" : "https://api.binance.com";
+      const qs = new URLSearchParams({ symbol: b + q, side: side.toUpperCase(), type: "MARKET", newOrderRespType: "FULL", newClientOrderId: clientId.slice(0, 36), recvWindow: "10000", timestamp: String(Date.now()) });
+      qs.set(side === "buy" ? "quoteOrderQty" : "quantity", amt);
+      const s = qs.toString();
+      const j = await getJson(`${host}/api/v3/order?${s}&signature=${hex(await hmac(c.apiSecret, s))}`, { method: "POST", headers: { "X-MBX-APIKEY": c.apiKey } });
+      const qty = Number(j.executedQty), quote = Number(j.cummulativeQuoteQty);
+      if (!(qty > 0)) throw new Error(`Binance order ${j.status}`);
+      const avg = quote / qty;
+      let baseFee = 0, feeQuote = 0;
+      for (const f of (j.fills ?? []) as { commission: string; commissionAsset: string }[]) {
+        if (f.commissionAsset === b) { baseFee += +f.commission; feeQuote += +f.commission * avg; } else if (f.commissionAsset === q) feeQuote += +f.commission;
+      }
+      return { orderId: String(j.orderId), qty: side === "buy" ? qty - baseFee : qty, avgPrice: avg, feeQuote };
+    }
+    case "bybit": {
+      const host = testnet ? "https://api-testnet.bybit.com" : "https://api.bybit.com";
+      const call = async (method: "GET" | "POST", path: string, payload: string) => {
+        const ts = String(Date.now()), recv = "10000";
+        const headers: Record<string, string> = { "X-BAPI-API-KEY": c.apiKey, "X-BAPI-TIMESTAMP": ts, "X-BAPI-RECV-WINDOW": recv, "X-BAPI-SIGN": hex(await hmac(c.apiSecret, ts + c.apiKey + recv + payload)), "Content-Type": "application/json" };
+        const j = await getJson(method === "GET" ? `${host}${path}?${payload}` : `${host}${path}`, method === "GET" ? { headers } : { method, headers, body: payload });
+        if (j.retCode !== 0) throw new Error(`Bybit: ${j.retMsg}`);
+        return j.result;
+      };
+      const r = await call("POST", "/v5/order/create", JSON.stringify({ category: "spot", symbol: b + q, side: side === "buy" ? "Buy" : "Sell", orderType: "Market", qty: amt, marketUnit: side === "buy" ? "quoteCoin" : "baseCoin", orderLinkId: clientId.slice(0, 36) }));
+      for (let i = 0; i < 5; i++) {
+        await wait(400);
+        const o = (await call("GET", "/v5/order/realtime", `category=spot&orderId=${r.orderId}`)).list?.[0];
+        if (o && Number(o.cumExecQty) > 0 && ["Filled", "PartiallyFilledCanceled", "Cancelled"].includes(o.orderStatus)) {
+          const qty = +o.cumExecQty, avg = +o.avgPrice || +o.cumExecValue / qty, fee = +o.cumExecFee || 0;
+          return { orderId: r.orderId, qty: side === "buy" ? qty - fee : qty, avgPrice: avg, feeQuote: side === "buy" ? fee * avg : fee };
+        }
+      }
+      throw new Error(`Bybit order ${r.orderId} did not fill in time`);
+    }
+    case "okx":
+    case "kucoin": {
+      const okx = exchange === "okx";
+      if (!c.passphrase) throw new Error(`${okx ? "OKX" : "KuCoin"} requires a passphrase`);
+      if (!okx && testnet) throw new Error("KuCoin has no testnet");
+      const host = okx ? "https://www.okx.com" : "https://api.kucoin.com";
+      const call = async (method: "GET" | "POST", path: string, body = "") => {
+        const headers: Record<string, string> = { "Content-Type": "application/json" };
+        if (okx) {
+          const ts = new Date().toISOString();
+          Object.assign(headers, { "OK-ACCESS-KEY": c.apiKey, "OK-ACCESS-SIGN": b64(await hmac(c.apiSecret, ts + method + path + body)), "OK-ACCESS-TIMESTAMP": ts, "OK-ACCESS-PASSPHRASE": c.passphrase! });
+          if (testnet) headers["x-simulated-trading"] = "1";
+        } else {
+          const ts = String(Date.now());
+          Object.assign(headers, { "KC-API-KEY": c.apiKey, "KC-API-TIMESTAMP": ts, "KC-API-KEY-VERSION": "2", "KC-API-SIGN": b64(await hmac(c.apiSecret, ts + method + path + body)), "KC-API-PASSPHRASE": b64(await hmac(c.apiSecret, c.passphrase!)) });
+        }
+        const j = await getJson(host + path, { method, headers, ...(body ? { body } : {}) });
+        if (okx ? j.code !== "0" : j.code !== "200000") throw new Error(`${okx ? "OKX" : "KuCoin"}: ${j.msg || j.data?.[0]?.sMsg}`);
+        return j.data;
+      };
+      const cid = clientId.replace(/[^A-Za-z0-9]/g, "").slice(0, 32);
+      const orderId: string = okx
+        ? (await call("POST", "/api/v5/trade/order", JSON.stringify({ instId: `${b}-${q}`, tdMode: "cash", side, ordType: "market", sz: amt, tgtCcy: side === "buy" ? "quote_ccy" : "base_ccy", clOrdId: cid })))[0].ordId
+        : (await call("POST", "/api/v1/orders", JSON.stringify({ clientOid: cid, side, symbol: `${b}-${q}`, type: "market", ...(side === "buy" ? { funds: amt } : { size: amt }) }))).orderId;
+      for (let i = 0; i < 5; i++) {
+        await wait(400);
+        if (okx) {
+          const o = (await call("GET", `/api/v5/trade/order?instId=${b}-${q}&ordId=${orderId}`))[0];
+          if (o && +o.accFillSz > 0 && o.state === "filled") {
+            const fee = Math.abs(+o.fee || 0), qty = +o.accFillSz, avg = +o.avgPx;
+            const baseFee = o.feeCcy === b ? fee : 0;
+            return { orderId, qty: side === "buy" ? qty - baseFee : qty, avgPrice: avg, feeQuote: o.feeCcy === b ? fee * avg : fee };
+          }
+        } else {
+          const o = await call("GET", `/api/v1/orders/${orderId}`);
+          if (o && !o.isActive && +o.dealSize > 0) {
+            const qty = +o.dealSize, avg = +o.dealFunds / qty, fee = +o.fee || 0;
+            return { orderId, qty, avgPrice: avg, feeQuote: o.feeCurrency === b ? fee * avg : fee };
+          }
+        }
+      }
+      throw new Error(`Order ${orderId} did not fill in time`);
+    }
+  }
+  throw new Error(`Live trading is not supported on ${exchange}`);
+}
