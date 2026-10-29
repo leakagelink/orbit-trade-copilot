@@ -16,3 +16,6 @@
 - AI chat streams through `/api/chat` (server route, bearer-verified) and persists to `ai_sessions` — keeps the AI key and prompts server-side.
 - Bots execute only in `src/lib/engine.server.ts`, invoked by the cron route `/api/public/engine/tick`; the engine is paper-only and pauses live bots — bots never run from the browser and live orders need an explicit later phase.
 - Exchange I/O goes through `src/lib/exchange-adapters.server.ts` (Web Crypto HMAC, fetch only) and indicator math lives in pure `src/lib/indicators.ts` — Workers-safe and testable.
+- Backtests run in pure `src/lib/backtest.ts` via `runBacktestFn`, using the same rule/risk semantics as the engine — results stay comparable to paper trading.
+- `trades.realized_pnl` is gross; fees are stored separately and every report subtracts them — avoids double-counting.
+- Account-wide limits live in `risk_settings` and are checked by the engine before every entry — UI cannot bypass them.
