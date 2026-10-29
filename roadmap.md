@@ -39,5 +39,10 @@
 - [ ] Zerodha / Upstox — blocked: needs a paid Kite Connect / Upstox developer app
 - [ ] Coinbase live orders — different key format
 
+## Manual trading (extra)
+- [x] Trade page: TradingView lightweight chart, crypto/forex/commodities, buy/sell, SL/TP, close
+- [x] OANDA adapter (forex + commodities, practice account support)
+- [x] AI trade idea from live data + "Ask the AI" strategy link
+
 ## Phase 6
 See the specification: engine integration, paper/live trading, backtesting, risk engine, billing, admin.

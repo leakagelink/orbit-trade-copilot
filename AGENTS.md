@@ -19,3 +19,5 @@
 - Backtests run in pure `src/lib/backtest.ts` via `runBacktestFn`, using the same rule/risk semantics as the engine — results stay comparable to paper trading.
 - `trades.realized_pnl` is gross; fees are stored separately and every report subtracts them — avoids double-counting.
 - Account-wide limits live in `risk_settings` and are checked by the engine before every entry — UI cannot bypass them.
+- Manual trades go through `src/lib/manual.server.ts` (open/close shared by UI server fns, engine tick and emergency stop); forex/commodities run on OANDA (`oanda*` in exchange-adapters, apiKey=token, apiSecret=account ID), paper SL/TP and OANDA broker-close sync run in `manageManualPositions` each tick.
+- Charts use `lightweight-charts` via dynamic import inside `src/components/tv-chart.tsx` behind ClientOnly — theme tokens are oklch and must be converted (canvas probe with hex fallback) before passing to the chart.
