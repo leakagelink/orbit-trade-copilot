@@ -640,6 +640,7 @@ export type Database = {
           entry_price: number
           exchange: string
           exchange_connection_id: string | null
+          external_ref: string | null
           id: string
           is_open: boolean
           mode: Database["public"]["Enums"]["trading_mode"]
@@ -660,6 +661,7 @@ export type Database = {
           entry_price: number
           exchange: string
           exchange_connection_id?: string | null
+          external_ref?: string | null
           id?: string
           is_open?: boolean
           mode: Database["public"]["Enums"]["trading_mode"]
@@ -680,6 +682,7 @@ export type Database = {
           entry_price?: number
           exchange?: string
           exchange_connection_id?: string | null
+          external_ref?: string | null
           id?: string
           is_open?: boolean
           mode?: Database["public"]["Enums"]["trading_mode"]
