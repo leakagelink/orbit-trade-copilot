@@ -15,6 +15,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthenticatedAnalyticsRouteImport } from './routes/_authenticated/analytics'
+import { Route as AuthenticatedArbitrageRouteImport } from './routes/_authenticated/arbitrage'
 import { Route as AuthenticatedAssistantRouteImport } from './routes/_authenticated/assistant'
 import { Route as AuthenticatedBacktestsRouteImport } from './routes/_authenticated/backtests'
 import { Route as AuthenticatedBotsRouteImport } from './routes/_authenticated/bots'
@@ -57,6 +58,11 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
 const AuthenticatedAnalyticsRoute = AuthenticatedAnalyticsRouteImport.update({
   id: '/analytics',
   path: '/analytics',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedArbitrageRoute = AuthenticatedArbitrageRouteImport.update({
+  id: '/arbitrage',
+  path: '/arbitrage',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedAssistantRoute = AuthenticatedAssistantRouteImport.update({
@@ -138,6 +144,7 @@ export interface FileRoutesByFullPath {
   '/forgot-password': typeof ForgotPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
   '/analytics': typeof AuthenticatedAnalyticsRoute
+  '/arbitrage': typeof AuthenticatedArbitrageRoute
   '/assistant': typeof AuthenticatedAssistantRoute
   '/backtests': typeof AuthenticatedBacktestsRoute
   '/bots': typeof AuthenticatedBotsRoute
@@ -159,6 +166,7 @@ export interface FileRoutesByTo {
   '/forgot-password': typeof ForgotPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
   '/analytics': typeof AuthenticatedAnalyticsRoute
+  '/arbitrage': typeof AuthenticatedArbitrageRoute
   '/assistant': typeof AuthenticatedAssistantRoute
   '/backtests': typeof AuthenticatedBacktestsRoute
   '/bots': typeof AuthenticatedBotsRoute
@@ -182,6 +190,7 @@ export interface FileRoutesById {
   '/forgot-password': typeof ForgotPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
   '/_authenticated/analytics': typeof AuthenticatedAnalyticsRoute
+  '/_authenticated/arbitrage': typeof AuthenticatedArbitrageRoute
   '/_authenticated/assistant': typeof AuthenticatedAssistantRoute
   '/_authenticated/backtests': typeof AuthenticatedBacktestsRoute
   '/_authenticated/bots': typeof AuthenticatedBotsRoute
@@ -205,6 +214,7 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/reset-password'
     | '/analytics'
+    | '/arbitrage'
     | '/assistant'
     | '/backtests'
     | '/bots'
@@ -226,6 +236,7 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/reset-password'
     | '/analytics'
+    | '/arbitrage'
     | '/assistant'
     | '/backtests'
     | '/bots'
@@ -248,6 +259,7 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/reset-password'
     | '/_authenticated/analytics'
+    | '/_authenticated/arbitrage'
     | '/_authenticated/assistant'
     | '/_authenticated/backtests'
     | '/_authenticated/bots'
@@ -316,6 +328,13 @@ declare module '@tanstack/react-router' {
       path: '/analytics'
       fullPath: '/analytics'
       preLoaderRoute: typeof AuthenticatedAnalyticsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/arbitrage': {
+      id: '/_authenticated/arbitrage'
+      path: '/arbitrage'
+      fullPath: '/arbitrage'
+      preLoaderRoute: typeof AuthenticatedArbitrageRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/assistant': {
@@ -421,6 +440,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAnalyticsRoute: typeof AuthenticatedAnalyticsRoute
+  AuthenticatedArbitrageRoute: typeof AuthenticatedArbitrageRoute
   AuthenticatedAssistantRoute: typeof AuthenticatedAssistantRoute
   AuthenticatedBacktestsRoute: typeof AuthenticatedBacktestsRoute
   AuthenticatedBotsRoute: typeof AuthenticatedBotsRoute
@@ -437,6 +457,7 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAnalyticsRoute: AuthenticatedAnalyticsRoute,
+  AuthenticatedArbitrageRoute: AuthenticatedArbitrageRoute,
   AuthenticatedAssistantRoute: AuthenticatedAssistantRoute,
   AuthenticatedBacktestsRoute: AuthenticatedBacktestsRoute,
   AuthenticatedBotsRoute: AuthenticatedBotsRoute,
