@@ -1,9 +1,11 @@
 # Roadmap
 
 ## Arbitrage
-- [ ] Pro-only multi-exchange opportunity scanner with executable bid/ask prices and fee estimates
-- [ ] Prefunded two-exchange execution, durable order claims and partial-fill visibility
-- [ ] Arbitrage screen, execution history and access/math tests
+- [x] Pro-only multi-exchange opportunity scanner with executable bid/ask prices and fee estimates
+- [x] Prefunded Binance ↔ OKX spot execution with typed confirmation, durable order claims and partial-fill visibility; Bybit/KuCoin scan and paper only
+- [x] Arbitrage screen, AI review, execution history and access/math tests
+- [ ] Pro browser flow and live arbitrage verification — blocked: current account is Free; no verified prefunded exchange accounts
+- [ ] Unattended arbitrage / automatic recovery — blocked: needs tested exchange reconciliation and partial-fill recovery before removing confirmation
 
 ## Phase 1
 - [x] Database schema (20+ tables, row-level security, roles, signup trigger)
