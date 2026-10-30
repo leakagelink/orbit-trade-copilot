@@ -77,7 +77,7 @@ export async function executeArbitrage(db: Admin, userId: string, input: Execute
     return data;
   }
   if (!buyAccount?.creds || !sellAccount?.creds) throw new Error("Missing verified accounts");
-  const persist = async (patch: Parameters<typeof db.from<"arbitrage_runs">>[0] extends never ? never : Record<string, unknown>) => {
+  const persist = async (patch: import("@/integrations/supabase/types").Database["public"]["Tables"]["arbitrage_runs"]["Update"]) => {
     const { error } = await db.from("arbitrage_runs").update({ ...patch, updated_at: new Date().toISOString() }).eq("id", run.id);
     if (error) throw new Error("Execution state could not be saved; check both exchange accounts");
   };
