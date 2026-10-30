@@ -143,6 +143,7 @@ export async function closeManual(db: Admin, p: Row, reason: string) {
   await db.from("trades").insert({
     user_id: p.user_id, order_id: ord.id, exchange: p.exchange, exchange_connection_id: p.exchange_connection_id, trading_pair: p.trading_pair,
     side: p.side, quantity: qty, entry_price: entry, exit_price: exit, fees, realized_pnl: pnl, mode: p.mode, opened_at: p.opened_at, closed_at: nowIso, close_reason: reason,
+    is_scalp: p.is_scalp === true,
   });
   return { exit, pnl: pnl - fees };
 }

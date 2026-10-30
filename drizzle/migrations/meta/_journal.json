@@ -50,6 +50,13 @@
       "when": 1793351599033,
       "tag": "0006_scalping_positions",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793351705194,
+      "tag": "0007_scalping_trades_flag",
+      "breakpoints": true
     }
   ]
 }
