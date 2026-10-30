@@ -4,6 +4,38 @@ import type { Candle } from "./indicators";
 export interface Creds { apiKey: string; apiSecret: string; passphrase?: string }
 export interface Balance { asset: string; free: number; locked: number }
 
+/** Spot order-book depth. Quotes are fetched on the server, never inferred from candles. */
+export async function fetchArbitrageBook(exchange: string, pair: string, testnet = false): Promise<import("./arbitrage").Book> {
+  const [base, quote] = pair.split("/");
+  if (!base || !quote) throw new Error("Invalid market");
+  let bids: unknown[][], asks: unknown[][];
+  switch (exchange) {
+    case "binance": {
+      const j = await getJson(`${testnet ? "https://testnet.binance.vision" : "https://api.binance.com"}/api/v3/depth?symbol=${base}${quote}&limit=100`);
+      bids = j.bids; asks = j.asks; break;
+    }
+    case "bybit": {
+      const j = await getJson(`${testnet ? "https://api-testnet.bybit.com" : "https://api.bybit.com"}/v5/market/orderbook?category=spot&symbol=${base}${quote}&limit=50`);
+      if (j.retCode !== 0) throw new Error("Bybit market unavailable");
+      bids = j.result.b; asks = j.result.a; break;
+    }
+    case "okx": {
+      const j = await getJson(`https://www.okx.com/api/v5/market/books?instId=${base}-${quote}&sz=100`);
+      if (j.code !== "0" || !j.data?.[0]) throw new Error("OKX market unavailable");
+      bids = j.data[0].bids; asks = j.data[0].asks; break;
+    }
+    case "kucoin": {
+      if (testnet) throw new Error("KuCoin testnet unavailable");
+      const j = await getJson(`https://api.kucoin.com/api/v1/market/orderbook/level2_20?symbol=${base}-${quote}`);
+      if (j.code !== "200000") throw new Error("KuCoin market unavailable");
+      bids = j.data.bids; asks = j.data.asks; break;
+    }
+    default: throw new Error("Unsupported arbitrage exchange");
+  }
+  const levels = (rows: unknown[][]): [number, number][] => rows.map((r) => [Number(r[0]), Number(r[1])]);
+  return { exchange, bids: levels(bids), asks: levels(asks), fetchedAt: Date.now() };
+}
+
 const te = new TextEncoder();
 async function hmac(secret: string, msg: string) {
   const k = await crypto.subtle.importKey("raw", te.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);

@@ -14,6 +14,10 @@ describe("plan access", () => {
     expect(canOpen("/bots", true)).toBe(true);
     expect(canOpen("/assistant", true)).toBe(true);
   });
+  it("arbitrage is available to Pro users and blocked for Free users", () => {
+    expect(canOpen("/arbitrage", false)).toBe(false);
+    expect(canOpen("/arbitrage", true)).toBe(true);
+  });
 });
 
 describe("demo wallet trade math", () => {

@@ -36,6 +36,13 @@
       "when": 1793268881128,
       "tag": "0004_positions_wallet_margin",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793350095093,
+      "tag": "0005_arbitrage_runs",
+      "breakpoints": true
     }
   ]
 }
