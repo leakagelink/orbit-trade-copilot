@@ -1,5 +1,10 @@
 # Roadmap
 
+## Arbitrage
+- [ ] Pro-only multi-exchange opportunity scanner with executable bid/ask prices and fee estimates
+- [ ] Prefunded two-exchange execution, durable order claims and partial-fill visibility
+- [ ] Arbitrage screen, execution history and access/math tests
+
 ## Phase 1
 - [x] Database schema (20+ tables, row-level security, roles, signup trigger)
 - [x] Authentication (email + Google + Lovable, verify email, forgot/reset password)
