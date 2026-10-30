@@ -1,5 +1,11 @@
 # Roadmap
 
+## Scalping (Pro)
+- [x] Scalping page: 1m/5m/15m chart, one-click buy/sell with % stop/target set on the server, auto time limit, close all
+- [x] Stops/targets/time limits checked every 5s while the page is open (every minute otherwise); today's scalp stats
+- [x] Scalping bot templates (EMA 9/21, RSI dip, Stoch RSI) → strategy → deploy to bot
+- [ ] Live-account scalps (exchange/OANDA) — not tested: needs a user-connected account
+
 ## Arbitrage
 - [x] Add read-only Binance/OKX reconciliation by durable client ID; missing, open, partial or unequal fills stay locked
 - [x] Verify Free browser restriction and paper execution/math/duplicate-request/reconciliation tests (24 tests passed)

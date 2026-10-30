@@ -51,6 +51,7 @@ function ScalpingPage() {
   const [slPct, setSlPct] = useState(String(DEFAULT_SCALP.slPct));
   const [hold, setHold] = useState(String(DEFAULT_SCALP.holdMin));
   const [busy, setBusy] = useState<"buy" | "sell" | null>(null);
+  const [closing, setClosing] = useState(false);
 
   const getCandles = useServerFn(getMarketCandles);
   const place = useServerFn(placeScalp);
@@ -157,14 +158,16 @@ function ScalpingPage() {
     catch (e) { toast.error(e instanceof Error ? e.message : "Close failed"); }
   }
   async function exitAll() {
+    setClosing(true);
     try {
       const r = await closeAll();
       toast.success(`Closed ${r.closed} scalp${r.closed === 1 ? "" : "s"} · net ${fmtMoney(r.net)}`);
       r.failed.forEach((f) => toast.error(f));
       refresh();
     } catch (e) { toast.error(e instanceof Error ? e.message : "Close failed"); }
+    setClosing(false);
   }
-  async function useTemplate(t: ReturnType<typeof scalpTemplates>[number]) {
+  async function applyTemplate(t: ReturnType<typeof scalpTemplates>[number]) {
     try {
       const id = await createStrategy(t.name, t.config, "manual", t.description);
       toast.success("Scalping strategy created — review it, then deploy it to a bot");
@@ -236,7 +239,7 @@ function ScalpingPage() {
           <div className="rounded-lg border bg-card">
             <div className="flex items-center justify-between border-b px-4 py-2">
               <span className="text-sm font-medium">Open scalps</span>
-              {openCount > 0 && <Button size="sm" variant="destructive" onClick={exitAll}><XCircle className="mr-1 h-4 w-4" />Close all</Button>}
+              {openCount > 0 && <Button size="sm" variant="destructive" onClick={exitAll} disabled={closing}><XCircle className="mr-1 h-4 w-4" />{closing ? "Closing…" : "Close all"}</Button>}
             </div>
             {!openCount ? (
               <p className="p-4 text-sm text-muted-foreground">No open scalps. Stops, targets and time limits are checked every 5 seconds while this page is open, and every minute otherwise.</p>
@@ -276,7 +279,7 @@ function ScalpingPage() {
                       const net = Number(t.realized_pnl) - Number(t.fees);
                       return (
                         <tr key={t.id} className="border-t font-mono text-xs">
-                          <td className="px-4 py-2">{new Date(t.closed_at).toLocaleTimeString()}</td>
+                          <td className="px-4 py-2">{new Date(t.closed_at ?? 0).toLocaleTimeString()}</td>
                           <td className="px-4 py-2 font-sans">{t.trading_pair}</td>
                           <td className="px-4 py-2">{t.side === "buy" ? "long" : "short"}</td>
                           <td className="px-4 py-2">{fmtPx(Number(t.entry_price))} → {t.exit_price == null ? "—" : fmtPx(Number(t.exit_price))}</td>
@@ -368,7 +371,7 @@ function ScalpingPage() {
               <div key={t.name} className="space-y-1 rounded-md border p-3">
                 <div className="text-sm font-medium">{t.name}</div>
                 <p className="text-xs text-muted-foreground">{t.description} SL {t.config.risk.stop_loss_pct}% · TP {t.config.risk.take_profit_pct}%</p>
-                <Button size="sm" variant="outline" onClick={() => useTemplate(t)}>Use template</Button>
+                <Button size="sm" variant="outline" onClick={() => applyTemplate(t)}>Use template</Button>
               </div>
             ))}
             {nonCrypto && <p className="text-xs text-muted-foreground">Bots trade crypto; templates use BTC/USDT.</p>}
