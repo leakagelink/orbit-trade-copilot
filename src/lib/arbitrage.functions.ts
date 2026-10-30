@@ -35,3 +35,11 @@ export const arbitrageReviewFn = createServerFn({ method: "POST" }).middleware([
     if (!text) throw new Error("AI review unavailable; no orders were placed");
     return { text, scannedAt: scan.scannedAt };
   });
+
+export const reconcileArbitrageFn = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) => z.object({ runId: z.string().uuid() }).parse(i)).handler(async ({ data, context }) => {
+    const { requirePro } = await import("./plan.server"); await requirePro(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { reconcileArbitrage } = await import("./arbitrage.server");
+    return reconcileArbitrage(supabaseAdmin, context.userId, data.runId);
+  });

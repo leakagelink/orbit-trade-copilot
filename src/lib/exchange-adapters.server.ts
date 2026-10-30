@@ -228,6 +228,50 @@ export async function fetchHistory(exchange: string, pair: string, tf: string, s
 // ───────────── Live order execution (spot, market orders only) ─────────────
 export interface Fill { orderId: string; qty: number; avgPrice: number; feeQuote: number }
 
+/** Lookup only: unknown/expired IDs and provider errors must never imply no fill. */
+export async function lookupArbitrageOrder(exchange: string, c: Creds, testnet: boolean, pair: string, side: "buy" | "sell", clientId: string): Promise<import("./arbitrage-recovery").OrderEvidence> {
+  const { b, q } = split(pair);
+  if (exchange === "binance") {
+    const host = testnet ? "https://testnet.binance.vision" : "https://api.binance.com";
+    const signed = async (path: string, params: Record<string, string>) => {
+      const qs = new URLSearchParams({ ...params, timestamp: String(Date.now()), recvWindow: "10000" }).toString();
+      return getJson(`${host}${path}?${qs}&signature=${hex(await hmac(c.apiSecret, qs))}`, { headers: { "X-MBX-APIKEY": c.apiKey } });
+    };
+    const o = await signed("/api/v3/order", { symbol: b + q, origClientOrderId: clientId.slice(0, 36) });
+    if (o.symbol !== b + q || o.side !== side.toUpperCase() || o.clientOrderId !== clientId.slice(0, 36)) throw new Error("Exchange order identity mismatch");
+    const gross = Number(o.executedQty), quoteValue = Number(o.cummulativeQuoteQty), avgPrice = gross > 0 ? quoteValue / gross : 0;
+    let baseFee = 0, feeQuote: number | null = 0;
+    if (gross > 0) {
+      const trades = await signed("/api/v3/myTrades", { symbol: b + q, orderId: String(o.orderId), limit: "1000" });
+      let tradeQty = 0;
+      for (const t of trades) {
+        if (String(t.orderId) !== String(o.orderId)) continue;
+        tradeQty += Number(t.qty);
+        const fee = Number(t.commission);
+        if (t.commissionAsset === b) { baseFee += fee; if (feeQuote != null) feeQuote += fee * avgPrice; }
+        else if (t.commissionAsset === q) { if (feeQuote != null) feeQuote += fee; }
+        else if (fee > 0) feeQuote = null;
+      }
+      if (Math.abs(tradeQty - gross) > gross * 1e-8) throw new Error("Incomplete exchange fill history");
+    }
+    return { orderId: String(o.orderId), state: o.status === "FILLED" ? "filled" : ["CANCELED", "REJECTED", "EXPIRED", "EXPIRED_IN_MATCH"].includes(o.status) ? "cancelled" : "open", qty: side === "buy" ? gross - baseFee : gross + baseFee, avgPrice, quoteValue, feeQuote: feeQuote == null ? null : feeQuote - baseFee * avgPrice };
+  }
+  if (exchange === "okx") {
+    if (!c.passphrase) throw new Error("Missing OKX passphrase");
+    const cid = clientId.replace(/[^A-Za-z0-9]/g, "").slice(0, 32);
+    const path = `/api/v5/trade/order?instId=${b}-${q}&clOrdId=${cid}`, ts = new Date().toISOString();
+    const headers: Record<string, string> = { "OK-ACCESS-KEY": c.apiKey, "OK-ACCESS-SIGN": b64(await hmac(c.apiSecret, ts + "GET" + path)), "OK-ACCESS-TIMESTAMP": ts, "OK-ACCESS-PASSPHRASE": c.passphrase };
+    if (testnet) headers["x-simulated-trading"] = "1";
+    const j = await getJson(`https://www.okx.com${path}`, { headers });
+    const o = j.data?.[0];
+    if (j.code !== "0" || !o || o.clOrdId !== cid || o.instId !== `${b}-${q}` || o.side !== side) throw new Error("OKX order could not be verified");
+    const gross = Number(o.accFillSz), avgPrice = Number(o.avgPx || 0), fee = -Number(o.fee || 0);
+    const baseFee = o.feeCcy === b ? fee : 0;
+    return { orderId: String(o.ordId), state: o.state === "filled" ? "filled" : ["canceled", "mmp_canceled"].includes(o.state) ? "cancelled" : "open", qty: side === "buy" ? gross - baseFee : gross + baseFee, avgPrice, quoteValue: gross * avgPrice, feeQuote: o.feeCcy === b ? 0 : o.feeCcy === q || fee === 0 ? fee : null };
+  }
+  throw new Error("Order reconciliation supports Binance and OKX only");
+}
+
 const decimals = (step: number) => { const s = step.toString(); return s.includes("e-") ? Number(s.split("e-")[1]) : (s.split(".")[1]?.length ?? 0); };
 export const floorToStep = (qty: number, step: number) => { if (!(step > 0)) return qty; const d = decimals(step); return Number((Math.floor(qty / step + 1e-9) * step).toFixed(d)); };
 

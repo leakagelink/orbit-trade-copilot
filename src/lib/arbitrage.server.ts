@@ -1,5 +1,6 @@
 import { compareBooks, executionAllowed, ARBITRAGE_EXCHANGES, type ArbitrageExchange, type Opportunity } from "./arbitrage";
-import { fetchArbitrageBook, fetchBalances, floorToStep, getStepSize, placeMarketOrder, type Fill } from "./exchange-adapters.server";
+import { fetchArbitrageBook, fetchBalances, floorToStep, getStepSize, placeMarketOrder, lookupArbitrageOrder, type Fill } from "./exchange-adapters.server";
+import { recoveryDecision, type OrderEvidence } from "./arbitrage-recovery";
 import { loadAccount } from "./manual.server";
 import { accountRiskBlock } from "./engine.server";
 
@@ -19,6 +20,38 @@ export interface ExecuteInput extends ScanInput {
   requestKey: string; buyExchange: ArbitrageExchange; sellExchange: ArbitrageExchange;
   buyConnectionId: string | null; sellConnectionId: string | null;
   mode: "paper" | "live"; confirmation: string; minimumNetPct: number;
+}
+
+export async function reconcileArbitrage(db: Admin, userId: string, runId: string) {
+  const { data: run, error } = await db.from("arbitrage_runs").select("*").eq("id", runId).eq("user_id", userId).single();
+  if (error || !run) throw new Error("Execution not found");
+  if (!["claimed", "buy_filled", "needs_review"].includes(run.status)) return run;
+  const idle = Date.now() - Date.parse(run.updated_at);
+  if (!Number.isFinite(idle) || idle < (run.status === "needs_review" ? 60000 : 600000)) throw new Error("Execution may still be running. Check again later; no orders were sent.");
+  if (run.mode === "paper") throw new Error("Interrupted paper simulation needs review; no exchange funds moved");
+  const { data: orders, error: orderError } = await db.from("orders").select("id,side,exchange,exchange_connection_id,idempotency_key").eq("user_id", userId).in("idempotency_key", [`arb:${run.id}:buy`, `arb:${run.id}:sell`]);
+  if (orderError) throw new Error("Unable to read original order intents");
+  const evidence = await Promise.all((["buy", "sell"] as const).map(async (side): Promise<OrderEvidence | null> => {
+    const connectionId = side === "buy" ? run.buy_connection_id : run.sell_connection_id;
+    const exchange = side === "buy" ? run.buy_exchange : run.sell_exchange;
+    const intent = orders?.find((o) => o.idempotency_key === `arb:${run.id}:${side}` && o.side === side && o.exchange === exchange && o.exchange_connection_id === connectionId);
+    if (!intent || !connectionId) return null;
+    try {
+      const account = await loadAccount(db, userId, connectionId);
+      if (!account.creds || account.exchange !== exchange || account.testnet !== (run.mode === "testnet")) return null;
+      const result = await lookupArbitrageOrder(exchange, account.creds, account.testnet, run.trading_pair, side, intent.id);
+      if (![result.qty, result.avgPrice, result.quoteValue].every(Number.isFinite) || result.qty < 0 || result.quoteValue < 0 || (result.qty > 0 && result.avgPrice <= 0) || (result.feeQuote != null && !Number.isFinite(result.feeQuote))) return null;
+      return result;
+    } catch { return null; }
+  }));
+  const buy = evidence[0] ?? null, sell = evidence[1] ?? null;
+  const decision = recoveryDecision(buy, sell);
+  const { data: saved, error: saveError } = await db.from("arbitrage_runs").update({ status: decision.status, realized_net: decision.realizedNet,
+    buy_fill: buy ? { ...buy } : run.buy_fill, sell_fill: sell ? { ...sell } : run.sell_fill,
+    message: decision.message, updated_at: new Date().toISOString(),
+  }).eq("id", run.id).eq("user_id", userId).eq("updated_at", run.updated_at).select("*").maybeSingle();
+  if (saveError || !saved) throw new Error("Execution changed during verification. Refresh history; no orders were sent.");
+  return saved;
 }
 
 export async function executeArbitrage(db: Admin, userId: string, input: ExecuteInput) {
