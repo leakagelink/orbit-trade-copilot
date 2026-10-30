@@ -3,6 +3,7 @@
 import { fetchCandles, floorToStep, getStepSize, oandaCloseTrade, oandaMarketOrder, oandaTrade, placeMarketOrder, quoteToUsd, type Creds } from "./exchange-adapters.server";
 import { accountRiskBlock } from "./engine.server";
 import { walletClose, walletOpen, walletUnrealized } from "./wallet-math";
+import { scalpBracket, scalpExit, validateScalp, type ScalpSettings } from "./scalping";
 
 type Admin = Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"];
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -39,13 +40,17 @@ async function walletApply(db: Admin, userId: string, amount: number, kind: stri
   return Number(data);
 }
 
-export interface OpenInput { symbol: string; side: "buy" | "sell"; amount: number; sl: number | null; tp: number | null }
+export interface OpenInput { symbol: string; side: "buy" | "sell"; amount: number; sl: number | null; tp: number | null; scalp?: ScalpSettings }
 
-export async function openManual(db: Admin, userId: string, a: Account, inp: OpenInput) {
+export async function openManual(db: Admin, userId: string, a: Account, input: OpenInput) {
   const isOanda = a.exchange === "oanda";
   const live = !!a.connId;
-  if (live && !isOanda && inp.side === "sell") throw new Error("Spot crypto accounts can only open buy positions. Use the demo wallet or OANDA to go short.");
-  const price = await lastPrice(a, inp.symbol);
+  if (live && !isOanda && input.side === "sell") throw new Error("Spot crypto accounts can only open buy positions. Use the demo wallet or OANDA to go short.");
+  if (input.scalp) { const bad = validateScalp(input.scalp, !live); if (bad) throw new Error(bad); }
+  const price = await lastPrice(a, input.symbol);
+  // Scalps: stop/target are set from the live price on the server, so they are always on the right side.
+  const inp = input.scalp ? { ...input, ...scalpBracket(input.side, price, input.scalp.tpPct, input.scalp.slPct) } : input;
+  const holdUntil = input.scalp?.holdMin != null ? new Date(Date.now() + input.scalp.holdMin * 60_000).toISOString() : null;
   if (inp.sl != null && (inp.side === "buy" ? inp.sl >= price : inp.sl <= price)) throw new Error(`Stop loss must be ${inp.side === "buy" ? "below" : "above"} the current price (${price})`);
   if (inp.tp != null && (inp.side === "buy" ? inp.tp <= price : inp.tp >= price)) throw new Error(`Take profit must be ${inp.side === "buy" ? "above" : "below"} the current price (${price})`);
   const notional = isOanda ? inp.amount * price : inp.amount;
@@ -142,27 +147,38 @@ export async function closeManual(db: Admin, p: Row, reason: string) {
   return { exit, pnl: pnl - fees };
 }
 
-/** Engine hook: SL/TP for manual positions, sync broker-closed OANDA trades, refresh unrealized PnL. */
-export async function manageManualPositions(db: Admin) {
-  const { data: open } = await db.from("positions").select("*").is("bot_id", null).eq("is_open", true).limit(500);
+/** Checks one open manual position: SL/TP/time limit, broker-closed OANDA trades, unrealized PnL. Returns the close reason when it was closed. */
+export async function checkManualPosition(db: Admin, p: Row): Promise<string | null> {
+  const a = await loadAccount(db, p.user_id, p.exchange_connection_id, p.exchange);
+  const now = Date.now();
+  if (a.exchange === "oanda") {
+    const t = await oandaTrade(a.creds!, a.testnet, p.external_ref ?? "");
+    if (t.state === "CLOSED") { await closeManual(db, p, "broker_closed"); return "broker_closed"; }
+    if (p.max_hold_until != null && now >= Date.parse(p.max_hold_until)) { await closeManual(db, p, "time_stop"); return "time_stop"; }
+    await db.from("positions").update({ unrealized_pnl: t.unrealized }).eq("id", p.id);
+    return null;
+  }
+  const px = await lastPrice(a, p.trading_pair);
+  const hit = scalpExit({ side: p.side, stop_loss: p.stop_loss == null ? null : +p.stop_loss, take_profit: p.take_profit == null ? null : +p.take_profit, max_hold_until: p.max_hold_until ?? null }, px, now);
+  if (hit) { await closeManual(db, p, hit); return hit; }
+  const q = p.wallet_margin != null ? await quoteToUsd(p.trading_pair, px) : 1;
+  await db.from("positions").update({ current_price: px, unrealized_pnl: walletUnrealized(p.side, +p.entry_price, +p.quantity, px, q) }).eq("id", p.id);
+  return null;
+}
+
+/** Engine hook: runs checkManualPosition for every open manual position (optionally one user's scalps only). */
+export async function manageManualPositions(db: Admin, onlyScalpsOf?: string) {
+  let q = db.from("positions").select("*").is("bot_id", null).eq("is_open", true);
+  if (onlyScalpsOf) q = q.eq("user_id", onlyScalpsOf).eq("is_scalp", true);
+  const { data: open } = await q.limit(500);
+  const closed: { id: string; reason: string }[] = [];
   for (const p of open ?? []) {
     try {
-      const a = await loadAccount(db, p.user_id, p.exchange_connection_id, p.exchange);
-      if (a.exchange === "oanda") {
-        const t = await oandaTrade(a.creds!, a.testnet, p.external_ref ?? "");
-        if (t.state === "CLOSED") await closeManual(db, p, "broker_closed");
-        else await db.from("positions").update({ unrealized_pnl: t.unrealized }).eq("id", p.id);
-        continue;
-      }
-      const px = await lastPrice(a, p.trading_pair);
-      const long = p.side === "buy";
-      const hitSl = p.stop_loss != null && (long ? px <= +p.stop_loss : px >= +p.stop_loss);
-      const hitTp = p.take_profit != null && (long ? px >= +p.take_profit : px <= +p.take_profit);
-      if (hitSl || hitTp) { await closeManual(db, p, hitSl ? "stop_loss" : "take_profit"); continue; }
-      const q = p.wallet_margin != null ? await quoteToUsd(p.trading_pair, px) : 1;
-      await db.from("positions").update({ current_price: px, unrealized_pnl: walletUnrealized(p.side, +p.entry_price, +p.quantity, px, q) }).eq("id", p.id);
+      const r = await checkManualPosition(db, p);
+      if (r) closed.push({ id: p.id, reason: r });
     } catch {
-      /* retried next minute */
+      /* retried on the next check */
     }
   }
+  return closed;
 }
