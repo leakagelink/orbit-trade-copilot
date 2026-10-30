@@ -25,12 +25,13 @@ export const arbitrageReviewFn = createServerFn({ method: "POST" }).middleware([
     const { requirePro } = await import("./plan.server"); await requirePro(context.supabase, context.userId);
     const { scanArbitrage } = await import("./arbitrage.server"); const scan = await scanArbitrage(data);
     if (!scan.opportunities.length) throw new Error("Not enough exchange data for AI review");
-    const apiKey = process.env["LOVABLE_API_KEY"]; if (!apiKey) throw new Error("AI is not configured");
-    const { createOpenAI } = await import("@ai-sdk/openai"); const { generateText } = await import("ai");
-    const provider = createOpenAI({ baseURL: "https://ai.gateway.lovable.dev/v1", apiKey, headers: { "Lovable-API-Key": apiKey, "X-Lovable-AIG-SDK": "vercel-ai-sdk" } });
-    const { text } = await generateText({ model: provider.responses("openai/gpt-6-astra"),
-      system: "Review cryptocurrency spot arbitrage using ONLY these server-fetched depth comparisons. Give 3 short sentences on best route, estimated fees/net, and prefunding/partial-fill risk. When all nets are negative, say do not execute. Never guarantee profits, invent balances, or suggest exchange withdrawals. You cannot place orders; user confirmation is required.",
-      prompt: JSON.stringify({ pair: data.pair, feeBps: data.feeBps, slippageBps: data.slippageBps, opportunities: scan.opportunities.slice(0, 3), errors: scan.errors }),
-      providerOptions: { openai: { reasoningEffort: "low" } },
-    }); return { text, scannedAt: scan.scannedAt };
+    const { generateResponse } = await import("@lovable.dev/ai-gateway");
+    const response = await generateResponse({ model: "openai/gpt-6-astra",
+      instructions: "Review cryptocurrency spot arbitrage using ONLY these server-fetched depth comparisons. Give 3 short sentences on best route, estimated fees/net, and prefunding/partial-fill risk. When all nets are negative, say do not execute. Never guarantee profits, invent balances, or suggest exchange withdrawals. You cannot place orders; user confirmation is required.",
+      input: JSON.stringify({ pair: data.pair, feeBps: data.feeBps, slippageBps: data.slippageBps, opportunities: scan.opportunities.slice(0, 3), errors: scan.errors }),
+      reasoning: { effort: "low" },
+    });
+    const text = response.output.flatMap((item) => item.type === "message" ? item.content.flatMap((c) => c.type === "output_text" ? [c.text] : []) : []).join("\n");
+    if (!text) throw new Error("AI review unavailable; no orders were placed");
+    return { text, scannedAt: scan.scannedAt };
   });

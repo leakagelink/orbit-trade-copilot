@@ -111,7 +111,7 @@ export async function executeArbitrage(db: Admin, userId: string, input: Execute
     await record(sellId, sell);
     const matched = Math.abs(sell.qty - buy.qty) <= step * 1.01;
     // Net buy quantity already excludes base fees; subtracting reported fees is conservative.
-    const net = sell.avgPrice * sell.qty - buy.avgPrice * buy.qty - buy.feeQuote - sell.feeQuote;
+    const net = sell.avgPrice * sell.qty - input.budget - buy.feeQuote - sell.feeQuote;
     await persist({ status: matched ? "completed" : "needs_review", realized_net: matched ? net : null,
       message: matched ? "Both legs filled. Inventory moved between prefunded accounts; residual dust and fee conversions may affect net." : "Unequal fills: inspect both exchanges. Further executions are locked.",
     });
