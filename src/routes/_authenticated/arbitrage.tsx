@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { usePlan } from "@/hooks/use-plan";
 import { ARBITRAGE_EXCHANGES, ARBITRAGE_PAIRS, executionAllowed, type ArbitrageExchange, type Opportunity } from "@/lib/arbitrage";
-import { scanArbitrageFn, executeArbitrageFn, arbitrageReviewFn } from "@/lib/arbitrage.functions";
+import { scanArbitrageFn, executeArbitrageFn, arbitrageReviewFn, reconcileArbitrageFn } from "@/lib/arbitrage.functions";
 import { exchangeName } from "@/lib/exchanges";
 
 const D = "Compare crypto exchange prices, review net spreads and execute prefunded spot arbitrage with Pro.";
@@ -28,6 +28,14 @@ const money = (n: number) => n.toLocaleString(undefined, { minimumFractionDigits
 function ArbitragePage() {
   const plan = usePlan(), qc = useQueryClient();
   const scanFn = useServerFn(scanArbitrageFn), executeFn = useServerFn(executeArbitrageFn), reviewFn = useServerFn(arbitrageReviewFn);
+  const reconcileFn = useServerFn(reconcileArbitrageFn);
+  const [checking, setChecking] = useState<string | null>(null);
+  async function checkOrders(runId: string) {
+    setChecking(runId);
+    try { const result = await reconcileFn({ data: { runId } }); result.status === "completed" ? toast.success(result.message) : toast.warning(result.message); }
+    catch (e) { toast.error(e instanceof Error ? e.message : "Orders could not be verified; executions remain locked"); }
+    finally { setChecking(null); await qc.invalidateQueries({ queryKey: ["arbitrage_runs"] }); }
+  }
   const [pair, setPair] = useState<typeof ARBITRAGE_PAIRS[number]>("BTC/USDT");
   const [budget, setBudget] = useState("1000"), [feeBps, setFeeBps] = useState("10"), [slippageBps, setSlippageBps] = useState("5"), [minimum, setMinimum] = useState("0.1");
   const [venues, setVenues] = useState<ArbitrageExchange[]>([...ARBITRAGE_EXCHANGES]);
@@ -92,7 +100,7 @@ function ArbitragePage() {
       </div>
       <div className="flex gap-3 border-y py-4 text-sm text-muted-foreground"><ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-primary" /><p>{mode === "paper" ? "Paper results are simulations; no wallet money or exchange funds move." : "Prefund USDT on the buy exchange and crypto on the sell exchange. Live execution: Binance ↔ OKX spot only. No transfers or withdrawals."} Fees are estimates; prices can change and either leg can fail. Profit is not guaranteed.</p></div>
       {connections.isError && <p className="text-sm text-destructive">Exchange accounts unavailable.</p>}
-      {blocked && <p role="alert" className="text-sm text-destructive">A previous execution is pending or needs review. New executions are locked; check both exchange accounts.</p>}
+      {blocked && <div role="alert" className="space-y-2 text-sm text-destructive"><p>A previous execution is pending or needs review. New executions are locked; check both exchange accounts.</p>{history.data?.filter((r) => r.mode !== "paper" && ["claimed", "buy_filled", "needs_review"].includes(r.status)).map((r) => <Button key={r.id} variant="outline" disabled={checking !== null} onClick={() => checkOrders(r.id)}><RefreshCw className={`mr-2 h-4 w-4 ${checking === r.id ? "animate-spin" : ""}`} />{checking === r.id ? "Checking…" : `Check exchange orders · ${r.trading_pair}`}</Button>)}</div>}
       {review && <section className="border-l-2 border-primary pl-4"><h2 className="mb-2 flex items-center gap-2 text-sm font-medium"><Sparkles className="h-4 w-4 text-primary" />AI assessment</h2><p className="max-w-4xl whitespace-pre-wrap text-sm text-muted-foreground">{review}</p></section>}
       <section>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><h2 className="font-medium">Exchange spreads</h2>{scan && <span className="font-mono text-xs text-muted-foreground">Snapshot {new Date(scan.scannedAt).toLocaleTimeString()}</span>}</div>
