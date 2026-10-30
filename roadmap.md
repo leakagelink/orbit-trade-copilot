@@ -1,6 +1,9 @@
 # Roadmap
 
 ## Arbitrage
+- [ ] Add read-only exchange reconciliation for interrupted executions, preserving locks on missing or unequal fills
+- [ ] Verify authenticated paper scan/execution/history and Free access restrictions
+- [ ] Verify exchange connections and small confirmed test/live trades — requires user-connected prefunded accounts and explicit trade confirmation
 - [x] Pro-only multi-exchange opportunity scanner with executable bid/ask prices and fee estimates
 - [x] Prefunded Binance ↔ OKX spot execution with typed confirmation, durable order claims and partial-fill visibility; Bybit/KuCoin scan and paper only
 - [x] Arbitrage screen, AI review, execution history and access/math tests
