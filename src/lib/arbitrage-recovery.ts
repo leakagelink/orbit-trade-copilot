@@ -9,6 +9,8 @@ export interface OrderEvidence {
 }
 
 export function recoveryDecision(buy: OrderEvidence | null, sell: OrderEvidence | null) {
+  const valid = (o: OrderEvidence) => [o.qty, o.avgPrice, o.quoteValue].every(Number.isFinite) && o.qty >= 0 && o.quoteValue >= 0 && (o.qty === 0 || o.avgPrice > 0) && (o.feeQuote == null || Number.isFinite(o.feeQuote));
+  if ((buy && !valid(buy)) || (sell && !valid(sell))) return { status: "needs_review", realizedNet: null, message: "Invalid exchange evidence. New executions remain locked. No orders were sent during verification." } as const;
   if (!buy || !sell) return { status: "needs_review", realizedNet: null, message: "An order could not be verified. New executions remain locked; inspect both exchanges. No orders were sent." } as const;
   if (buy.state === "cancelled" && sell.state === "cancelled" && buy.qty === 0 && sell.qty === 0) {
     return { status: "blocked", realizedNet: null, message: "Both exchanges confirm terminal orders with zero fills. No orders were sent during reconciliation." } as const;

@@ -142,12 +142,12 @@ export async function executeArbitrage(db: Admin, userId: string, input: Execute
     const sell = await placeMarketOrder(sellAccount.exchange, sellAccount.creds, sellAccount.testnet, input.pair, "sell", sellQty, sellId);
     await persist({ sell_fill: { ...sell } });
     await record(sellId, sell);
-    const matched = Math.abs(sell.qty - buy.qty) <= step * 1.01;
-    // Net buy quantity already excludes base fees; subtracting reported fees is conservative.
-    const net = sell.avgPrice * sell.qty - input.budget - buy.feeQuote - sell.feeQuote;
-    await persist({ status: matched ? "completed" : "needs_review", realized_net: matched ? net : null,
-      message: matched ? "Both legs filled. Inventory moved between prefunded accounts; residual dust and fee conversions may affect net." : "Unequal fills: inspect both exchanges. Further executions are locked.",
-    });
+    const [verifiedBuy, verifiedSell] = await Promise.all([
+      lookupArbitrageOrder(buyAccount.exchange, buyAccount.creds, buyAccount.testnet, input.pair, "buy", buyId),
+      lookupArbitrageOrder(sellAccount.exchange, sellAccount.creds, sellAccount.testnet, input.pair, "sell", sellId),
+    ]);
+    const outcome = recoveryDecision(verifiedBuy, verifiedSell);
+    await persist({ status: outcome.status, realized_net: outcome.realizedNet, buy_fill: { ...verifiedBuy }, sell_fill: { ...verifiedSell }, message: outcome.message });
   } catch {
     await persist({ status: sent ? "needs_review" : "blocked", message: sent ? "An order may have filled. Check BOTH exchanges and reconcile orders; do not retry. Further arbitrage is locked." : "Preflight failed; no exchange order was submitted." });
   }

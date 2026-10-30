@@ -246,6 +246,7 @@ export async function lookupArbitrageOrder(exchange: string, c: Creds, testnet: 
       let tradeQty = 0;
       for (const t of trades) {
         if (String(t.orderId) !== String(o.orderId)) continue;
+        if (![t.qty, t.commission].every((v) => v !== "" && Number.isFinite(Number(v))) || Number(t.commission) < 0) throw new Error("Invalid exchange fee details");
         tradeQty += Number(t.qty);
         const fee = Number(t.commission);
         if (t.commissionAsset === b) { baseFee += fee; if (feeQuote != null) feeQuote += fee * avgPrice; }
@@ -265,9 +266,13 @@ export async function lookupArbitrageOrder(exchange: string, c: Creds, testnet: 
     const j = await getJson(`https://www.okx.com${path}`, { headers });
     const o = j.data?.[0];
     if (j.code !== "0" || !o || o.clOrdId !== cid || o.instId !== `${b}-${q}` || o.side !== side) throw new Error("OKX order could not be verified");
-    const gross = Number(o.accFillSz), avgPrice = Number(o.avgPx || 0), fee = -Number(o.fee || 0);
-    const baseFee = o.feeCcy === b ? fee : 0;
-    return { orderId: String(o.ordId), state: o.state === "filled" ? "filled" : ["canceled", "mmp_canceled"].includes(o.state) ? "cancelled" : "open", qty: side === "buy" ? gross - baseFee : gross + baseFee, avgPrice, quoteValue: gross * avgPrice, feeQuote: o.feeCcy === b ? 0 : o.feeCcy === q || fee === 0 ? fee : null };
+    const gross = Number(o.accFillSz), avgPrice = Number(o.avgPx || 0);
+    const feesKnown = typeof o.fee === "string" && o.fee !== "" && Number.isFinite(Number(o.fee)) && typeof o.rebate === "string" && o.rebate !== "" && Number.isFinite(Number(o.rebate));
+    if (gross > 0 && !feesKnown) throw new Error("Incomplete OKX fee details");
+    const fee = -Number(o.fee || 0), rebate = Number(o.rebate || 0);
+    const baseFee = (o.feeCcy === b ? fee : 0) - (o.rebateCcy === b ? rebate : 0);
+    const valued = (o.feeCcy === b || o.feeCcy === q || fee === 0) && (o.rebateCcy === b || o.rebateCcy === q || rebate === 0);
+    return { orderId: String(o.ordId), state: o.state === "filled" ? "filled" : ["canceled", "mmp_canceled"].includes(o.state) ? "cancelled" : "open", qty: side === "buy" ? gross - baseFee : gross + baseFee, avgPrice, quoteValue: gross * avgPrice, feeQuote: valued ? (o.feeCcy === q ? fee : 0) - (o.rebateCcy === q ? rebate : 0) : null };
   }
   throw new Error("Order reconciliation supports Binance and OKX only");
 }

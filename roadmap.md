@@ -1,14 +1,14 @@
 # Roadmap
 
 ## Arbitrage
-- [ ] Add read-only exchange reconciliation for interrupted executions, preserving locks on missing or unequal fills
-- [ ] Verify authenticated paper scan/execution/history and Free access restrictions
+- [x] Add read-only Binance/OKX reconciliation by durable client ID; missing, open, partial or unequal fills stay locked
+- [x] Verify Free browser restriction and paper execution/math/duplicate-request/reconciliation tests (24 tests passed)
+- [ ] Verify authenticated Pro paper scan/execution/history in browser — blocked: only current account is Free; no Pro test session available
 - [ ] Verify exchange connections and small confirmed test/live trades — requires user-connected prefunded accounts and explicit trade confirmation
 - [x] Pro-only multi-exchange opportunity scanner with executable bid/ask prices and fee estimates
 - [x] Prefunded Binance ↔ OKX spot execution with typed confirmation, durable order claims and partial-fill visibility; Bybit/KuCoin scan and paper only
 - [x] Arbitrage screen, AI review, execution history and access/math tests
-- [ ] Pro browser flow and live arbitrage verification — blocked: current account is Free; no verified prefunded exchange accounts
-- [ ] Unattended arbitrage / automatic recovery — blocked: needs tested exchange reconciliation and partial-fill recovery before removing confirmation
+- [ ] Unattended arbitrage / automatic inventory recovery — deferred: user chose advisory AI; needs exchange-tested reconciliation and separately confirmed recovery orders
 
 ## Phase 1
 - [x] Database schema (20+ tables, row-level security, roles, signup trigger)
