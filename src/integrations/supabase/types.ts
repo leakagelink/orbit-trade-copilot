@@ -721,6 +721,8 @@ export type Database = {
           external_ref: string | null
           id: string
           is_open: boolean
+          is_scalp: boolean
+          max_hold_until: string | null
           mode: Database["public"]["Enums"]["trading_mode"]
           opened_at: string
           quantity: number
@@ -743,6 +745,8 @@ export type Database = {
           external_ref?: string | null
           id?: string
           is_open?: boolean
+          is_scalp?: boolean
+          max_hold_until?: string | null
           mode: Database["public"]["Enums"]["trading_mode"]
           opened_at?: string
           quantity: number
@@ -765,6 +769,8 @@ export type Database = {
           external_ref?: string | null
           id?: string
           is_open?: boolean
+          is_scalp?: boolean
+          max_hold_until?: string | null
           mode?: Database["public"]["Enums"]["trading_mode"]
           opened_at?: string
           quantity?: number
@@ -991,6 +997,7 @@ export type Database = {
           exit_price: number | null
           fees: number
           id: string
+          is_scalp: boolean
           mode: Database["public"]["Enums"]["trading_mode"]
           opened_at: string
           order_id: string | null
@@ -1013,6 +1020,7 @@ export type Database = {
           exit_price?: number | null
           fees?: number
           id?: string
+          is_scalp?: boolean
           mode: Database["public"]["Enums"]["trading_mode"]
           opened_at: string
           order_id?: string | null
@@ -1035,6 +1043,7 @@ export type Database = {
           exit_price?: number | null
           fees?: number
           id?: string
+          is_scalp?: boolean
           mode?: Database["public"]["Enums"]["trading_mode"]
           opened_at?: string
           order_id?: string | null

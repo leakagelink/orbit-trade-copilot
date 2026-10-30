@@ -23,6 +23,7 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedExchangesRouteImport } from './routes/_authenticated/exchanges'
 import { Route as AuthenticatedPlansRouteImport } from './routes/_authenticated/plans'
 import { Route as AuthenticatedRiskRouteImport } from './routes/_authenticated/risk'
+import { Route as AuthenticatedScalpingRouteImport } from './routes/_authenticated/scalping'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedTradeRouteImport } from './routes/_authenticated/trade'
 import { Route as AuthenticatedWalletRouteImport } from './routes/_authenticated/wallet'
@@ -100,6 +101,11 @@ const AuthenticatedRiskRoute = AuthenticatedRiskRouteImport.update({
   path: '/risk',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedScalpingRoute = AuthenticatedScalpingRouteImport.update({
+  id: '/scalping',
+  path: '/scalping',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -152,6 +158,7 @@ export interface FileRoutesByFullPath {
   '/exchanges': typeof AuthenticatedExchangesRoute
   '/plans': typeof AuthenticatedPlansRoute
   '/risk': typeof AuthenticatedRiskRoute
+  '/scalping': typeof AuthenticatedScalpingRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/trade': typeof AuthenticatedTradeRoute
   '/wallet': typeof AuthenticatedWalletRoute
@@ -174,6 +181,7 @@ export interface FileRoutesByTo {
   '/exchanges': typeof AuthenticatedExchangesRoute
   '/plans': typeof AuthenticatedPlansRoute
   '/risk': typeof AuthenticatedRiskRoute
+  '/scalping': typeof AuthenticatedScalpingRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/trade': typeof AuthenticatedTradeRoute
   '/wallet': typeof AuthenticatedWalletRoute
@@ -198,6 +206,7 @@ export interface FileRoutesById {
   '/_authenticated/exchanges': typeof AuthenticatedExchangesRoute
   '/_authenticated/plans': typeof AuthenticatedPlansRoute
   '/_authenticated/risk': typeof AuthenticatedRiskRoute
+  '/_authenticated/scalping': typeof AuthenticatedScalpingRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/trade': typeof AuthenticatedTradeRoute
   '/_authenticated/wallet': typeof AuthenticatedWalletRoute
@@ -222,6 +231,7 @@ export interface FileRouteTypes {
     | '/exchanges'
     | '/plans'
     | '/risk'
+    | '/scalping'
     | '/settings'
     | '/trade'
     | '/wallet'
@@ -244,6 +254,7 @@ export interface FileRouteTypes {
     | '/exchanges'
     | '/plans'
     | '/risk'
+    | '/scalping'
     | '/settings'
     | '/trade'
     | '/wallet'
@@ -267,6 +278,7 @@ export interface FileRouteTypes {
     | '/_authenticated/exchanges'
     | '/_authenticated/plans'
     | '/_authenticated/risk'
+    | '/_authenticated/scalping'
     | '/_authenticated/settings'
     | '/_authenticated/trade'
     | '/_authenticated/wallet'
@@ -386,6 +398,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRiskRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/scalping': {
+      id: '/_authenticated/scalping'
+      path: '/scalping'
+      fullPath: '/scalping'
+      preLoaderRoute: typeof AuthenticatedScalpingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/settings': {
       id: '/_authenticated/settings'
       path: '/settings'
@@ -448,6 +467,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedExchangesRoute: typeof AuthenticatedExchangesRoute
   AuthenticatedPlansRoute: typeof AuthenticatedPlansRoute
   AuthenticatedRiskRoute: typeof AuthenticatedRiskRoute
+  AuthenticatedScalpingRoute: typeof AuthenticatedScalpingRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedTradeRoute: typeof AuthenticatedTradeRoute
   AuthenticatedWalletRoute: typeof AuthenticatedWalletRoute
@@ -465,6 +485,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedExchangesRoute: AuthenticatedExchangesRoute,
   AuthenticatedPlansRoute: AuthenticatedPlansRoute,
   AuthenticatedRiskRoute: AuthenticatedRiskRoute,
+  AuthenticatedScalpingRoute: AuthenticatedScalpingRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedTradeRoute: AuthenticatedTradeRoute,
   AuthenticatedWalletRoute: AuthenticatedWalletRoute,

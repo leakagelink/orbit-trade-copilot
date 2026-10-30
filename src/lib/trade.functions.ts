@@ -19,6 +19,17 @@ async function account(userId: string, connectionId: string | null, paperExchang
   return { db: supabaseAdmin, a: await loadAccount(supabaseAdmin, userId, connectionId, paperExchange) };
 }
 
+/** Loads the account for an order and checks the market can trade there. */
+async function tradingAccount(userId: string, data: { symbol: string; amount: number; connectionId: string | null; paperExchange: string }) {
+  const { db, a } = await account(userId, data.connectionId, priceSource(data.symbol, data.paperExchange));
+  const m = marketOf(data.symbol)!, cat = m.category;
+  if (cat !== "crypto" && a.connId && a.exchange !== "oanda") throw new Error("Forex and commodities trade through the demo wallet or an OANDA account");
+  if (a.exchange === "oanda" && !m.oanda) throw new Error(`${data.symbol} is not available on OANDA — use the demo wallet`);
+  if (cat === "crypto" && a.exchange === "oanda") throw new Error("Pick a crypto exchange account (or paper) for crypto");
+  if (a.exchange === "oanda" && !Number.isInteger(data.amount)) throw new Error("OANDA trades whole units");
+  return { db, a };
+}
+
 async function candlesFor(userId: string, connectionId: string | null, paperExchange: string, sym: string, tf: string) {
   const { a } = await account(userId, connectionId, priceSource(sym, paperExchange));
   const ad = await import("./exchange-adapters.server");
@@ -45,12 +56,7 @@ export const placeManualOrder = createServerFn({ method: "POST" })
     }).parse(i),
   )
   .handler(async ({ data, context }) => {
-    const { db, a } = await account(context.userId, data.connectionId, priceSource(data.symbol, data.paperExchange));
-    const m = marketOf(data.symbol)!, cat = m.category;
-    if (cat !== "crypto" && a.connId && a.exchange !== "oanda") throw new Error("Forex and commodities trade through the demo wallet or an OANDA account");
-    if (a.exchange === "oanda" && !m.oanda) throw new Error(`${data.symbol} is not available on OANDA — use the demo wallet`);
-    if (cat === "crypto" && a.exchange === "oanda") throw new Error("Pick a crypto exchange account (or paper) for crypto");
-    if (a.exchange === "oanda" && !Number.isInteger(data.amount)) throw new Error("OANDA trades whole units");
+    const { db, a } = await tradingAccount(context.userId, data);
     const { openManual } = await import("./manual.server");
     return openManual(db, context.userId, a, { symbol: data.symbol, side: data.side, amount: data.amount, sl: data.sl, tp: data.tp });
   });
@@ -67,6 +73,55 @@ export const closeManualPosition = createServerFn({ method: "POST" })
     const r = await closeManual(supabaseAdmin, p, "manual");
     await context.supabase.from("audit_logs").insert({ user_id: context.userId, action: "trade.manual_close", entity_type: "position", entity_id: data.id, details: r });
     return r;
+  });
+
+// ---- Scalping (Pro): one-click trades whose stop/target/time limit are set on the server from the live price ----
+export const placeScalp = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) =>
+    venue.extend({
+      symbol, side: z.enum(["buy", "sell"]), amount: z.number().positive().max(1e9),
+      tpPct: z.number().positive(), slPct: z.number().positive(), holdMin: z.number().int().positive().nullable(),
+    }).parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    const { requirePro } = await import("./plan.server");
+    await requirePro(context.supabase, context.userId);
+    const { db, a } = await tradingAccount(context.userId, data);
+    const { openManual } = await import("./manual.server");
+    return openManual(db, context.userId, a, {
+      symbol: data.symbol, side: data.side, amount: data.amount, sl: null, tp: null,
+      scalp: { tpPct: data.tpPct, slPct: data.slPct, holdMin: data.holdMin },
+    });
+  });
+
+/** Checks the caller's open scalps right now (the engine also checks every minute). Returns the scalps that closed. */
+export const checkScalps = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { requirePro } = await import("./plan.server");
+    await requirePro(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { manageManualPositions } = await import("./manual.server");
+    return { closed: await manageManualPositions(supabaseAdmin, context.userId) };
+  });
+
+/** Closes all of the caller's open scalps at market. Allowed on any plan so positions can always be exited. */
+export const closeAllScalps = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: own } = await context.supabase.from("positions").select("id").eq("is_open", true).eq("is_scalp", true).is("bot_id", null);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { closeManual } = await import("./manual.server");
+    let closed = 0, net = 0; const failed: string[] = [];
+    for (const { id } of own ?? []) {
+      const { data: p } = await supabaseAdmin.from("positions").select("*").eq("id", id).eq("is_open", true).maybeSingle();
+      if (!p) continue;
+      try { const r = await closeManual(supabaseAdmin, p, "manual"); closed++; net += r.pnl; }
+      catch (e) { failed.push(`${p.trading_pair}: ${e instanceof Error ? e.message : "close failed"}`); }
+    }
+    await context.supabase.from("audit_logs").insert({ user_id: context.userId, action: "trade.scalp_close_all", entity_type: "position", details: { closed, net, failed } });
+    return { closed, net, failed };
   });
 
 const ideaSchema = z.object({
