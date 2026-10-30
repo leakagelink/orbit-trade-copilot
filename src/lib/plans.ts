@@ -28,6 +28,7 @@ export const PLAN_FEATURES: Record<PlanId, { name: string; features: string[] }>
       "AI one-click trades on the Trade page",
       "Strategy builder",
       "Algo trading bots (paper & live)",
+      "Multi-exchange arbitrage",
       "Backtesting & analytics",
     ],
   },

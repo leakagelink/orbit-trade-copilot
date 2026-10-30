@@ -89,6 +89,84 @@ export type Database = {
           },
         ]
       }
+      arbitrage_runs: {
+        Row: {
+          budget: number
+          buy_connection_id: string | null
+          buy_exchange: string
+          buy_fill: Json | null
+          created_at: string
+          estimated_net: number | null
+          id: string
+          message: string | null
+          mode: string
+          realized_net: number | null
+          request_key: string
+          sell_connection_id: string | null
+          sell_exchange: string
+          sell_fill: Json | null
+          status: string
+          trading_pair: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          budget: number
+          buy_connection_id?: string | null
+          buy_exchange: string
+          buy_fill?: Json | null
+          created_at?: string
+          estimated_net?: number | null
+          id?: string
+          message?: string | null
+          mode?: string
+          realized_net?: number | null
+          request_key: string
+          sell_connection_id?: string | null
+          sell_exchange: string
+          sell_fill?: Json | null
+          status?: string
+          trading_pair: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          budget?: number
+          buy_connection_id?: string | null
+          buy_exchange?: string
+          buy_fill?: Json | null
+          created_at?: string
+          estimated_net?: number | null
+          id?: string
+          message?: string | null
+          mode?: string
+          realized_net?: number | null
+          request_key?: string
+          sell_connection_id?: string | null
+          sell_exchange?: string
+          sell_fill?: Json | null
+          status?: string
+          trading_pair?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "arbitrage_runs_buy_connection_id_fkey"
+            columns: ["buy_connection_id"]
+            isOneToOne: false
+            referencedRelation: "exchange_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "arbitrage_runs_sell_connection_id_fkey"
+            columns: ["sell_connection_id"]
+            isOneToOne: false
+            referencedRelation: "exchange_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string
