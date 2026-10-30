@@ -2,7 +2,7 @@
 
 ## Arbitrage
 - [x] Add read-only Binance/OKX reconciliation by durable client ID; missing, open, partial or unequal fills stay locked
-- [x] Verify Free browser restriction and paper execution/math/duplicate-request tests (20 tests passed)
+- [x] Verify Free browser restriction and paper execution/math/duplicate-request/reconciliation tests (24 tests passed)
 - [ ] Verify authenticated Pro paper scan/execution/history in browser — blocked: only current account is Free; no Pro test session available
 - [ ] Verify exchange connections and small confirmed test/live trades — requires user-connected prefunded accounts and explicit trade confirmation
 - [x] Pro-only multi-exchange opportunity scanner with executable bid/ask prices and fee estimates
