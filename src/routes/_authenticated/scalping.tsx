@@ -276,7 +276,7 @@ function ScalpingPage() {
                       const net = Number(t.realized_pnl) - Number(t.fees);
                       return (
                         <tr key={t.id} className="border-t font-mono text-xs">
-                          <td className="px-4 py-2">{new Date(t.closed_at).toLocaleTimeString()}</td>
+                          <td className="px-4 py-2">{new Date(t.closed_at ?? 0).toLocaleTimeString()}</td>
                           <td className="px-4 py-2 font-sans">{t.trading_pair}</td>
                           <td className="px-4 py-2">{t.side === "buy" ? "long" : "short"}</td>
                           <td className="px-4 py-2">{fmtPx(Number(t.entry_price))} → {t.exit_price == null ? "—" : fmtPx(Number(t.exit_price))}</td>

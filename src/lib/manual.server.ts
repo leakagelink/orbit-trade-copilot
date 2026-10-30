@@ -98,7 +98,7 @@ export async function openManual(db: Admin, userId: string, a: Account, input: O
     entry_price: fill, current_price: price, mode: live ? "live" : "paper", unrealized_pnl: -fee, stop_loss: inp.sl, take_profit: inp.tp, external_ref: extRef,
     wallet_margin: live ? null : inp.amount, is_scalp: !!input.scalp, max_hold_until: holdUntil,
   });
-  await db.from("audit_logs").insert({ user_id: userId, action: "trade.manual_open", entity_type: "position", entity_id: positionId, details: { symbol: inp.symbol, side: inp.side, amount: inp.amount, live, entry_fee: fee, scalp: input.scalp ?? null } });
+  await db.from("audit_logs").insert({ user_id: userId, action: "trade.manual_open", entity_type: "position", entity_id: positionId, details: { symbol: inp.symbol, side: inp.side, amount: inp.amount, live, entry_fee: fee, scalp: input.scalp ? { ...input.scalp } : null } });
   return { positionId, price: fill, qty, sl: inp.sl, tp: inp.tp };
 }
 
