@@ -51,6 +51,7 @@ function ScalpingPage() {
   const [slPct, setSlPct] = useState(String(DEFAULT_SCALP.slPct));
   const [hold, setHold] = useState(String(DEFAULT_SCALP.holdMin));
   const [busy, setBusy] = useState<"buy" | "sell" | null>(null);
+  const [closing, setClosing] = useState(false);
 
   const getCandles = useServerFn(getMarketCandles);
   const place = useServerFn(placeScalp);
@@ -157,12 +158,14 @@ function ScalpingPage() {
     catch (e) { toast.error(e instanceof Error ? e.message : "Close failed"); }
   }
   async function exitAll() {
+    setClosing(true);
     try {
       const r = await closeAll();
       toast.success(`Closed ${r.closed} scalp${r.closed === 1 ? "" : "s"} · net ${fmtMoney(r.net)}`);
       r.failed.forEach((f) => toast.error(f));
       refresh();
     } catch (e) { toast.error(e instanceof Error ? e.message : "Close failed"); }
+    setClosing(false);
   }
   async function applyTemplate(t: ReturnType<typeof scalpTemplates>[number]) {
     try {
@@ -236,7 +239,7 @@ function ScalpingPage() {
           <div className="rounded-lg border bg-card">
             <div className="flex items-center justify-between border-b px-4 py-2">
               <span className="text-sm font-medium">Open scalps</span>
-              {openCount > 0 && <Button size="sm" variant="destructive" onClick={exitAll}><XCircle className="mr-1 h-4 w-4" />Close all</Button>}
+              {openCount > 0 && <Button size="sm" variant="destructive" onClick={exitAll} disabled={closing}><XCircle className="mr-1 h-4 w-4" />{closing ? "Closing…" : "Close all"}</Button>}
             </div>
             {!openCount ? (
               <p className="p-4 text-sm text-muted-foreground">No open scalps. Stops, targets and time limits are checked every 5 seconds while this page is open, and every minute otherwise.</p>
