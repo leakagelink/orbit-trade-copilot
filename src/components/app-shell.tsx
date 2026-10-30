@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, type ReactNode } from "react";
 import {
   LayoutDashboard, Bot, Cable, Blocks, Settings, LogOut, Moon, Sun, Menu, MessageSquareText, Activity,
-  FlaskConical, ChartColumn, ShieldAlert, CandlestickChart, Wallet, Crown, Lock, ArrowLeftRight,
+  FlaskConical, ChartColumn, ShieldAlert, CandlestickChart, Wallet, Crown, Lock, ArrowLeftRight, Zap,
 } from "lucide-react";
 import { usePlan } from "@/hooks/use-plan";
 import { canOpen, PLAN_FEATURES } from "@/lib/plans";
@@ -19,6 +19,7 @@ const NAV = [
   { to: "/assistant", label: "AI Assistant", icon: MessageSquareText },
   { to: "/strategies", label: "Strategies", icon: Blocks },
   { to: "/bots", label: "Trading Bots", icon: Bot },
+  { to: "/scalping", label: "Scalping", icon: Zap },
   { to: "/arbitrage", label: "Arbitrage", icon: ArrowLeftRight },
   { to: "/backtests", label: "Backtests", icon: FlaskConical },
   { to: "/analytics", label: "Analytics", icon: ChartColumn },

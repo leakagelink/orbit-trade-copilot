@@ -164,7 +164,7 @@ function ScalpingPage() {
       refresh();
     } catch (e) { toast.error(e instanceof Error ? e.message : "Close failed"); }
   }
-  async function useTemplate(t: ReturnType<typeof scalpTemplates>[number]) {
+  async function applyTemplate(t: ReturnType<typeof scalpTemplates>[number]) {
     try {
       const id = await createStrategy(t.name, t.config, "manual", t.description);
       toast.success("Scalping strategy created — review it, then deploy it to a bot");
@@ -368,7 +368,7 @@ function ScalpingPage() {
               <div key={t.name} className="space-y-1 rounded-md border p-3">
                 <div className="text-sm font-medium">{t.name}</div>
                 <p className="text-xs text-muted-foreground">{t.description} SL {t.config.risk.stop_loss_pct}% · TP {t.config.risk.take_profit_pct}%</p>
-                <Button size="sm" variant="outline" onClick={() => useTemplate(t)}>Use template</Button>
+                <Button size="sm" variant="outline" onClick={() => applyTemplate(t)}>Use template</Button>
               </div>
             ))}
             {nonCrypto && <p className="text-xs text-muted-foreground">Bots trade crypto; templates use BTC/USDT.</p>}
