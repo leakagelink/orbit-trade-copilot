@@ -36,3 +36,5 @@
 - New AI calls use the server-only `@lovable.dev/ai-gateway` SDK with generated contracts loaded through `src/ai-gateway.types.ts`; existing AI integrations keep their model selections — typed native requests prevent provider-contract drift.
 - Arbitrage reconciliation is lookup-only by durable client order IDs, with a cooling period and compare-and-set persistence; missing, open, partial or unequal fills keep the lock — prevents blind resubmission and racing active execution. Base fees adjust inventory; only quote fees are additionally deducted from actual cash flows.
 - Scalps are manual positions flagged `is_scalp` (positions + trades) with `max_hold_until`; rules live in pure `src/lib/scalping.ts`, new entries require highest-tier access and exits run through `checkManualPosition` (engine tick + owner-authenticated `checkScalps` polling) — one exit path for manual trades.
+
+- Growth features (referrals, demo leaderboard, marketplace, admin overview) read through security-definer RPCs that return only aggregated or opted-in data, and admin RPCs check has_role themselves — keeps other users' private data out of the browser.

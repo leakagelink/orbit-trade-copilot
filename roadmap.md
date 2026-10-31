@@ -1,5 +1,17 @@
 # Roadmap
 
+## Launch readiness and growth
+- [x] Terms, Privacy, Risk Disclosure and Refund pages linked from the homepage
+- [x] Admin panel (role-checked overview and user list)
+- [x] Getting-started checklist and beginner lessons
+- [x] Invite links with referral tracking (rewards reviewed manually)
+- [x] Opt-in demo leaderboard (paper trades, 30 days, net of fees) and Pro strategy marketplace
+- [x] Hindi menu option and installable phone app icon
+- [ ] Paid checkout — waiting for Pro/Elite monthly and yearly prices
+- [ ] Email notifications — waiting for the owner's email domain setup
+- [ ] Legal pages company name, country and contact — placeholders until owner provides them
+- [ ] Copy trading and Zerodha/Upstox — deferred by owner
+
 ## Support-only mailbox
 - [x] Private threaded in-app user/support messages, append-only replies and owner-only drafts; existing requests preserved
 - [x] Inbox, sent, search, unread, star, archive and trash/restore controls with participant-private folder state
