@@ -14,9 +14,13 @@ describe("plan access", () => {
     expect(canOpen("/bots", true)).toBe(true);
     expect(canOpen("/assistant", true)).toBe(true);
   });
-  it("arbitrage is available to Pro users and blocked for Free users", () => {
-    expect(canOpen("/arbitrage", false)).toBe(false);
-    expect(canOpen("/arbitrage", true)).toBe(true);
+  it("arbitrage is Elite-only", () => {
+    expect(canOpen("/arbitrage", "free")).toBe(false);
+    expect(canOpen("/arbitrage", "pro")).toBe(false);
+    expect(canOpen("/arbitrage", "elite")).toBe(true);
+  });
+  it("Pro includes AI, bots, strategy builder, backtests and analytics", () => {
+    for (const path of ["/assistant", "/bots", "/strategies/abc", "/backtests", "/analytics", "/dashboard"]) expect(canOpen(path, "pro")).toBe(true);
   });
 });
 

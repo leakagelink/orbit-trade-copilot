@@ -1,5 +1,11 @@
 # Roadmap
 
+## Three subscription tiers
+- [x] Free / Pro / Elite with monthly and yearly selector, existing-feature comparison and no invented prices
+- [x] Paid-tier access checks; Elite-only new scalping/arbitrage entries; owner recovery and exits retained
+- [x] Verified signed-in Free account: three cards, yearly selection, Elite upgrade screens, mobile no-overflow; 30 access/trading tests passed, build OK
+- [ ] Paid checkout — waiting for monthly/yearly prices, currency and payment setup
+
 ## All-screen mobile optimization
 - [x] Fit all page sections, headers, forms, charts and locally scrollable tables to mobile widths
 - [x] Optimize chat viewport/history selector, dialogs, touch targets and bottom-bar clearance
@@ -10,7 +16,7 @@
 - [x] Polish Trade/Wallet screens, shared controls and mobile layout without changing trading rules
 - [x] Verify signed-in Trade/Wallet, 3D rendering, theme switching, mobile menu, no page overflow and reduced-motion behavior; 21 existing tests pass
 
-## Scalping (Pro)
+## Scalping (Elite)
 - [x] Scalping page: 1m/5m/15m chart, one-click buy/sell with % stop/target set on the server, auto time limit, close all
 - [x] Stops/targets/time limits checked every 5s while the page is open (every minute otherwise); today's scalp stats
 - [x] Scalping bot templates (EMA 9/21, RSI dip, Stoch RSI) → strategy → deploy to bot
@@ -19,9 +25,9 @@
 ## Arbitrage
 - [x] Add read-only Binance/OKX reconciliation by durable client ID; missing, open, partial or unequal fills stay locked
 - [x] Verify Free browser restriction and paper execution/math/duplicate-request/reconciliation tests (24 tests passed)
-- [ ] Verify authenticated Pro paper scan/execution/history in browser — blocked: only current account is Free; no Pro test session available
+- [ ] Verify authenticated Elite paper scan/execution/history in browser — blocked: only current account is Free; no Elite test session available
 - [ ] Verify exchange connections and small confirmed test/live trades — requires user-connected prefunded accounts and explicit trade confirmation
-- [x] Pro-only multi-exchange opportunity scanner with executable bid/ask prices and fee estimates
+- [x] Elite-only multi-exchange opportunity scanner with executable bid/ask prices and fee estimates
 - [x] Prefunded Binance ↔ OKX spot execution with typed confirmation, durable order claims and partial-fill visibility; Bybit/KuCoin scan and paper only
 - [x] Arbitrage screen, AI review, execution history and access/math tests
 - [ ] Unattended arbitrage / automatic inventory recovery — deferred: user chose advisory AI; needs exchange-tested reconciliation and separately confirmed recovery orders
