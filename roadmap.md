@@ -7,7 +7,7 @@
 ## App experience
 - [x] Modern animated splash screen on app load
 - [x] Caching on all screens so the app loads fast
-- [ ] Reconnect NOWPayments after second workspace move
+- [x] NOWPayments reconnected after second workspace move (workspace-shared connector)
 
 ## Crypto plan payments (NOWPayments)
 - [x] Connect NOWPayments in the new workspace
