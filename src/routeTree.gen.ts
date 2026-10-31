@@ -18,6 +18,7 @@ import { Route as RefundsRouteImport } from './routes/refunds'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as RiskDisclosureRouteImport } from './routes/risk-disclosure'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedAnalyticsRouteImport } from './routes/_authenticated/analytics'
 import { Route as AuthenticatedArbitrageRouteImport } from './routes/_authenticated/arbitrage'
 import { Route as AuthenticatedAssistantRouteImport } from './routes/_authenticated/assistant'
@@ -30,6 +31,7 @@ import { Route as AuthenticatedJournalRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedLeaderboardRouteImport } from './routes/_authenticated/leaderboard'
 import { Route as AuthenticatedLearnRouteImport } from './routes/_authenticated/learn'
 import { Route as AuthenticatedMailboxRouteImport } from './routes/_authenticated/mailbox'
+import { Route as AuthenticatedMarketplaceRouteImport } from './routes/_authenticated/marketplace'
 import { Route as AuthenticatedNotificationsRouteImport } from './routes/_authenticated/notifications'
 import { Route as AuthenticatedPlansRouteImport } from './routes/_authenticated/plans'
 import { Route as AuthenticatedReferralsRouteImport } from './routes/_authenticated/referrals'
@@ -90,6 +92,11 @@ const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedAnalyticsRoute = AuthenticatedAnalyticsRouteImport.update({
   id: '/analytics',
@@ -152,6 +159,12 @@ const AuthenticatedMailboxRoute = AuthenticatedMailboxRouteImport.update({
   path: '/mailbox',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedMarketplaceRoute =
+  AuthenticatedMarketplaceRouteImport.update({
+    id: '/marketplace',
+    path: '/marketplace',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedNotificationsRoute =
   AuthenticatedNotificationsRouteImport.update({
     id: '/notifications',
@@ -245,6 +258,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/risk-disclosure': typeof RiskDisclosureRoute
   '/terms': typeof TermsRoute
+  '/admin': typeof AuthenticatedAdminRoute
   '/analytics': typeof AuthenticatedAnalyticsRoute
   '/arbitrage': typeof AuthenticatedArbitrageRoute
   '/assistant': typeof AuthenticatedAssistantRoute
@@ -257,6 +271,7 @@ export interface FileRoutesByFullPath {
   '/leaderboard': typeof AuthenticatedLeaderboardRoute
   '/learn': typeof AuthenticatedLearnRoute
   '/mailbox': typeof AuthenticatedMailboxRoute
+  '/marketplace': typeof AuthenticatedMarketplaceRoute
   '/notifications': typeof AuthenticatedNotificationsRoute
   '/plans': typeof AuthenticatedPlansRoute
   '/referrals': typeof AuthenticatedReferralsRoute
@@ -283,6 +298,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/risk-disclosure': typeof RiskDisclosureRoute
   '/terms': typeof TermsRoute
+  '/admin': typeof AuthenticatedAdminRoute
   '/analytics': typeof AuthenticatedAnalyticsRoute
   '/arbitrage': typeof AuthenticatedArbitrageRoute
   '/assistant': typeof AuthenticatedAssistantRoute
@@ -295,6 +311,7 @@ export interface FileRoutesByTo {
   '/leaderboard': typeof AuthenticatedLeaderboardRoute
   '/learn': typeof AuthenticatedLearnRoute
   '/mailbox': typeof AuthenticatedMailboxRoute
+  '/marketplace': typeof AuthenticatedMarketplaceRoute
   '/notifications': typeof AuthenticatedNotificationsRoute
   '/plans': typeof AuthenticatedPlansRoute
   '/referrals': typeof AuthenticatedReferralsRoute
@@ -323,6 +340,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/risk-disclosure': typeof RiskDisclosureRoute
   '/terms': typeof TermsRoute
+  '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/analytics': typeof AuthenticatedAnalyticsRoute
   '/_authenticated/arbitrage': typeof AuthenticatedArbitrageRoute
   '/_authenticated/assistant': typeof AuthenticatedAssistantRoute
@@ -335,6 +353,7 @@ export interface FileRoutesById {
   '/_authenticated/leaderboard': typeof AuthenticatedLeaderboardRoute
   '/_authenticated/learn': typeof AuthenticatedLearnRoute
   '/_authenticated/mailbox': typeof AuthenticatedMailboxRoute
+  '/_authenticated/marketplace': typeof AuthenticatedMarketplaceRoute
   '/_authenticated/notifications': typeof AuthenticatedNotificationsRoute
   '/_authenticated/plans': typeof AuthenticatedPlansRoute
   '/_authenticated/referrals': typeof AuthenticatedReferralsRoute
@@ -363,6 +382,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/risk-disclosure'
     | '/terms'
+    | '/admin'
     | '/analytics'
     | '/arbitrage'
     | '/assistant'
@@ -375,6 +395,7 @@ export interface FileRouteTypes {
     | '/leaderboard'
     | '/learn'
     | '/mailbox'
+    | '/marketplace'
     | '/notifications'
     | '/plans'
     | '/referrals'
@@ -401,6 +422,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/risk-disclosure'
     | '/terms'
+    | '/admin'
     | '/analytics'
     | '/arbitrage'
     | '/assistant'
@@ -413,6 +435,7 @@ export interface FileRouteTypes {
     | '/leaderboard'
     | '/learn'
     | '/mailbox'
+    | '/marketplace'
     | '/notifications'
     | '/plans'
     | '/referrals'
@@ -440,6 +463,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/risk-disclosure'
     | '/terms'
+    | '/_authenticated/admin'
     | '/_authenticated/analytics'
     | '/_authenticated/arbitrage'
     | '/_authenticated/assistant'
@@ -452,6 +476,7 @@ export interface FileRouteTypes {
     | '/_authenticated/leaderboard'
     | '/_authenticated/learn'
     | '/_authenticated/mailbox'
+    | '/_authenticated/marketplace'
     | '/_authenticated/notifications'
     | '/_authenticated/plans'
     | '/_authenticated/referrals'
@@ -550,6 +575,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/analytics': {
       id: '/_authenticated/analytics'
       path: '/analytics'
@@ -632,6 +664,13 @@ declare module '@tanstack/react-router' {
       path: '/mailbox'
       fullPath: '/mailbox'
       preLoaderRoute: typeof AuthenticatedMailboxRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/marketplace': {
+      id: '/_authenticated/marketplace'
+      path: '/marketplace'
+      fullPath: '/marketplace'
+      preLoaderRoute: typeof AuthenticatedMarketplaceRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/notifications': {
@@ -750,6 +789,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedAnalyticsRoute: typeof AuthenticatedAnalyticsRoute
   AuthenticatedArbitrageRoute: typeof AuthenticatedArbitrageRoute
   AuthenticatedAssistantRoute: typeof AuthenticatedAssistantRoute
@@ -762,6 +802,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedLeaderboardRoute: typeof AuthenticatedLeaderboardRoute
   AuthenticatedLearnRoute: typeof AuthenticatedLearnRoute
   AuthenticatedMailboxRoute: typeof AuthenticatedMailboxRoute
+  AuthenticatedMarketplaceRoute: typeof AuthenticatedMarketplaceRoute
   AuthenticatedNotificationsRoute: typeof AuthenticatedNotificationsRoute
   AuthenticatedPlansRoute: typeof AuthenticatedPlansRoute
   AuthenticatedReferralsRoute: typeof AuthenticatedReferralsRoute
@@ -778,6 +819,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedAnalyticsRoute: AuthenticatedAnalyticsRoute,
   AuthenticatedArbitrageRoute: AuthenticatedArbitrageRoute,
   AuthenticatedAssistantRoute: AuthenticatedAssistantRoute,
@@ -790,6 +832,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedLeaderboardRoute: AuthenticatedLeaderboardRoute,
   AuthenticatedLearnRoute: AuthenticatedLearnRoute,
   AuthenticatedMailboxRoute: AuthenticatedMailboxRoute,
+  AuthenticatedMarketplaceRoute: AuthenticatedMarketplaceRoute,
   AuthenticatedNotificationsRoute: AuthenticatedNotificationsRoute,
   AuthenticatedPlansRoute: AuthenticatedPlansRoute,
   AuthenticatedReferralsRoute: AuthenticatedReferralsRoute,
