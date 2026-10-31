@@ -558,10 +558,52 @@ export type Database = {
         }
         Relationships: []
       }
+      journal_entries: {
+        Row: {
+          created_at: string
+          id: string
+          lessons: string
+          symbol: string
+          tags: string
+          thesis: string
+          trade_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lessons?: string
+          symbol: string
+          tags?: string
+          thesis: string
+          trade_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lessons?: string
+          symbol?: string
+          tags?: string
+          thesis?: string
+          trade_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journal_entries_trade_id_fkey"
+            columns: ["trade_id"]
+            isOneToOne: false
+            referencedRelation: "trades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           body: string | null
           created_at: string
+          event_key: string | null
           id: string
           kind: string
           read_at: string | null
@@ -571,6 +613,7 @@ export type Database = {
         Insert: {
           body?: string | null
           created_at?: string
+          event_key?: string | null
           id?: string
           kind?: string
           read_at?: string | null
@@ -580,6 +623,7 @@ export type Database = {
         Update: {
           body?: string | null
           created_at?: string
+          event_key?: string | null
           id?: string
           kind?: string
           read_at?: string | null
@@ -800,6 +844,48 @@ export type Database = {
           },
         ]
       }
+      price_alerts: {
+        Row: {
+          created_at: string
+          direction: string
+          id: string
+          last_checked_at: string | null
+          last_error: string | null
+          last_price: number | null
+          state: string
+          symbol: string
+          target: number
+          triggered_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          direction: string
+          id?: string
+          last_checked_at?: string | null
+          last_error?: string | null
+          last_price?: number | null
+          state?: string
+          symbol: string
+          target: number
+          triggered_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          direction?: string
+          id?: string
+          last_checked_at?: string | null
+          last_error?: string | null
+          last_price?: number | null
+          state?: string
+          symbol?: string
+          target?: number
+          triggered_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -984,6 +1070,39 @@ export type Database = {
           provider_ref?: string | null
           status?: string
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      support_tickets: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          message: string
+          response: string | null
+          status: string
+          subject: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          id?: string
+          message: string
+          response?: string | null
+          status?: string
+          subject: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          message?: string
+          response?: string | null
+          status?: string
+          subject?: string
           user_id?: string
         }
         Relationships: []
@@ -1236,6 +1355,27 @@ export type Database = {
         }
         Relationships: []
       }
+      watchlist_items: {
+        Row: {
+          created_at: string
+          id: string
+          symbol: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          symbol: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          symbol?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -1248,6 +1388,10 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      trigger_price_alert: {
+        Args: { _id: string; _price: number }
         Returns: boolean
       }
       wallet_apply: {

@@ -1,0 +1,47 @@
+CREATE TABLE public.watchlist_items (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), user_id uuid NOT NULL, symbol text NOT NULL, created_at timestamptz NOT NULL DEFAULT now(), UNIQUE(user_id,symbol));
+GRANT SELECT,INSERT,DELETE ON public.watchlist_items TO authenticated; GRANT ALL ON public.watchlist_items TO service_role;
+ALTER TABLE public.watchlist_items ENABLE ROW LEVEL SECURITY;
+CREATE POLICY watchlist_read ON public.watchlist_items FOR SELECT TO authenticated USING(auth.uid()=user_id);
+CREATE POLICY watchlist_add ON public.watchlist_items FOR INSERT TO authenticated WITH CHECK(auth.uid()=user_id AND public.has_pro_access(auth.uid()));
+CREATE POLICY watchlist_delete ON public.watchlist_items FOR DELETE TO authenticated USING(auth.uid()=user_id);
+CREATE TABLE public.price_alerts (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), user_id uuid NOT NULL, symbol text NOT NULL, direction text NOT NULL CHECK(direction IN ('above','below')), target numeric NOT NULL CHECK(target>0), state text NOT NULL DEFAULT 'active' CHECK(state IN ('active','triggered')), triggered_at timestamptz, last_checked_at timestamptz, last_price numeric, last_error text, created_at timestamptz NOT NULL DEFAULT now());
+GRANT SELECT,INSERT,DELETE ON public.price_alerts TO authenticated; GRANT ALL ON public.price_alerts TO service_role;
+ALTER TABLE public.price_alerts ENABLE ROW LEVEL SECURITY;
+CREATE POLICY alerts_read ON public.price_alerts FOR SELECT TO authenticated USING(auth.uid()=user_id);
+CREATE POLICY alerts_add ON public.price_alerts FOR INSERT TO authenticated WITH CHECK(auth.uid()=user_id AND public.has_pro_access(auth.uid()));
+CREATE POLICY alerts_delete ON public.price_alerts FOR DELETE TO authenticated USING(auth.uid()=user_id);
+CREATE INDEX alerts_active ON public.price_alerts(symbol) WHERE state='active';
+CREATE TABLE public.journal_entries (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), user_id uuid NOT NULL, trade_id uuid REFERENCES public.trades(id), symbol text NOT NULL, thesis text NOT NULL CHECK(length(thesis)<=4000), lessons text NOT NULL DEFAULT '' CHECK(length(lessons)<=4000), tags text NOT NULL DEFAULT '' CHECK(length(tags)<=200), created_at timestamptz NOT NULL DEFAULT now());
+GRANT SELECT,INSERT,UPDATE,DELETE ON public.journal_entries TO authenticated; GRANT ALL ON public.journal_entries TO service_role;
+ALTER TABLE public.journal_entries ENABLE ROW LEVEL SECURITY;
+CREATE POLICY journal_read ON public.journal_entries FOR SELECT TO authenticated USING(auth.uid()=user_id);
+CREATE POLICY journal_add ON public.journal_entries FOR INSERT TO authenticated WITH CHECK(auth.uid()=user_id AND public.has_pro_access(auth.uid()) AND (trade_id IS NULL OR EXISTS(SELECT 1 FROM public.trades t WHERE t.id=trade_id AND t.user_id=auth.uid())));
+CREATE POLICY journal_edit ON public.journal_entries FOR UPDATE TO authenticated USING(auth.uid()=user_id AND public.has_pro_access(auth.uid())) WITH CHECK(auth.uid()=user_id AND public.has_pro_access(auth.uid()) AND (trade_id IS NULL OR EXISTS(SELECT 1 FROM public.trades t WHERE t.id=trade_id AND t.user_id=auth.uid())));
+CREATE POLICY journal_delete ON public.journal_entries FOR DELETE TO authenticated USING(auth.uid()=user_id);
+CREATE TABLE public.support_tickets (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), user_id uuid NOT NULL, subject text NOT NULL CHECK(length(subject) BETWEEN 1 AND 160), message text NOT NULL CHECK(length(message) BETWEEN 1 AND 4000), category text NOT NULL CHECK(category IN ('trading','account','billing','other')), status text NOT NULL DEFAULT 'open' CHECK(status IN ('open','in_progress','resolved')), response text, created_at timestamptz NOT NULL DEFAULT now());
+GRANT SELECT,INSERT ON public.support_tickets TO authenticated; GRANT ALL ON public.support_tickets TO service_role;
+ALTER TABLE public.support_tickets ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tickets_read ON public.support_tickets FOR SELECT TO authenticated USING(auth.uid()=user_id);
+CREATE POLICY tickets_add ON public.support_tickets FOR INSERT TO authenticated WITH CHECK(auth.uid()=user_id AND status='open' AND response IS NULL);
+ALTER TABLE public.notifications ADD COLUMN event_key text;
+CREATE UNIQUE INDEX notification_event_unique ON public.notifications(user_id,event_key) WHERE event_key IS NOT NULL;
+REVOKE UPDATE ON public.notifications FROM authenticated; GRANT UPDATE(read_at) ON public.notifications TO authenticated;
+CREATE OR REPLACE FUNCTION public.trigger_price_alert(_id uuid,_price numeric) RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$ DECLARE a public.price_alerts; BEGIN
+UPDATE public.price_alerts SET state='triggered',triggered_at=now(),last_price=_price,last_checked_at=now(),last_error=NULL WHERE id=_id AND state='active' AND public.has_pro_access(user_id) AND _price>0 AND ((direction='above' AND _price>=target) OR (direction='below' AND _price<=target)) RETURNING * INTO a;
+IF NOT FOUND THEN RETURN false; END IF;
+INSERT INTO public.notifications(user_id,title,body,kind,event_key) VALUES(a.user_id,'Price alert: '||a.symbol,a.symbol||' is '||a.direction||' '||a.target||'; observed price '||_price,'price','price:'||a.id); RETURN true; END $$;
+REVOKE ALL ON FUNCTION public.trigger_price_alert(uuid,numeric) FROM PUBLIC,anon,authenticated; GRANT EXECUTE ON FUNCTION public.trigger_price_alert(uuid,numeric) TO service_role;
+CREATE OR REPLACE FUNCTION public.notify_trading_event() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$ DECLARE heading text; detail text; BEGIN
+IF NOT public.has_pro_access(NEW.user_id) THEN RETURN NEW; END IF;
+IF TG_TABLE_NAME='orders' THEN
+IF NEW.status NOT IN ('filled','rejected') OR (TG_OP='UPDATE' AND OLD.status=NEW.status) THEN RETURN NEW; END IF;
+heading:=CASE WHEN NEW.status='filled' THEN 'Order filled: ' ELSE 'Order rejected: ' END||NEW.trading_pair; detail:=NEW.side||' / '||NEW.mode;
+ELSIF TG_TABLE_NAME='trades' THEN heading:='Trade closed: '||NEW.trading_pair; detail:='Net P&L: '||(NEW.realized_pnl-NEW.fees)||' · '||coalesce(NEW.close_reason,'closed');
+ELSIF TG_TABLE_NAME='trading_bots' THEN IF NEW.status<>'error' OR OLD.status=NEW.status THEN RETURN NEW; END IF; heading:='Bot needs attention: '||NEW.name; detail:='Review the bot log before restarting.';
+ELSIF TG_TABLE_NAME='exchange_connections' THEN IF NEW.status NOT IN ('error','expired','disconnected') OR OLD.status=NEW.status THEN RETURN NEW; END IF; heading:='Exchange connection: '||NEW.label; detail:='Connection status: '||NEW.status;
+END IF;
+INSERT INTO public.notifications(user_id,title,body,kind,event_key) VALUES(NEW.user_id,heading,detail,'trading',TG_TABLE_NAME||':'||NEW.id||':'||coalesce(to_jsonb(NEW)->>'updated_at',to_jsonb(NEW)->>'created_at')) ON CONFLICT DO NOTHING; RETURN NEW; END $$;
+CREATE TRIGGER order_notification AFTER INSERT OR UPDATE OF status ON public.orders FOR EACH ROW EXECUTE FUNCTION public.notify_trading_event();
+CREATE TRIGGER trade_notification AFTER INSERT ON public.trades FOR EACH ROW EXECUTE FUNCTION public.notify_trading_event();
+CREATE TRIGGER bot_notification AFTER UPDATE OF status ON public.trading_bots FOR EACH ROW EXECUTE FUNCTION public.notify_trading_event();
+CREATE TRIGGER connection_notification AFTER UPDATE OF status ON public.exchange_connections FOR EACH ROW EXECUTE FUNCTION public.notify_trading_event();
