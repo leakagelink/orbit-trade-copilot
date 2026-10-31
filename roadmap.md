@@ -12,7 +12,7 @@
 - [x] Invite links with referral tracking (rewards reviewed manually)
 - [x] Opt-in demo leaderboard (paper trades, 30 days, net of fees) and Pro strategy marketplace
 - [x] Hindi menu option and installable phone app icon
-- [ ] Paid checkout — waiting for Pro/Elite monthly and yearly prices
+- [x] Paid checkout — crypto via NOWPayments
 - [ ] Email notifications — waiting for the owner's email domain setup
 - [ ] Legal pages company name, country and contact — placeholders until owner provides them
 - [ ] Copy trading and Zerodha/Upstox — deferred by owner
@@ -45,7 +45,7 @@
 - [x] Free / Pro / Elite with monthly and yearly selector, existing-feature comparison and no invented prices
 - [x] Paid-tier access checks; Elite-only new scalping/arbitrage entries; owner recovery and exits retained
 - [x] Verified signed-in Free account: three cards, yearly selection, Elite upgrade screens, mobile no-overflow; 30 access/trading tests passed, build OK
-- [ ] Paid checkout — waiting for monthly/yearly prices, currency and payment setup
+- [x] Paid checkout — crypto via NOWPayments
 
 ## All-screen mobile optimization
 - [x] Fit all page sections, headers, forms, charts and locally scrollable tables to mobile widths
