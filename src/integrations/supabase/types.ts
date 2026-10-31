@@ -510,6 +510,60 @@ export type Database = {
           },
         ]
       }
+      crypto_payments: {
+        Row: {
+          activated_at: string | null
+          actually_paid: number | null
+          amount_usd: number
+          billing_interval: string
+          created_at: string
+          id: string
+          invoice_id: string | null
+          invoice_url: string | null
+          pay_currency: string | null
+          payment_id: string | null
+          period_end: string | null
+          plan: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          activated_at?: string | null
+          actually_paid?: number | null
+          amount_usd: number
+          billing_interval: string
+          created_at?: string
+          id?: string
+          invoice_id?: string | null
+          invoice_url?: string | null
+          pay_currency?: string | null
+          payment_id?: string | null
+          period_end?: string | null
+          plan: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          activated_at?: string | null
+          actually_paid?: number | null
+          amount_usd?: number
+          billing_interval?: string
+          created_at?: string
+          id?: string
+          invoice_id?: string | null
+          invoice_url?: string | null
+          pay_currency?: string | null
+          payment_id?: string | null
+          period_end?: string | null
+          plan?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       exchange_connections: {
         Row: {
           account_type: string
@@ -1554,6 +1608,18 @@ export type Database = {
           plan: string
           trades: number
         }[]
+      }
+      apply_crypto_payment: {
+        Args: {
+          _actually_paid: number
+          _order: string
+          _pay_currency: string
+          _payment_id: string
+          _price_amount: number
+          _price_currency: string
+          _status: string
+        }
+        Returns: Json
       }
       bump_strategy_clone: { Args: { _id: string }; Returns: undefined }
       claim_referral: { Args: { _code: string }; Returns: string }

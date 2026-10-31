@@ -113,6 +113,13 @@
       "when": 1793453059052,
       "tag": "0015_growth_admin_marketplace",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1793472117445,
+      "tag": "0016_nowpayments_crypto_checkout",
+      "breakpoints": true
     }
   ]
 }

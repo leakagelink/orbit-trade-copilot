@@ -48,6 +48,7 @@ import { Route as AuthenticatedStrategiesIndexRouteImport } from './routes/_auth
 import { Route as AuthenticatedStrategiesIdRouteImport } from './routes/_authenticated/strategies.$id'
 import { Route as ApiPublicAlertsTickRouteImport } from './routes/api/public/alerts/tick'
 import { Route as ApiPublicEngineTickRouteImport } from './routes/api/public/engine/tick'
+import { Route as ApiPublicNowpaymentsIpnRouteImport } from './routes/api/public/nowpayments/ipn'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -248,6 +249,11 @@ const ApiPublicEngineTickRoute = ApiPublicEngineTickRouteImport.update({
   path: '/api/public/engine/tick',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicNowpaymentsIpnRoute = ApiPublicNowpaymentsIpnRouteImport.update({
+  id: '/api/public/nowpayments/ipn',
+  path: '/api/public/nowpayments/ipn',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -288,6 +294,7 @@ export interface FileRoutesByFullPath {
   '/strategies/': typeof AuthenticatedStrategiesIndexRoute
   '/api/public/alerts/tick': typeof ApiPublicAlertsTickRoute
   '/api/public/engine/tick': typeof ApiPublicEngineTickRoute
+  '/api/public/nowpayments/ipn': typeof ApiPublicNowpaymentsIpnRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -328,6 +335,7 @@ export interface FileRoutesByTo {
   '/strategies': typeof AuthenticatedStrategiesIndexRoute
   '/api/public/alerts/tick': typeof ApiPublicAlertsTickRoute
   '/api/public/engine/tick': typeof ApiPublicEngineTickRoute
+  '/api/public/nowpayments/ipn': typeof ApiPublicNowpaymentsIpnRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -370,6 +378,7 @@ export interface FileRoutesById {
   '/_authenticated/strategies/': typeof AuthenticatedStrategiesIndexRoute
   '/api/public/alerts/tick': typeof ApiPublicAlertsTickRoute
   '/api/public/engine/tick': typeof ApiPublicEngineTickRoute
+  '/api/public/nowpayments/ipn': typeof ApiPublicNowpaymentsIpnRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -412,6 +421,7 @@ export interface FileRouteTypes {
     | '/strategies/'
     | '/api/public/alerts/tick'
     | '/api/public/engine/tick'
+    | '/api/public/nowpayments/ipn'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -452,6 +462,7 @@ export interface FileRouteTypes {
     | '/strategies'
     | '/api/public/alerts/tick'
     | '/api/public/engine/tick'
+    | '/api/public/nowpayments/ipn'
   id:
     | '__root__'
     | '/'
@@ -493,6 +504,7 @@ export interface FileRouteTypes {
     | '/_authenticated/strategies/'
     | '/api/public/alerts/tick'
     | '/api/public/engine/tick'
+    | '/api/public/nowpayments/ipn'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -508,6 +520,7 @@ export interface RootRouteChildren {
   ApiChatRoute: typeof ApiChatRoute
   ApiPublicAlertsTickRoute: typeof ApiPublicAlertsTickRoute
   ApiPublicEngineTickRoute: typeof ApiPublicEngineTickRoute
+  ApiPublicNowpaymentsIpnRoute: typeof ApiPublicNowpaymentsIpnRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -785,6 +798,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicEngineTickRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/nowpayments/ipn': {
+      id: '/api/public/nowpayments/ipn'
+      path: '/api/public/nowpayments/ipn'
+      fullPath: '/api/public/nowpayments/ipn'
+      preLoaderRoute: typeof ApiPublicNowpaymentsIpnRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -864,6 +884,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiChatRoute: ApiChatRoute,
   ApiPublicAlertsTickRoute: ApiPublicAlertsTickRoute,
   ApiPublicEngineTickRoute: ApiPublicEngineTickRoute,
+  ApiPublicNowpaymentsIpnRoute: ApiPublicNowpaymentsIpnRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
