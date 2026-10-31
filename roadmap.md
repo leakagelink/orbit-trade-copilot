@@ -3,7 +3,7 @@
 ## Three subscription tiers
 - [x] Free / Pro / Elite with monthly and yearly selector, existing-feature comparison and no invented prices
 - [x] Paid-tier access checks; Elite-only new scalping/arbitrage entries; owner recovery and exits retained
-- [ ] Verify plan selection, tier guards and mobile/desktop display
+- [x] Verified signed-in Free account: three cards, yearly selection, Elite upgrade screens, mobile no-overflow; 30 access/trading tests passed, build OK
 - [ ] Paid checkout — waiting for monthly/yearly prices, currency and payment setup
 
 ## All-screen mobile optimization
@@ -25,9 +25,9 @@
 ## Arbitrage
 - [x] Add read-only Binance/OKX reconciliation by durable client ID; missing, open, partial or unequal fills stay locked
 - [x] Verify Free browser restriction and paper execution/math/duplicate-request/reconciliation tests (24 tests passed)
-- [ ] Verify authenticated Pro paper scan/execution/history in browser — blocked: only current account is Free; no Pro test session available
+- [ ] Verify authenticated Elite paper scan/execution/history in browser — blocked: only current account is Free; no Elite test session available
 - [ ] Verify exchange connections and small confirmed test/live trades — requires user-connected prefunded accounts and explicit trade confirmation
-- [x] Pro-only multi-exchange opportunity scanner with executable bid/ask prices and fee estimates
+- [x] Elite-only multi-exchange opportunity scanner with executable bid/ask prices and fee estimates
 - [x] Prefunded Binance ↔ OKX spot execution with typed confirmation, durable order claims and partial-fill visibility; Bybit/KuCoin scan and paper only
 - [x] Arbitrage screen, AI review, execution history and access/math tests
 - [ ] Unattended arbitrage / automatic inventory recovery — deferred: user chose advisory AI; needs exchange-tested reconciliation and separately confirmed recovery orders
