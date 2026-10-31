@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Logo, ThemeToggle } from "@/components/app-shell";
 import { PLAN_FEATURES, PLAN_IDS, type BillingInterval } from "@/lib/plans";
+import { planPrice, yearlySavingsPercent } from "@/lib/billing";
 import heroImage from "@/assets/home-trading.jpg";
 
 const DESCRIPTION = "Trade crypto, forex and commodities with AlgoVirt. Start with free manual trading and a demo wallet, then explore AI, strategies, bots, backtesting, scalping and arbitrage.";
