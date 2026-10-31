@@ -2,7 +2,11 @@
 
 ## Promotions
 - [x] All plans free for every signed-in user until 4 Nov 2026 (end of day, India time)
-- [ ] Reconnect NOWPayments in new workspace — connect card was skipped
+- [x] NOWPayments reconnected in new workspace as a workspace-shared connector
+
+## App experience
+- [ ] Modern animated splash screen on app load
+- [ ] Caching on all screens so the app loads fast
 
 ## Crypto plan payments (NOWPayments)
 - [x] Connect NOWPayments in the new workspace
