@@ -5,7 +5,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import {
   LayoutDashboard, Bot, Cable, Blocks, Settings, LogOut, Moon, Sun, Menu, MessageSquareText, Activity,
   FlaskConical, ChartColumn, ShieldAlert, CandlestickChart, Wallet, Crown, Lock, ArrowLeftRight, Zap, ChevronRight, ArrowUpRight, Ellipsis,
-  Star, BookOpen, CalendarDays, Bell, LifeBuoy, HeartPulse,
+  Star, BookOpen, CalendarDays, Bell, LifeBuoy, HeartPulse, Mail,
 } from "lucide-react";
 import { usePlan } from "@/hooks/use-plan";
 import { canOpen, requiredPlan, PLAN_FEATURES } from "@/lib/plans";
@@ -36,6 +36,7 @@ const NAV = [
   { to: "/calendar", label: "Economic calendar", icon: CalendarDays },
   { to: "/notifications", label: "Notifications", icon: Bell },
   { to: "/support", label: "Support", icon: LifeBuoy },
+  { to: "/mailbox", label: "Support mailbox", icon: Mail },
   { to: "/status", label: "Service status", icon: HeartPulse },
 ] as const;
 
@@ -174,6 +175,7 @@ function SecuredShell({ children }: { children: ReactNode }) {
           <div className="flex shrink-0 items-center gap-3">
           <Link to="/wallet" className="hidden items-center gap-2 text-xs text-muted-foreground sm:flex"><Wallet className="h-3.5 w-3.5" />Demo wallet</Link>
           <ThemeToggle />
+          <Button variant="ghost" size="icon" asChild title="Support mailbox"><Link to="/mailbox" aria-label="Support mailbox"><Mail className="h-4 w-4"/></Link></Button>
           {plan.data?.pro && <Button variant="ghost" size="icon" asChild title="Notifications"><Link to="/notifications" aria-label="Notifications" className="relative"><Bell className="h-4 w-4"/>{(unread.data??0)>0&&<span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-primary"/>}</Link></Button>}
           <span className="grid h-8 w-8 place-items-center rounded-full border bg-secondary font-mono text-xs" title="Your account">{email?.slice(0, 2).toUpperCase() ?? "Q"}</span>
           </div>
