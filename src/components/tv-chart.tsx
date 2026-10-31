@@ -71,5 +71,5 @@ export function TvChart({ candles, lines = [], height = 420 }: { candles: Candle
     return () => node?.removeEventListener("tv-ready", apply);
   }, [candles, lines]);
 
-  return <div ref={el} style={{ height }} className="w-full" />;
+  return <div ref={el} style={{ height }} className="tv-chart min-w-0 w-full" />;
 }

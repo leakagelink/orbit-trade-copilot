@@ -70,12 +70,12 @@ function Exchanges() {
               {q.data.map((c) => (
                 <div key={c.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <div className="flex items-center gap-2"><span className="font-medium">{c.label}</span><Badge variant={STATUS_VARIANT[c.status]}>{c.status}</Badge>{c.is_testnet && <Badge variant="outline">testnet</Badge>}</div>
+                    <div className="flex min-w-0 flex-wrap items-center gap-2"><span className="min-w-0 break-words font-medium">{c.label}</span><Badge variant={STATUS_VARIANT[c.status]}>{c.status}</Badge>{c.is_testnet && <Badge variant="outline">testnet</Badge>}</div>
                     <div className="mt-1 font-mono text-xs text-muted-foreground">{exchangeName(c.exchange)} · {c.account_type} · key {c.api_key_hint ?? "—"}</div>
                     {(() => { const bal = (c.permissions as { balances?: { asset: string; free: number; locked: number }[] } | null)?.balances; return c.status === "connected" && bal ? <p className="mt-1 font-mono text-xs">{bal.length ? bal.slice(0, 6).map((b) => `${b.asset} ${+(b.free + b.locked).toPrecision(6)}`).join(" · ") : "No balances"}{c.last_synced_at && <span className="text-muted-foreground"> · synced {new Date(c.last_synced_at).toLocaleString()}</span>}</p> : null; })()}
                     {c.last_error && <p className="mt-1 max-w-xl text-xs text-muted-foreground">{c.last_error}</p>}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     {c.status !== "disconnected" && <Button size="sm" variant="outline" disabled={verifying === c.id} onClick={() => runVerify(c.id)}><RefreshCw className={`mr-1 h-3.5 w-3.5 ${verifying === c.id ? "animate-spin" : ""}`} />Verify</Button>}
                     <Button size="sm" variant="outline" onClick={() => setReconnect({ id: c.id, exchange: c.exchange })}><KeyRound className="mr-1 h-3.5 w-3.5" />{c.status === "disconnected" ? "Reconnect" : "Update keys"}</Button>
                     {c.status !== "disconnected" && <Button size="sm" variant="ghost" onClick={() => setToDisconnect(c.id)}><Unplug className="mr-1 h-3.5 w-3.5" />Disconnect</Button>}
@@ -152,7 +152,7 @@ function CredentialsDialog({ meta, connectionId, onClose, onDone }: { meta: Exch
           {!connectionId && (
             <>
               <div className="space-y-1.5"><Label htmlFor="label">Label</Label><Input id="label" name="label" required maxLength={60} defaultValue={meta ? `${meta.name} main` : ""} /></div>
-              <div className="flex gap-4">
+              <div className="grid gap-4 sm:flex">
                 <div className="flex-1 space-y-1.5"><Label>Account type</Label>
                   <Select value={accountType} onValueChange={(v) => setAccountType(v as "spot" | "futures")}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="spot">Spot</SelectItem><SelectItem value="futures">Futures</SelectItem></SelectContent></Select>
                 </div>

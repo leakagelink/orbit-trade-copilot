@@ -193,7 +193,7 @@ function ScalpingPage() {
               <Button key={c} size="sm" variant={cat === c ? "default" : "outline"} onClick={() => pickCat(c)}>{CATEGORY_LABEL[c]}</Button>
             ))}
             <Select value={symbol} onValueChange={setSymbol}>
-              <SelectTrigger className="w-64"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-full sm:w-64"><SelectValue /></SelectTrigger>
               <SelectContent className="max-h-96">
                 {[...new Set(MARKETS.filter((m) => m.category === cat).map((m) => m.group ?? ""))].map((g) => (
                   <SelectGroup key={g}>
@@ -222,7 +222,7 @@ function ScalpingPage() {
             </div>
           )}
 
-          <div className="grid gap-3 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[
               ["Scalps today", String(stats.count)],
               ["Win rate", stats.count ? `${stats.winRate.toFixed(0)}%` : "—"],
@@ -350,11 +350,11 @@ function ScalpingPage() {
               </div>
             )}
             <div className="grid grid-cols-2 gap-2">
-              <Button className="h-14 flex-col gap-0 bg-gain text-black hover:bg-gain/90" disabled={!!busy || !!problem} onClick={() => go("buy")}>
+              <Button variant="buy" className="h-14 flex-col gap-0" disabled={!!busy || !!problem} onClick={() => go("buy")}>
                 <span className="flex items-center font-semibold"><ArrowUpRight className="mr-1 h-4 w-4" />{busy === "buy" ? "Buying…" : "Buy"}</span>
                 {preview && <span className="font-mono text-[10px] opacity-80">TP {fmtPx(preview.buy.tp)}</span>}
               </Button>
-              <Button className="h-14 flex-col gap-0 bg-loss text-white hover:bg-loss/90" disabled={!!busy || !!problem || liveCrypto} onClick={() => go("sell")}>
+              <Button variant="sell" className="h-14 flex-col gap-0" disabled={!!busy || !!problem || liveCrypto} onClick={() => go("sell")}>
                 <span className="flex items-center font-semibold"><ArrowDownRight className="mr-1 h-4 w-4" />{busy === "sell" ? "Selling…" : "Sell"}</span>
                 {preview && <span className="font-mono text-[10px] opacity-80">TP {fmtPx(preview.sell.tp)}</span>}
               </Button>

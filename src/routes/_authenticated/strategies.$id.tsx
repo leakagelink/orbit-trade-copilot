@@ -98,7 +98,7 @@ function Builder() {
         }
       />
       <BacktestDialog strategyId={id} capital={cfg.risk.capital_allocation} open={btOpen} onOpenChange={setBtOpen} />
-      <div className="grid gap-6 p-6 xl:grid-cols-[1fr_320px]">
+      <div className="grid gap-6 p-6 xl:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-6">
           <Section title="Live signal preview"><SignalPreview cfg={cfg} /></Section>
           <Section title="General">
@@ -149,10 +149,10 @@ function Builder() {
               {cfg[side].conditions.length === 0 ? <p className="text-sm text-muted-foreground">No conditions.</p> : (
                 <div className="space-y-2">
                   {cfg[side].conditions.map((c, i) => (
-                    <div key={i} className="flex flex-wrap items-center gap-2">
-                      <Select value={c.left} onValueChange={(v) => updateCond(side, i, { left: v })}><SelectTrigger className="h-8 w-36 font-mono text-xs"><SelectValue /></SelectTrigger><SelectContent>{operands.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select>
-                      <Select value={c.operator} onValueChange={(v) => updateCond(side, i, { operator: v as Condition["operator"] })}><SelectTrigger className="h-8 w-36 font-mono text-xs"><SelectValue /></SelectTrigger><SelectContent>{OPERATORS.map((o) => <SelectItem key={o} value={o}>{o.replace("_", " ")}</SelectItem>)}</SelectContent></Select>
-                      <Input className="h-8 w-36 font-mono text-xs" value={c.right} onChange={(e) => updateCond(side, i, { right: e.target.value })} placeholder="value or indicator id" list={`ops-${side}`} />
+                    <div key={i} className="grid grid-cols-[minmax(0,1fr)_44px] items-center gap-2 sm:flex sm:flex-wrap">
+                      <Select value={c.left} onValueChange={(v) => updateCond(side, i, { left: v })}><SelectTrigger className="col-span-2 h-8 w-full font-mono text-xs sm:w-36"><SelectValue /></SelectTrigger><SelectContent>{operands.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select>
+                      <Select value={c.operator} onValueChange={(v) => updateCond(side, i, { operator: v as Condition["operator"] })}><SelectTrigger className="col-span-2 h-8 w-full font-mono text-xs sm:w-36"><SelectValue /></SelectTrigger><SelectContent>{OPERATORS.map((o) => <SelectItem key={o} value={o}>{o.replace("_", " ")}</SelectItem>)}</SelectContent></Select>
+                      <Input className="h-8 w-full font-mono text-xs sm:w-36" value={c.right} onChange={(e) => updateCond(side, i, { right: e.target.value })} placeholder="value or indicator id" list={`ops-${side}`} />
                       <Button size="icon" variant="ghost" aria-label="Remove condition" onClick={() => set({ [side]: { ...cfg[side], conditions: cfg[side].conditions.filter((_, j) => j !== i) } } as Partial<StrategyConfig>)}><Trash2 className="h-4 w-4" /></Button>
                     </div>
                   ))}
@@ -202,7 +202,7 @@ function Builder() {
 function Section({ title, action, children }: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
   return (
     <section className="rounded-lg border bg-card p-4">
-      <div className="mb-4 flex items-center justify-between gap-2"><h2 className="text-sm font-medium">{title}</h2>{action}</div>
+      <div className="mb-4 grid min-w-0 gap-3 sm:flex sm:items-center sm:justify-between"><h2 className="min-w-0 text-sm font-medium">{title}</h2>{action && <div className="flex min-w-0 flex-wrap gap-2">{action}</div>}</div>
       {children}
     </section>
   );

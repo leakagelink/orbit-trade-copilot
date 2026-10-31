@@ -37,7 +37,7 @@ function Backtests() {
   return (
     <div>
       <PageHeader title="Backtests" description={D} />
-      <div className="grid gap-6 p-6 lg:grid-cols-[300px_1fr]">
+      <div className="grid gap-6 p-6 lg:grid-cols-[300px_minmax(0,1fr)]">
         <div className="space-y-2">
           {q.isLoading ? <Skeleton className="h-40" /> : !q.data?.length ? (
             <EmptyState icon={FlaskConical} title="No backtests yet" body="Open a strategy and click Backtest." action={<Link to="/strategies" className="text-sm text-primary hover:underline">Open strategies</Link>} />
