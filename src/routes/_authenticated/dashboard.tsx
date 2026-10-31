@@ -70,7 +70,7 @@ function Dashboard() {
   if (q.isError) return <div className="p-6 text-sm text-destructive">Couldn't load dashboard: {q.error.message}</div>;
 
   const filters = q.data && view && (
-    <div className="flex flex-wrap gap-2">
+    <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
       <F value={account} onChange={setAccount} items={[["all", "All accounts"], ...q.data.conns.map((c) => [c.id, `${c.label} · ${exchangeName(c.exchange)}`] as [string, string])]} />
       <F value={mode} onChange={setMode} items={[["all", "All modes"], ["paper", "Paper"], ["live", "Live"]]} />
       <F value={pair} onChange={setPair} items={[["all", "All pairs"], ...view.pairs.map((p) => [p, p] as [string, string])]} />
@@ -104,7 +104,7 @@ function Dashboard() {
             </div>
 
             <div className="rounded-lg border bg-card p-4">
-              <div className="mb-3 flex items-center justify-between"><h2 className="text-sm font-medium">Portfolio performance</h2><span className="font-mono text-xs text-muted-foreground">{view.m.closedTrades} closed trades</span></div>
+              <div className="mb-3 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3"><h2 className="min-w-0 text-sm font-medium">Portfolio performance</h2><span className="shrink-0 font-mono text-xs text-muted-foreground">{view.m.closedTrades} closed trades</span></div>
               {view.m.equityCurve.length < 2 ? (
                 <EmptyState icon={LineIcon} title="No performance history yet" body="Balance snapshots are recorded once a connected account or paper bot is running." action={q.data.conns.length === 0 ? <Button asChild size="sm"><Link to="/exchanges"><Cable className="mr-1 h-4 w-4" />Connect an exchange</Link></Button> : undefined} />
               ) : (
@@ -137,7 +137,7 @@ function Dashboard() {
 function F({ value, onChange, items }: { value: string; onChange: (v: string) => void; items: [string, string][] }) {
   return (
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="h-8 w-auto min-w-36 text-xs"><SelectValue /></SelectTrigger>
+      <SelectTrigger className="h-8 w-full min-w-0 text-xs sm:w-auto sm:min-w-36"><SelectValue /></SelectTrigger>
       <SelectContent>{items.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent>
     </Select>
   );

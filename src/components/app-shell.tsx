@@ -137,7 +137,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         {footer}
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="workspace-topbar flex h-16 shrink-0 items-center justify-between gap-3 border-b px-4 md:px-7">
+        <header className="workspace-topbar grid h-16 shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b px-4 sm:flex sm:justify-between md:px-7">
           <div className="flex min-w-0 items-center gap-3">
           <div className="md:hidden">
           <Sheet open={open} onOpenChange={setOpen}>
@@ -198,7 +198,7 @@ function PlanGate({ children }: { children: ReactNode }) {
         <ul className="mx-auto mt-4 max-w-xs space-y-1 text-left text-sm">
           {PLAN_FEATURES.pro.features.slice(1).map((f) => <li key={f}>• {f}</li>)}
         </ul>
-        <div className="mt-6 flex justify-center gap-2">
+        <div className="mt-6 flex flex-wrap justify-center gap-2">
           <Button asChild><Link to="/plans">See plans</Link></Button>
           <Button variant="outline" asChild><Link to="/trade">Go to Trade</Link></Button>
         </div>
@@ -212,10 +212,10 @@ export function PageHeader({ title, description, actions }: { title: string; des
   return (
     <div className="page-heading flex flex-col gap-3 px-5 pb-5 pt-7 sm:flex-row sm:items-center sm:justify-between md:px-7">
       <div className="min-w-0">
-        <h1 className="text-2xl font-semibold">{title}</h1>
+        <h1 className="text-2xl font-semibold break-words">{title}</h1>
         {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
       </div>
-      {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
+      {actions && <div className="page-actions flex min-w-0 flex-wrap gap-2">{actions}</div>}
     </div>
   );
 }
