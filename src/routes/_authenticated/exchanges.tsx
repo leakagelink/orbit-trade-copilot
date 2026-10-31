@@ -20,7 +20,7 @@ import { connectExchange, disconnectExchange, updateExchangeCredentials, verifyE
 
 const D = "Connect your crypto exchange accounts. API secrets are encrypted on the server.";
 export const Route = createFileRoute("/_authenticated/exchanges")({
-  head: () => ({ meta: [{ title: "Exchanges — Quantra" }, { name: "description", content: D }, { property: "og:title", content: "Exchanges — Quantra" }, { property: "og:description", content: D }] }),
+  head: () => ({ meta: [{ title: "Exchanges — AlgoVirt" }, { name: "description", content: D }, { property: "og:title", content: "Exchanges — AlgoVirt" }, { property: "og:description", content: D }] }),
   component: Exchanges,
 });
 

@@ -21,7 +21,7 @@ import {
 } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/_authenticated/admin")({
-  head: () => toolkitHead("Admin panel", "Manage Quantra users, plans, roles, wallets, bots, referrals and marketplace content."),
+  head: () => toolkitHead("Admin panel", "Manage AlgoVirt users, plans, roles, wallets, bots, referrals and marketplace content."),
   component: Admin,
 });
 

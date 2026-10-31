@@ -11,7 +11,7 @@ import { fmtMoney, groupStats, monthlyPnl } from "@/lib/metrics";
 
 const D = "Performance by bot, strategy and pair, computed from your closed trades.";
 export const Route = createFileRoute("/_authenticated/analytics")({
-  head: () => ({ meta: [{ title: "Analytics — Quantra" }, { name: "description", content: D }, { property: "og:title", content: "Analytics — Quantra" }, { property: "og:description", content: D }] }),
+  head: () => ({ meta: [{ title: "Analytics — AlgoVirt" }, { name: "description", content: D }, { property: "og:title", content: "Analytics — AlgoVirt" }, { property: "og:description", content: D }] }),
   component: Analytics,
 });
 

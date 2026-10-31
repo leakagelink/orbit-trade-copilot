@@ -22,7 +22,7 @@ import { fmtMoney } from "@/lib/metrics";
 
 const D = "Fast one-click trades with an automatic tight stop, target and time limit. Elite plan.";
 export const Route = createFileRoute("/_authenticated/scalping")({
-  head: () => ({ meta: [{ title: "Scalping — Quantra" }, { name: "description", content: D }, { property: "og:title", content: "Scalping — Quantra" }, { property: "og:description", content: D }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
+  head: () => ({ meta: [{ title: "Scalping — AlgoVirt" }, { name: "description", content: D }, { property: "og:title", content: "Scalping — AlgoVirt" }, { property: "og:description", content: D }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: ScalpingPage,
 });
 

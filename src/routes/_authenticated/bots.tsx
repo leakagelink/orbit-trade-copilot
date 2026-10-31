@@ -21,7 +21,7 @@ import { EXCHANGES, exchangeName } from "@/lib/exchanges";
 
 const D = "Configure automated trading bots with capital, sizing and risk limits.";
 export const Route = createFileRoute("/_authenticated/bots")({
-  head: () => ({ meta: [{ title: "Trading Bots — Quantra" }, { name: "description", content: D }, { property: "og:title", content: "Trading Bots — Quantra" }, { property: "og:description", content: D }] }),
+  head: () => ({ meta: [{ title: "Trading Bots — AlgoVirt" }, { name: "description", content: D }, { property: "og:title", content: "Trading Bots — AlgoVirt" }, { property: "og:description", content: D }] }),
   validateSearch: (s: Record<string, unknown>): { strategy?: string } => (typeof s["strategy"] === "string" ? { strategy: s["strategy"] } : {}),
   component: Bots,
 });

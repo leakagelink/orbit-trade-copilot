@@ -16,7 +16,7 @@ import { fmtMoney } from "@/lib/metrics";
 
 const D = "Account-wide limits that every bot must respect before opening a trade.";
 export const Route = createFileRoute("/_authenticated/risk")({
-  head: () => ({ meta: [{ title: "Risk Management — Quantra" }, { name: "description", content: D }, { property: "og:title", content: "Risk Management — Quantra" }, { property: "og:description", content: D }] }),
+  head: () => ({ meta: [{ title: "Risk Management — AlgoVirt" }, { name: "description", content: D }, { property: "og:title", content: "Risk Management — AlgoVirt" }, { property: "og:description", content: D }] }),
   component: Risk,
 });
 

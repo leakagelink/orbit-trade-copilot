@@ -27,7 +27,7 @@ import { fetchBinanceChart } from "@/lib/chart-feed";
 
 const D = "Buy and sell crypto, forex and commodities from your wallet, with AI trade ideas on Pro.";
 export const Route = createFileRoute("/_authenticated/trade")({
-  head: () => ({ meta: [{ title: "Trade — Quantra" }, { name: "description", content: D }, { property: "og:title", content: "Trade — Quantra" }, { property: "og:description", content: D }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" }] }),
+  head: () => ({ meta: [{ title: "Trade — AlgoVirt" }, { name: "description", content: D }, { property: "og:title", content: "Trade — AlgoVirt" }, { property: "og:description", content: D }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" }] }),
   validateSearch: (s: Record<string, unknown>): { symbol?: string } => (typeof s["symbol"] === "string" ? { symbol: s["symbol"] } : {}),
   component: TradePage,
 });

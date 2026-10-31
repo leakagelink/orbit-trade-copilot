@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 
 const D = "Portfolio metrics computed from your recorded trades, positions and balance snapshots.";
 export const Route = createFileRoute("/_authenticated/dashboard")({
-  head: () => ({ meta: [{ title: "Dashboard — Quantra" }, { name: "description", content: D }, { property: "og:title", content: "Dashboard — Quantra" }, { property: "og:description", content: D }] }),
+  head: () => ({ meta: [{ title: "Dashboard — AlgoVirt" }, { name: "description", content: D }, { property: "og:title", content: "Dashboard — AlgoVirt" }, { property: "og:description", content: D }] }),
   component: Dashboard,
 });
 

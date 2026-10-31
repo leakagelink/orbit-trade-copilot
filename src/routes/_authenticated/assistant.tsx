@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils";
 const D = "Chat with the AI about strategies, indicators and risk parameters.";
 export const Route = createFileRoute("/_authenticated/assistant")({
   validateSearch: z.object({ session: z.string().uuid().optional(), prompt: z.string().max(1000).optional() }),
-  head: () => ({ meta: [{ title: "AI Assistant — Quantra" }, { name: "description", content: D }, { property: "og:title", content: "AI Assistant — Quantra" }, { property: "og:description", content: D }] }),
+  head: () => ({ meta: [{ title: "AI Assistant — AlgoVirt" }, { name: "description", content: D }, { property: "og:title", content: "AI Assistant — AlgoVirt" }, { property: "og:description", content: D }] }),
   component: Assistant,
 });
 
@@ -160,7 +160,7 @@ function Chat({ sessionId, initial, onSaved }: { sessionId: string; initial: UIM
       <Conversation className="min-h-0 min-w-0 flex-1">
         <ConversationContent className="mx-auto w-full max-w-3xl">
           {messages.length === 0 ? (
-            <ConversationEmptyState icon={<Activity className="h-8 w-8 text-primary" />} title="Quantra AI" description="Strategy design, indicators and risk. No live market data yet — the AI won't invent prices.">
+            <ConversationEmptyState icon={<Activity className="h-8 w-8 text-primary" />} title="AlgoVirt AI" description="Strategy design, indicators and risk. No live market data yet — the AI won't invent prices.">
               <div className="mt-6 grid gap-2 sm:grid-cols-2">
                 {SUGGESTIONS.map((s) => <button key={s} onClick={() => send(s)} className="rounded-md border bg-card px-3 py-2 text-left text-sm hover:border-primary">{s}</button>)}
               </div>

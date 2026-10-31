@@ -10,14 +10,14 @@ export const LEGAL_LINKS = [
 ] as const;
 
 /** Company details are placeholders until the owner provides the registered name, country and contact. */
-export const COMPANY = { name: "Quantra", contact: "the in-app Support mailbox", updated: "October 31, 2026" };
+export const COMPANY = { name: "AlgoVirt", contact: "the in-app Support mailbox", updated: "October 31, 2026" };
 
 export function legalHead(title: string, description: string) {
   return {
     meta: [
-      { title: `${title} — Quantra` },
+      { title: `${title} — AlgoVirt` },
       { name: "description", content: description },
-      { property: "og:title", content: `${title} — Quantra` },
+      { property: "og:title", content: `${title} — AlgoVirt` },
       { property: "og:description", content: description },
       { property: "og:type", content: "article" },
       { name: "twitter:card", content: "summary" },

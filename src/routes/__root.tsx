@@ -85,7 +85,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { name: "theme-color", content: "#0b0f17" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
-      { title: "Quantra — AI Algorithmic Trading" },
+      { title: "AlgoVirt — AI Algorithmic Trading" },
       { name: "description", content: "Automate crypto trading with AI strategies, bots and risk controls." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

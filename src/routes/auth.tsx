@@ -30,10 +30,10 @@ export const Route = createFileRoute("/auth")({
   },
   head: () => ({
     meta: [
-      { title: "Sign in — Quantra" },
-      { name: "description", content: "Sign in or create your Quantra trading account." },
-      { property: "og:title", content: "Sign in — Quantra" },
-      { property: "og:description", content: "Sign in or create your Quantra trading account." },
+      { title: "Sign in — AlgoVirt" },
+      { name: "description", content: "Sign in or create your AlgoVirt trading account." },
+      { property: "og:title", content: "Sign in — AlgoVirt" },
+      { property: "og:description", content: "Sign in or create your AlgoVirt trading account." },
     ],
   }),
   component: AuthPage,

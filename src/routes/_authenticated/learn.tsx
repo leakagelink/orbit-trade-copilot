@@ -7,7 +7,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Badge } from "@/components/ui/badge";
 
 export const Route = createFileRoute("/_authenticated/learn")({
-  head: () => toolkitHead("Learn trading", "Beginner lessons on trading basics, risk management and using Quantra's tools."),
+  head: () => toolkitHead("Learn trading", "Beginner lessons on trading basics, risk management and using AlgoVirt's tools."),
   component: Learn,
 });
 

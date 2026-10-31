@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { LegalPage, legalHead, COMPANY } from "@/components/legal-page";
 
 export const Route = createFileRoute("/refunds")({
-  head: () => legalHead("Refund Policy", "How cancellations and refunds work for Quantra Pro and Elite subscriptions."),
+  head: () => legalHead("Refund Policy", "How cancellations and refunds work for AlgoVirt Pro and Elite subscriptions."),
   component: () => (
     <LegalPage title="Refund Policy">
       <h2>Cancelling</h2><p>You can cancel a paid plan at any time. You keep access until the end of the period you paid for, then the account returns to Free. Open positions can still be managed and closed after a downgrade.</p>
