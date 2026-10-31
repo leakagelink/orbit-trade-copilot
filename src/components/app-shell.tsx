@@ -1,9 +1,11 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState, type ReactNode } from "react";
 import {
   LayoutDashboard, Bot, Cable, Blocks, Settings, LogOut, Moon, Sun, Menu, MessageSquareText, Activity,
   FlaskConical, ChartColumn, ShieldAlert, CandlestickChart, Wallet, Crown, Lock, ArrowLeftRight, Zap, ChevronRight, ArrowUpRight, Ellipsis,
+  Star, BookOpen, CalendarDays, Bell, LifeBuoy, HeartPulse,
 } from "lucide-react";
 import { usePlan } from "@/hooks/use-plan";
 import { canOpen, requiredPlan, PLAN_FEATURES } from "@/lib/plans";
@@ -11,6 +13,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { MfaGate } from "@/components/mfa-gate";
+import { recordSession } from "@/lib/security.functions";
 
 const NAV = [
   { to: "/trade", label: "Trade", icon: CandlestickChart },
@@ -27,6 +31,12 @@ const NAV = [
   { to: "/exchanges", label: "Exchanges", icon: Cable },
   { to: "/settings", label: "Settings", icon: Settings },
   { to: "/plans", label: "Plans", icon: Crown },
+  { to: "/watchlist", label: "Watchlist & alerts", icon: Star },
+  { to: "/journal", label: "Trading journal", icon: BookOpen },
+  { to: "/calendar", label: "Economic calendar", icon: CalendarDays },
+  { to: "/notifications", label: "Notifications", icon: Bell },
+  { to: "/support", label: "Support", icon: LifeBuoy },
+  { to: "/status", label: "Service status", icon: HeartPulse },
 ] as const;
 
 export function Logo({ className }: { className?: string }) {
@@ -96,12 +106,19 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
+  return <MfaGate><SecuredShell>{children}</SecuredShell></MfaGate>;
+}
+
+function SecuredShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [email, setEmail] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const path = useRouterState({ select: (s) => s.location.pathname });
   const plan = usePlan();
+  const record = useServerFn(recordSession);
+  useEffect(() => { record().catch(() => {}); const timer = setInterval(() => record().catch(() => {}), 60000); return () => clearInterval(timer); }, [record]);
+  const unread = useQuery({queryKey:["notifications","unread"],enabled:plan.data?.pro===true,queryFn:async()=>{const r=await supabase.from("notifications").select("id",{count:"exact",head:true}).is("read_at",null);if(r.error)throw new Error("Notifications unavailable");return r.count??0;},refetchInterval:30000});
   const current = NAV.find(item => path === item.to || path.startsWith(item.to + "/"));
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? null));
@@ -157,6 +174,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="flex shrink-0 items-center gap-3">
           <Link to="/wallet" className="hidden items-center gap-2 text-xs text-muted-foreground sm:flex"><Wallet className="h-3.5 w-3.5" />Demo wallet</Link>
           <ThemeToggle />
+          {plan.data?.pro && <Button variant="ghost" size="icon" asChild title="Notifications"><Link to="/notifications" aria-label="Notifications" className="relative"><Bell className="h-4 w-4"/>{(unread.data??0)>0&&<span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-primary"/>}</Link></Button>}
           <span className="grid h-8 w-8 place-items-center rounded-full border bg-secondary font-mono text-xs" title="Your account">{email?.slice(0, 2).toUpperCase() ?? "Q"}</span>
           </div>
         </header>

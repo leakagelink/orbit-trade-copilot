@@ -1,0 +1,7 @@
+CREATE OR REPLACE FUNCTION public.account_mfa_allowed() RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public AS $$ SELECT auth.uid() IS NOT NULL AND (coalesce(auth.jwt()->>'aal','aal1')='aal2' OR NOT EXISTS(SELECT 1 FROM auth.mfa_factors WHERE user_id=auth.uid() AND status='verified')); $$;
+REVOKE ALL ON FUNCTION public.account_mfa_allowed() FROM PUBLIC,anon; GRANT EXECUTE ON FUNCTION public.account_mfa_allowed() TO authenticated,service_role;
+DO $$ DECLARE t record; BEGIN FOR t IN SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename NOT IN ('connection_credentials') LOOP IF EXISTS(SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relname=t.tablename AND c.relrowsecurity) THEN EXECUTE format('CREATE POLICY account_mfa_guard ON public.%I AS RESTRICTIVE FOR ALL TO authenticated USING (public.account_mfa_allowed()) WITH CHECK (public.account_mfa_allowed())',t.tablename); END IF; END LOOP; END $$;
+CREATE TABLE public.workspace_sessions (id uuid PRIMARY KEY, user_id uuid NOT NULL, device text NOT NULL, first_seen_at timestamptz NOT NULL DEFAULT now(), last_seen_at timestamptz NOT NULL DEFAULT now(), revoked_at timestamptz);
+GRANT SELECT ON public.workspace_sessions TO authenticated; GRANT ALL ON public.workspace_sessions TO service_role;
+ALTER TABLE public.workspace_sessions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY sessions_read ON public.workspace_sessions FOR SELECT TO authenticated USING(auth.uid()=user_id AND public.account_mfa_allowed());
