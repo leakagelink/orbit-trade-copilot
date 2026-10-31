@@ -32,13 +32,13 @@ function Marketplace() {
 
   async function publish(id: string, v: boolean) {
     const r = await supabase.from("strategies").update({ is_published: v, published_at: v ? new Date().toISOString() : null }).eq("id", id);
-    if (r.error) return toast.error("Couldn't update — strategy changes need a Pro plan");
+    if (r.error) { toast.error("Couldn't update — strategy changes need a Pro plan"); return; }
     toast.success(v ? "Published to the marketplace" : "Removed from the marketplace");
     qc.invalidateQueries({ queryKey: ["marketplace"] });
   }
   async function clone(s: { id: string; name: string; description: string | null; config: Json }) {
     const r = await supabase.from("strategies").insert({ user_id: mine.data!.userId, name: `${s.name} (copy)`.slice(0, 120), description: s.description, config: s.config, source: "marketplace" }).select("id").single();
-    if (r.error) return toast.error("Couldn't copy — strategies need a Pro plan");
+    if (r.error) { toast.error("Couldn't copy — strategies need a Pro plan"); return; }
     await supabase.rpc("bump_strategy_clone", { _id: s.id });
     toast.success("Copied to your strategies");
     navigate({ to: "/strategies/$id", params: { id: r.data.id } });
