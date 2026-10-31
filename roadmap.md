@@ -1,5 +1,10 @@
 # Roadmap
 
+## Homepage redesign
+- [ ] Replace homepage with full trading-platform presentation, market coverage, workflows, safeguards, FAQ and three-tier comparison
+- [ ] Add cohesive 3D trading imagery and mobile-friendly signup calls to action
+- [ ] Verify homepage interactions, signup navigation and mobile/desktop layouts
+
 ## Three subscription tiers
 - [x] Free / Pro / Elite with monthly and yearly selector, existing-feature comparison and no invented prices
 - [x] Paid-tier access checks; Elite-only new scalping/arbitrage entries; owner recovery and exits retained
