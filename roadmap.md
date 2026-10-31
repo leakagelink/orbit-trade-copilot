@@ -1,5 +1,14 @@
 # Roadmap
 
+## Trading toolkit and account safety
+- [ ] Paid watchlist and server-checked price alerts
+- [ ] Paid trading journal and trade-history CSV export
+- [ ] Economic calendar with real provider data
+- [ ] Durable trade, bot, connection and price notifications
+- [ ] Two-step verification, workspace device activity and revoke-other-sessions control
+- [ ] Support tickets and truthful service checks
+- [ ] Verify access rules, persistence and mobile layouts
+
 ## Homepage redesign
 - [x] Replace homepage with full trading-platform presentation, market coverage, workflows, safeguards, FAQ and three-tier comparison
 - [x] Add cohesive 3D trading imagery and mobile-friendly signup calls to action
