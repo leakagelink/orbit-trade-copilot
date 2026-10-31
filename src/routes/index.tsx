@@ -17,8 +17,10 @@ export const Route = createFileRoute("/")({
     { property: "og:title", content: "AlgoVirt — Your Complete Trading Workspace" },
     { property: "og:description", content: DESCRIPTION },
     { property: "og:type", content: "website" },
+    { property: "og:site_name", content: "AlgoVirt" },
+    { property: "og:url", content: "https://algovirt.com" },
     { name: "twitter:card", content: "summary_large_image" },
-  ] }),
+  ], links: [{ rel: "canonical", href: "https://algovirt.com" }] }),
   component: Landing,
 });
 
