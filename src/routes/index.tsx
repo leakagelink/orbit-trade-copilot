@@ -27,11 +27,11 @@ const FEATURES = [
 function Landing() {
   return (
     <div className="min-h-screen bg-background">
-      <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
+      <header className="mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 py-4 sm:flex sm:justify-between sm:px-6 sm:py-5">
         <Logo />
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <Button variant="ghost" asChild><Link to="/auth">Sign in</Link></Button>
+          <Button variant="ghost" className="hidden sm:inline-flex" asChild><Link to="/auth">Sign in</Link></Button>
           <Button asChild><Link to="/auth" search={{ mode: "register" }}>Get started</Link></Button>
         </div>
       </header>
@@ -50,7 +50,7 @@ function Landing() {
               <Button size="lg" variant="outline" asChild><Link to="/auth">Sign in</Link></Button>
             </div>
           </div>
-          <div className="rounded-lg border bg-card p-5 font-mono text-xs shadow-sm">
+          <div className="min-w-0 rounded-lg border bg-card p-5 font-mono text-xs shadow-sm">
             <div className="mb-3 flex items-center justify-between text-muted-foreground"><span>strategy.json</span><span className="text-primary">● validated</span></div>
             <pre className="overflow-x-auto leading-relaxed text-card-foreground">{`{
   "pairs": ["BTC/USDT"],

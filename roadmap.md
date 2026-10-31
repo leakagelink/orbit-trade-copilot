@@ -1,9 +1,9 @@
 # Roadmap
 
 ## All-screen mobile optimization
-- [ ] Fit all page sections, headers, forms, charts and tables to mobile widths
-- [ ] Optimize chat, dialogs, touch targets and bottom-bar clearance
-- [ ] Check mobile/tablet/desktop screens and existing access tests
+- [x] Fit all page sections, headers, forms, charts and locally scrollable tables to mobile widths
+- [x] Optimize chat viewport/history selector, dialogs, touch targets and bottom-bar clearance
+- [x] Check all 14 main screens at 393px, builder and selected screens at 320px, four tablet screens, desktop Trade and public pages; no page overflow, 21 tests pass. Pro layouts inspected with browser-only plan response override, not paid trading execution.
 
 ## Trading UI refresh
 - [x] Modern trading workspace, dimensional surfaces and animated 3D market scene using actual candles
