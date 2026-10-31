@@ -9,7 +9,7 @@ function headers() {
 }
 
 async function call<T>(path: string, init?: { method?: string; body?: unknown }): Promise<T> {
-  const res = await fetch(`${GATEWAY_URL}${path}`, { method: init?.method ?? "GET", headers: headers(), body: init?.body === undefined ? undefined : JSON.stringify(init.body) });
+  const res = await fetch(`${GATEWAY_URL}${path}`, { method: init?.method ?? "GET", headers: headers(), body: init?.body === undefined ? null : JSON.stringify(init.body) });
   if (!res.ok) {
     const text = await res.text();
     console.error(`NOWPayments request failed [${res.status}]: ${text}`);
