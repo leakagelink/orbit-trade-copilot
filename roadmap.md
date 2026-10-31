@@ -1,9 +1,9 @@
 # Roadmap
 
 ## Trading UI refresh
-- [ ] Modern trading workspace, dimensional surfaces and animated 3D market scene
-- [ ] Polish Trade/Wallet screens, shared controls and mobile layout without changing trading rules
-- [ ] Verify authenticated screens, theme switching and reduced-motion behavior
+- [x] Modern trading workspace, dimensional surfaces and animated 3D market scene using actual candles
+- [x] Polish Trade/Wallet screens, shared controls and mobile layout without changing trading rules
+- [x] Verify signed-in Trade/Wallet, 3D rendering, theme switching, mobile menu, no page overflow and reduced-motion behavior; 21 existing tests pass
 
 ## Scalping (Pro)
 - [x] Scalping page: 1m/5m/15m chart, one-click buy/sell with % stop/target set on the server, auto time limit, close all
