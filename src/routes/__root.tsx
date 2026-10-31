@@ -143,6 +143,7 @@ function RootComponent() {
       <TooltipProvider delayDuration={200}>
         <Outlet />
       </TooltipProvider>
+      <SplashScreen />
       <Toaster richColors position="top-right" />
     </QueryClientProvider>
   );
