@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 
 export const Route = createFileRoute("/_authenticated/referrals")({
-  head: () => toolkitHead("Invite friends", "Share your Quantra invite link and track friends who join."),
+  head: () => toolkitHead("Invite friends", "Share your AlgoVirt invite link and track friends who join."),
   component: Referrals,
 });
 

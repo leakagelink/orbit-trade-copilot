@@ -78,7 +78,7 @@ const Y_INT: Record<string, [string, string]> = {
 export async function yahooChart(ticker: string, tf: string, limit = 300): Promise<Candle[]> {
   const [interval, range] = Y_INT[tf] ?? ["60m", "6mo"];
   const path = `/v8/finance/chart/${encodeURIComponent(ticker)}?interval=${interval}&range=${range}`;
-  const init = { headers: { "User-Agent": "Mozilla/5.0 (compatible; Quantra/1.0)", Accept: "application/json" } };
+  const init = { headers: { "User-Agent": "Mozilla/5.0 (compatible; AlgoVirt/1.0)", Accept: "application/json" } };
   let j;
   try { j = await getJson(`https://query1.finance.yahoo.com${path}`, init); }
   catch { j = await getJson(`https://query2.finance.yahoo.com${path}`, init); }

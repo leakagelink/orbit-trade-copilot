@@ -53,7 +53,7 @@ export function Logo({ className }: { className?: string }) {
       <span className="brand-mark grid h-8 w-8 place-items-center rounded-md bg-primary text-primary-foreground">
         <Activity className="h-5 w-5" />
       </span>
-      QUANTRA
+      ALGOVIRT
     </span>
   );
 }

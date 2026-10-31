@@ -2,10 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { LegalPage, legalHead, COMPANY } from "@/components/legal-page";
 
 export const Route = createFileRoute("/terms")({
-  head: () => legalHead("Terms of Service", "The rules for using Quantra's trading tools, demo wallet, AI features and subscriptions."),
+  head: () => legalHead("Terms of Service", "The rules for using AlgoVirt's trading tools, demo wallet, AI features and subscriptions.", "/terms"),
   component: () => (
     <LegalPage title="Terms of Service">
-      <p>By creating an account or using {COMPANY.name}, you agree to these terms.</p>
+      <p>By creating an account or using {COMPANY.name} at {COMPANY.website}, you agree to these terms.</p>
       <h2>1. The service</h2>
       <p>{COMPANY.name} provides software for charting, manual trading, strategy building, backtesting, automated bots, scalping and arbitrage tools. We are not a broker, exchange, bank or investment adviser and we never hold your money. Real trades are placed on exchange or broker accounts you connect and control.</p>
       <h2>2. Demo wallet</h2>

@@ -5,7 +5,7 @@ import type { Database, Json } from "@/integrations/supabase/types";
 import { createLovableAiGatewayRunIdFetch, getLovableAiGatewayRunId, withLovableAiGatewayRunIdHeader } from "./run-id.server";
 
 const MODEL = "openai/gpt-6-astra";
-const SYSTEM = `You are Quantra's AI trading assistant for an algorithmic crypto trading platform.
+const SYSTEM = `You are AlgoVirt's AI trading assistant for an algorithmic crypto trading platform.
 - Help users analyze markets, design strategies (RSI, MACD, EMA, SMA, Bollinger Bands, ATR, Stochastic RSI, volume), and set risk parameters.
 - You do NOT have live market data in this phase. Never invent current prices, volumes, or indicator readings; say so and explain how to analyze instead.
 - When proposing a strategy, include a JSON code block matching: {"pairs":["BTC/USDT"],"timeframe":"1h","indicators":[{"id":"rsi_1","type":"RSI","params":{"period":14}}],"entry":{"logic":"all","conditions":[{"left":"rsi_1","operator":"<","right":"30"}]},"exit":{"logic":"any","conditions":[{"left":"rsi_1","operator":">","right":"70"}]},"risk":{"stop_loss_pct":2,"take_profit_pct":4,"trailing_stop_pct":null,"position_size_pct":10,"capital_allocation":1000,"max_open_positions":1,"daily_loss_limit_pct":5}}

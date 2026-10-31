@@ -11,10 +11,10 @@ export const Route = createFileRoute("/reset-password")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Set a new password — Quantra" },
-      { name: "description", content: "Choose a new password for your Quantra account." },
-      { property: "og:title", content: "Set a new password — Quantra" },
-      { property: "og:description", content: "Choose a new password for your Quantra account." },
+      { title: "Set a new password — AlgoVirt" },
+      { name: "description", content: "Choose a new password for your AlgoVirt account." },
+      { property: "og:title", content: "Set a new password — AlgoVirt" },
+      { property: "og:description", content: "Choose a new password for your AlgoVirt account." },
     ],
   }),
   component: Reset,

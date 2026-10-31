@@ -14,7 +14,7 @@ import {Textarea} from "@/components/ui/textarea";
 import {Label} from "@/components/ui/label";
 import {Badge} from "@/components/ui/badge";
 import {Select,SelectContent,SelectItem,SelectTrigger,SelectValue} from "@/components/ui/select";
-export const Route=createFileRoute("/_authenticated/support")({head:()=>toolkitHead("Support","Submit and track your Quantra account and trading support requests."),component:Support});
+export const Route=createFileRoute("/_authenticated/support")({head:()=>toolkitHead("Support","Submit and track your AlgoVirt account and trading support requests."),component:Support});
 function OperatorQueue(){
  const reply=useServerFn(replyTicket),qc=useQueryClient();
  const roles=useQuery({queryKey:["support","operator"],queryFn:async()=>{const {data}=await supabase.auth.getUser();if(!data.user)return false;const r=await supabase.from("user_roles").select("role").eq("user_id",data.user.id);return r.data?.some(x=>x.role==="admin"||x.role==="super_admin")??false;}});

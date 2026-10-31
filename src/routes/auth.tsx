@@ -3,8 +3,6 @@ import { useEffect, useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
-import "@lovable.dev/cloud-auth-js/styles.css";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,10 +30,10 @@ export const Route = createFileRoute("/auth")({
   },
   head: () => ({
     meta: [
-      { title: "Sign in — Quantra" },
-      { name: "description", content: "Sign in or create your Quantra trading account." },
-      { property: "og:title", content: "Sign in — Quantra" },
-      { property: "og:description", content: "Sign in or create your Quantra trading account." },
+      { title: "Sign in — AlgoVirt" },
+      { name: "description", content: "Sign in or create your AlgoVirt trading account." },
+      { property: "og:title", content: "Sign in — AlgoVirt" },
+      { property: "og:description", content: "Sign in or create your AlgoVirt trading account." },
     ],
   }),
   component: AuthPage,
@@ -47,17 +45,6 @@ function AuthPage() {
   useEffect(() => { if (search.ref && /^[A-Za-z0-9]{4,16}$/.test(search.ref)) localStorage.setItem("pending_ref", search.ref.toUpperCase()); }, [search.ref]);
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState<string | null>(null);
-
-  async function oauth(provider: "google" | "lovable") {
-    if (search.redirect) sessionStorage.setItem("post_auth_redirect", safePath(search.redirect));
-    const r = await lovable.auth.signInWithOAuth(provider, { redirect_uri: window.location.origin + "/auth" });
-    if (r.error) toast.error(r.error.message ?? "Sign-in failed");
-    else if (!r.redirected) {
-      const dest = sessionStorage.getItem("post_auth_redirect") ?? "/dashboard";
-      sessionStorage.removeItem("post_auth_redirect");
-      navigate({ to: dest as "/dashboard" });
-    }
-  }
 
   async function login(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -112,11 +99,6 @@ function AuthPage() {
                 <TabsTrigger value="login">Sign in</TabsTrigger>
                 <TabsTrigger value="register">Create account</TabsTrigger>
               </TabsList>
-              <div className="space-y-2">
-                <button type="button" className="lovable-auth-button w-full" onClick={() => oauth("lovable")}>Continue with Lovable</button>
-                <Button type="button" variant="outline" className="w-full" onClick={() => oauth("google")}>Continue with Google</Button>
-              </div>
-              <div className="my-5 flex items-center gap-3 text-xs text-muted-foreground"><div className="h-px flex-1 bg-border" />or<div className="h-px flex-1 bg-border" /></div>
               <TabsContent value="login">
                 <form onSubmit={login} className="space-y-4">
                   <div className="space-y-1.5"><Label htmlFor="le">Email</Label><Input id="le" name="email" type="email" required autoComplete="email" /></div>

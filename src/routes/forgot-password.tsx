@@ -10,10 +10,10 @@ import { Logo } from "@/components/app-shell";
 export const Route = createFileRoute("/forgot-password")({
   head: () => ({
     meta: [
-      { title: "Reset password — Quantra" },
-      { name: "description", content: "Request a password reset link for your Quantra account." },
-      { property: "og:title", content: "Reset password — Quantra" },
-      { property: "og:description", content: "Request a password reset link for your Quantra account." },
+      { title: "Reset password — AlgoVirt" },
+      { name: "description", content: "Request a password reset link for your AlgoVirt account." },
+      { property: "og:title", content: "Reset password — AlgoVirt" },
+      { property: "og:description", content: "Request a password reset link for your AlgoVirt account." },
     ],
   }),
   component: Forgot,

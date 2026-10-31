@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import type { Json } from "@/integrations/supabase/types";
 
 export const Route = createFileRoute("/_authenticated/marketplace")({
-  head: () => toolkitHead("Strategy marketplace", "Browse and copy strategies shared by other Quantra traders, or publish your own."),
+  head: () => toolkitHead("Strategy marketplace", "Browse and copy strategies shared by other AlgoVirt traders, or publish your own."),
   component: Marketplace,
 });
 

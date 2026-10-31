@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { Logo } from "@/components/app-shell";
+import { canonical, SITE_DOMAIN, SITE_NAME } from "@/lib/site";
 
 export const LEGAL_LINKS = [
   { to: "/terms", label: "Terms of Service" },
@@ -10,18 +11,21 @@ export const LEGAL_LINKS = [
 ] as const;
 
 /** Company details are placeholders until the owner provides the registered name, country and contact. */
-export const COMPANY = { name: "Quantra", contact: "the in-app Support mailbox", updated: "October 31, 2026" };
+export const COMPANY = { name: SITE_NAME, website: SITE_DOMAIN, contact: "the in-app Support mailbox", updated: "October 31, 2026" };
 
-export function legalHead(title: string, description: string) {
+export function legalHead(title: string, description: string, path: string) {
+  const c = canonical(path);
   return {
     meta: [
-      { title: `${title} — Quantra` },
+      { title: `${title} — ${SITE_NAME}` },
       { name: "description", content: description },
-      { property: "og:title", content: `${title} — Quantra` },
+      { property: "og:title", content: `${title} — ${SITE_NAME}` },
       { property: "og:description", content: description },
       { property: "og:type", content: "article" },
       { name: "twitter:card", content: "summary" },
+      c.meta,
     ],
+    links: [c.link],
   };
 }
 

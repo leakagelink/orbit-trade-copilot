@@ -13,7 +13,7 @@ import { SecurityPanel } from "@/components/security-panel";
 
 const D = "Manage your profile, password and account details.";
 export const Route = createFileRoute("/_authenticated/settings")({
-  head: () => ({ meta: [{ title: "Settings — Quantra" }, { name: "description", content: D }, { property: "og:title", content: "Settings — Quantra" }, { property: "og:description", content: D }] }),
+  head: () => ({ meta: [{ title: "Settings — AlgoVirt" }, { name: "description", content: D }, { property: "og:title", content: "Settings — AlgoVirt" }, { property: "og:description", content: D }] }),
   component: Settings,
 });
 

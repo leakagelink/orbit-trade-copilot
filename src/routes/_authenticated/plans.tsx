@@ -12,7 +12,7 @@ import { PLAN_FEATURES, PLAN_IDS, type BillingInterval } from "@/lib/plans";
 
 const D = "Free manual trading, Pro AI and trading bots, or Elite scalping and arbitrage. Compare monthly and yearly plans.";
 export const Route = createFileRoute("/_authenticated/plans")({
-  head: () => ({ meta: [{ title: "Free, Pro & Elite Plans — Quantra" }, { name: "description", content: D }, { property: "og:title", content: "Free, Pro & Elite Plans — Quantra" }, { property: "og:description", content: D }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
+  head: () => ({ meta: [{ title: "Free, Pro & Elite Plans — AlgoVirt" }, { name: "description", content: D }, { property: "og:title", content: "Free, Pro & Elite Plans — AlgoVirt" }, { property: "og:description", content: D }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: PlansPage,
 });
 

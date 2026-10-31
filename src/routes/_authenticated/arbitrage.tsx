@@ -20,7 +20,7 @@ import { exchangeName } from "@/lib/exchanges";
 
 const D = "Compare crypto exchange prices, review net spreads and execute prefunded spot arbitrage with Elite.";
 export const Route = createFileRoute("/_authenticated/arbitrage")({
-  head: () => ({ meta: [{ title: "Arbitrage — Quantra" }, { name: "description", content: D }, { property: "og:title", content: "Arbitrage — Quantra" }, { property: "og:description", content: D }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" }] }),
+  head: () => ({ meta: [{ title: "Arbitrage — AlgoVirt" }, { name: "description", content: D }, { property: "og:title", content: "Arbitrage — AlgoVirt" }, { property: "og:description", content: D }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" }] }),
   component: ArbitragePage,
 });
 const money = (n: number) => n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 });
