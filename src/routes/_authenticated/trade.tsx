@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { ArrowUpRight, ArrowDownRight, Bot, Sparkles, Lock, Wallet, CandlestickChart } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, Bot, Sparkles, Lock, Wallet, CandlestickChart, RefreshCw } from "lucide-react";
 import { ClientOnly } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/app-shell";
@@ -25,7 +25,7 @@ import { fmtMoney } from "@/lib/metrics";
 
 const D = "Buy and sell crypto, forex and commodities from your wallet, with AI trade ideas on Pro.";
 export const Route = createFileRoute("/_authenticated/trade")({
-  head: () => ({ meta: [{ title: "Trade — Quantra" }, { name: "description", content: D }, { property: "og:title", content: "Trade — Quantra" }, { property: "og:description", content: D }] }),
+  head: () => ({ meta: [{ title: "Trade — Quantra" }, { name: "description", content: D }, { property: "og:title", content: "Trade — Quantra" }, { property: "og:description", content: D }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" }] }),
   validateSearch: (s: Record<string, unknown>): { symbol?: string } => (typeof s["symbol"] === "string" ? { symbol: s["symbol"] } : {}),
   component: TradePage,
 });
@@ -202,8 +202,13 @@ function TradePage() {
             {nonCrypto && isWallet && <span className="text-xs text-muted-foreground">Prices: Yahoo Finance</span>}
           </div>
 
-          {candles.isLoading ? <Skeleton className="h-[420px]" /> : candles.data?.error ? (
-            <p className="rounded-lg border bg-card p-4 text-sm text-destructive">{candles.data.error}</p>
+          {candles.isLoading ? <Skeleton className="h-[420px]" /> : candles.isError || candles.data?.error || !candles.data?.candles.length ? (
+            <div role="alert" className="flex min-h-[420px] flex-col items-center justify-center gap-4 rounded-lg border bg-card p-4 text-center text-sm">
+              <p className="text-destructive">Market data is temporarily unavailable for {symbol}.</p>
+              <Button variant="outline" size="sm" onClick={() => candles.refetch()} disabled={candles.isFetching}>
+                <RefreshCw className={`mr-2 h-4 w-4 ${candles.isFetching ? "animate-spin" : ""}`} />{candles.isFetching ? "Retrying…" : "Retry chart"}
+              </Button>
+            </div>
           ) : (
             <div className="rounded-lg border bg-card p-2">
               <ClientOnly fallback={<Skeleton className="h-[420px]" />}>

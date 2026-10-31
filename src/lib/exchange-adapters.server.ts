@@ -58,6 +58,16 @@ async function getJson(url: string, init?: RequestInit) {
 
 const split = (pair: string) => { const [b, q] = pair.toUpperCase().split("/"); return { b: b!, q: q! }; };
 
+/** Same Binance market, alternate official data-only host; never changes order routing or testnet. */
+async function binanceKlines(query: string, testnet = false) {
+  if (testnet) return getJson(`https://testnet.binance.vision/api/v3/klines?${query}`);
+  try {
+    return await getJson(`https://api.binance.com/api/v3/klines?${query}`);
+  } catch {
+    return getJson(`https://data-api.binance.vision/api/v3/klines?${query}`);
+  }
+}
+
 const TF_MS: Record<string, number> = { "1m": 60e3, "5m": 300e3, "15m": 900e3, "30m": 1800e3, "1h": 3600e3, "4h": 14400e3, "1d": 86400e3 };
 export const timeframeMs = (tf: string) => TF_MS[tf] ?? 3600e3;
 
@@ -115,8 +125,7 @@ export async function fetchCandles(exchange: string, pair: string, tf: string, t
   const n = (x: unknown) => Number(x);
   switch (exchange) {
     case "binance": {
-      const host = testnet ? "https://testnet.binance.vision" : "https://api.binance.com";
-      const rows = await getJson(`${host}/api/v3/klines?symbol=${b}${q}&interval=${tf}&limit=${limit}`);
+      const rows = await binanceKlines(`symbol=${b}${q}&interval=${tf}&limit=${limit}`, testnet);
       return rows.map((r: unknown[]) => ({ t: n(r[0]), o: n(r[1]), h: n(r[2]), l: n(r[3]), c: n(r[4]), v: n(r[5]) }));
     }
     case "bybit": {
@@ -216,7 +225,7 @@ export async function fetchHistory(exchange: string, pair: string, tf: string, s
   const out: Candle[] = [];
   let from = Math.max(start, end - tfMs * 5000);
   while (from < end && out.length < 5000) {
-    const rows = await getJson(`https://api.binance.com/api/v3/klines?symbol=${b}${q}&interval=${tf}&startTime=${from}&limit=1000`);
+    const rows = await binanceKlines(`symbol=${b}${q}&interval=${tf}&startTime=${from}&limit=1000`);
     if (!rows.length) break;
     for (const r of rows as unknown[][]) out.push({ t: +r[0]!, o: +r[1]!, h: +r[2]!, l: +r[3]!, c: +r[4]!, v: +r[5]! });
     from = out[out.length - 1]!.t + tfMs;
