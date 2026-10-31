@@ -1,5 +1,10 @@
 # Roadmap
 
+## Trading UI refresh
+- [ ] Modern trading workspace, dimensional surfaces and animated 3D market scene
+- [ ] Polish Trade/Wallet screens, shared controls and mobile layout without changing trading rules
+- [ ] Verify authenticated screens, theme switching and reduced-motion behavior
+
 ## Scalping (Pro)
 - [x] Scalping page: 1m/5m/15m chart, one-click buy/sell with % stop/target set on the server, auto time limit, close all
 - [x] Stops/targets/time limits checked every 5s while the page is open (every minute otherwise); today's scalp stats
