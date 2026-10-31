@@ -1,5 +1,9 @@
 # Roadmap
 
+## Promotions
+- [x] All plans free for every signed-in user until 4 Nov 2026 (end of day, India time)
+- [ ] Reconnect NOWPayments in new workspace — connect card was skipped
+
 ## Crypto plan payments (NOWPayments)
 - [x] Connect NOWPayments in the new workspace
 - [x] Pro $249/mo, $1999/yr; Elite $449/mo, $3899/yr shown on Plans page with crypto checkout
