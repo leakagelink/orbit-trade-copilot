@@ -1,0 +1,6 @@
+## src/lib rules
+- Exchange I/O goes through `src/lib/exchange-adapters.server.ts` (Web Crypto HMAC, fetch only) and indicator math lives in pure `src/lib/indicators.ts` — Workers-safe and testable.
+- Backtests run in pure `src/lib/backtest.ts` via `runBacktestFn`, using the same rule/risk semantics as the engine — results stay comparable to paper trading.
+- Binance production candles and history retry the official data-only host when the primary feed fails; testnet and signed/order endpoints never switch hosts — keeps charts available without changing venues or execution.
+- Arbitrage math lives in pure `src/lib/arbitrage.ts`; authenticated highest-tier functions use `arbitrage.server.ts` for server-fetched depth and prefunded legs. Each run and both order intents are durably claimed before submission; ambiguous fills lock further runs for review, never blind retry or transfer funds. AI reviews are advisory; live execution requires user confirmation because cross-exchange orders are not atomic.
+- Arbitrage reconciliation is lookup-only by durable client order IDs, with a cooling period and compare-and-set persistence; missing, open, partial or unequal fills keep the lock — prevents blind resubmission and racing active execution. Base fees adjust inventory; only quote fees are additionally deducted from actual cash flows.
