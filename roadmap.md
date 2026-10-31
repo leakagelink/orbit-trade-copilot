@@ -1,10 +1,11 @@
 # Roadmap
 
 ## Support-only mailbox
-- [ ] Private threaded user/support messages, replies and owner-only drafts
-- [ ] Inbox, sent, search, unread, star, archive and trash controls
-- [ ] Dashboard/mailbox navigation and support operator view
-- [ ] Verify persistence, restrictions and mobile layout
+- [x] Private threaded in-app user/support messages, append-only replies and owner-only drafts; existing requests preserved
+- [x] Inbox, sent, search, unread, star, archive and trash/restore controls with participant-private folder state
+- [x] Dashboard/mailbox navigation and support operator view; Free mailbox access without unlocking paid dashboard
+- [x] Signed-in send, follow-up reply and draft reload checked; recipient validation tests and mobile no-overflow checks pass; 22 relevant tests, build OK
+- [ ] Support-operator reply-to-user end-to-end — needs an operator account; current account is a regular user and roles were not changed
 
 ## Trading toolkit and account safety
 - [x] Paid watchlist and server-checked price alerts with atomic one-time delivery and stale-quote rejection

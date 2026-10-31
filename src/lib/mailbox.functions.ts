@@ -4,7 +4,7 @@ import {supportMailSchema} from "./mailbox";
 import {z} from "zod";
 export const sendSupportMail=createServerFn({method:"POST"}).middleware([requireSupabaseAuth])
  .inputValidator((i:unknown)=>supportMailSchema.parse(i)).handler(async({context,data})=>{
- const r=await context.supabase.rpc("mailbox_send",{_ticket:data.ticketId,_subject:data.subject,_body:data.body,_recipient:data.recipient});
+ const r=await context.supabase.rpc("mailbox_send_message",{_ticket:data.ticketId??"",_subject:data.subject,_body:data.body,_recipient:data.recipient});
  if(r.error)throw new Error("Unable to send: conversations are restricted to you and support");return {id:r.data};
 });
 export const getMailbox=createServerFn({method:"POST"}).middleware([requireSupabaseAuth]).handler(async({context})=>{

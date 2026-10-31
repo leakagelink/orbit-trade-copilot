@@ -1519,6 +1519,15 @@ export type Database = {
         }
         Returns: string
       }
+      mailbox_send_message: {
+        Args: {
+          _body: string
+          _recipient: string
+          _subject: string
+          _ticket: string
+        }
+        Returns: string
+      }
       trigger_price_alert: {
         Args: { _id: string; _price: number }
         Returns: boolean

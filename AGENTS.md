@@ -12,7 +12,8 @@
 ## Architecture rules
 - Toolkit extras use owner-scoped tables and Pro guards; alerts run on a separate authenticated cron and atomically claim a one-time notification, while trading-event triggers create durable inbox records — notifications cannot submit orders or delay risk exits.
 - Optional MFA is enforced by a restrictive public-table policy and shared server-function security middleware; AppShell challenges before mounting protected content, and workspace session records are activity observations rather than an authoritative Auth device inventory — prevents UI-only security claims.
-- Trade exports paginate owner reads, subtract fees once and escape spreadsheet formulas; the economic calendar embeds the official attributed provider widget and service status reports only on-demand measured connectivity — prevents fabricated reporting or health claims.
+- Exports paginate owner reads and escape formulas; calendar and status use real provider/measured data.
+- Support mailbox uses immutable owners, append-only messages and atomic support-only RPCs; drafts and folder state are participant-private — no arbitrary recipients.
 - The public homepage reuses the browser-safe plan catalog for comparisons; workflow previews are illustrative and never submit orders or fabricate live prices — keeps marketing aligned with entitlements and trading safety.
 - Responsive layout safety is shared in styles.css (zero-minimum grid/flex children, local table scrolling, touch targets and viewport-bounded dialogs); assistant height subtracts shared top/bottom navigation — prevents page overflow and hidden chat controls without changing access rules.
 - Shared trading visuals live in global semantic tokens and AppShell; decorative 3D market candles dynamically load Three.js in a browser effect using actual chart data, respecting reduced motion — keeps trading logic untouched and SSR browser-safe.
