@@ -1,5 +1,10 @@
 # Roadmap
 
+## All-screen mobile optimization
+- [ ] Fit all page sections, headers, forms, charts and tables to mobile widths
+- [ ] Optimize chat, dialogs, touch targets and bottom-bar clearance
+- [ ] Check mobile/tablet/desktop screens and existing access tests
+
 ## Trading UI refresh
 - [x] Modern trading workspace, dimensional surfaces and animated 3D market scene using actual candles
 - [x] Polish Trade/Wallet screens, shared controls and mobile layout without changing trading rules
