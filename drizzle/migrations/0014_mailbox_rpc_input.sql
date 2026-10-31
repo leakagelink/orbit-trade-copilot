@@ -1,0 +1,2 @@
+CREATE OR REPLACE FUNCTION public.mailbox_send_message(_ticket text,_subject text,_body text,_recipient text) RETURNS uuid LANGUAGE sql SECURITY INVOKER SET search_path=public AS $$ SELECT public.mailbox_send(nullif(_ticket,'')::uuid,_subject,_body,_recipient); $$;
+REVOKE ALL ON FUNCTION public.mailbox_send_message(text,text,text,text) FROM PUBLIC,anon; GRANT EXECUTE ON FUNCTION public.mailbox_send_message(text,text,text,text) TO authenticated;

@@ -99,6 +99,13 @@
       "when": 1793436354964,
       "tag": "0013_support_mailbox_threads",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1793436486430,
+      "tag": "0014_mailbox_rpc_input",
+      "breakpoints": true
     }
   ]
 }
