@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, type ReactNode } from "react";
 import {
   LayoutDashboard, Bot, Cable, Blocks, Settings, LogOut, Moon, Sun, Menu, MessageSquareText, Activity,
-  FlaskConical, ChartColumn, ShieldAlert, CandlestickChart, Wallet, Crown, Lock, ArrowLeftRight, Zap, ChevronRight, ArrowUpRight,
+  FlaskConical, ChartColumn, ShieldAlert, CandlestickChart, Wallet, Crown, Lock, ArrowLeftRight, Zap, ChevronRight, ArrowUpRight, Ellipsis,
 } from "lucide-react";
 import { usePlan } from "@/hooks/use-plan";
 import { canOpen, PLAN_FEATURES } from "@/lib/plans";
@@ -162,6 +162,23 @@ export function AppShell({ children }: { children: ReactNode }) {
         </header>
         <main key={path} className="workspace-main min-w-0 flex-1"><PlanGate>{children}</PlanGate></main>
       </div>
+      <nav aria-label="Mobile navigation" className="mobile-bottom-nav fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t bg-sidebar md:hidden">
+        {NAV.slice(0, 3).map(({ to, label, icon: Icon }) => {
+          const active = path === to || path.startsWith(to + "/");
+          const locked = !plan.isLoading && !canOpen(to, plan.data?.pro ?? false);
+          return (
+            <Button key={to} variant="ghost" asChild className={cn("mobile-nav-item relative h-16 min-w-0 flex-col gap-1 rounded-none px-1 text-[10px]", active ? "text-primary" : "text-muted-foreground")}>
+              <Link to={to} aria-current={active ? "page" : undefined} onClick={() => setOpen(false)}>
+                <span className="relative"><Icon className="h-5 w-5" />{locked && <Lock className="absolute -right-2 -top-1 h-2.5 w-2.5" aria-label="Pro plan" />}</span>
+                <span>{label}</span>
+              </Link>
+            </Button>
+          );
+        })}
+        <Button variant="ghost" aria-label="More" aria-expanded={open} onClick={() => setOpen(true)} className={cn("mobile-nav-item h-16 min-w-0 flex-col gap-1 rounded-none px-1 text-[10px]", open || !NAV.slice(0, 3).some(item => path === item.to) ? "text-primary" : "text-muted-foreground")}>
+          <Ellipsis className="h-5 w-5" /><span>More</span>
+        </Button>
+      </nav>
     </div>
   );
 }
