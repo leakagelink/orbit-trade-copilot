@@ -14,7 +14,7 @@ export async function evaluateAlerts(userId?: string) {
     try {
       const candles=await fetchCandles(marketOf(symbol)?.category==="crypto"?"binance":"yahoo",symbol,"1m",false,2);
       const last=candles.at(-1);
-      if(!last || !Number.isFinite(last.c) || last.c<=0 || Date.now()/1000-last.t>180) throw new Error("No fresh quote; market may be closed");
+      if(!last || !Number.isFinite(last.c) || last.c<=0 || Date.now()-last.t>180000 || last.t>Date.now()+60000) throw new Error("No fresh quote; market may be closed");
       for(const a of alerts){
         if(alertHit(a.direction as "above"|"below",a.target,last.c)) {
           const result=await db.rpc("trigger_price_alert",{_id:a.id,_price:last.c});
