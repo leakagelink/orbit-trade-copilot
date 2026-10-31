@@ -1,0 +1,19 @@
+import {createFileRoute} from "@tanstack/react-router";
+import {useServerFn} from "@tanstack/react-start";
+import {useQuery,useQueryClient} from "@tanstack/react-query";
+import {useState} from "react";
+import {Send,LifeBuoy} from "lucide-react";
+import {toast} from "sonner";
+import {supabase} from "@/integrations/supabase/client";
+import {createTicket} from "@/lib/toolkit.functions";
+import {PageHeader,EmptyState} from "@/components/app-shell";
+import {QueryError,toolkitHead} from "@/components/toolkit-shared";
+import {Button} from "@/components/ui/button";
+import {Input} from "@/components/ui/input";
+import {Textarea} from "@/components/ui/textarea";
+import {Label} from "@/components/ui/label";
+import {Badge} from "@/components/ui/badge";
+import {Select,SelectContent,SelectItem,SelectTrigger,SelectValue} from "@/components/ui/select";
+export const Route=createFileRoute("/_authenticated/support")({head:()=>toolkitHead("Support","Submit and track your Quantra account and trading support requests."),component:Support});
+function Support(){const save=useServerFn(createTicket),qc=useQueryClient(),[category,setCategory]=useState<"trading"|"account"|"billing"|"other">("trading"),[busy,setBusy]=useState(false);const q=useQuery({queryKey:["support"],queryFn:async()=>{const r=await supabase.from("support_tickets").select("*").order("created_at",{ascending:false});if(r.error)throw new Error("Support requests unavailable");return r.data;},refetchInterval:30000});
+return <div><PageHeader title="Support" description="Account and trading assistance."/><div className="space-y-8 px-5 pb-8 md:px-7"><QueryError error={q.error}/><form className="max-w-2xl space-y-4 border-y py-6" onSubmit={async e=>{e.preventDefault();const form=e.currentTarget,f=new FormData(form);setBusy(true);try{await save({data:{subject:String(f.get("subject")),message:String(f.get("message")),category}});form.reset();await qc.invalidateQueries({queryKey:["support"]});toast.success("Request saved");}catch(e){toast.error(e instanceof Error?e.message:"Request failed");}finally{setBusy(false);}}}><h2 className="font-medium">New request</h2><Select value={category} onValueChange={v=>setCategory(v as typeof category)}><SelectTrigger aria-label="Support category"><SelectValue/></SelectTrigger><SelectContent>{["trading","account","billing","other"].map(v=><SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select><div className="space-y-1.5"><Label htmlFor="subject">Subject</Label><Input id="subject" name="subject" required maxLength={160}/></div><div className="space-y-1.5"><Label htmlFor="message">What happened?</Label><Textarea id="message" name="message" required maxLength={4000} rows={5}/></div><p className="text-xs text-muted-foreground">Never include passwords, API keys or authenticator codes. No response-time guarantee.</p><Button disabled={busy}><Send className="h-4 w-4"/>Submit request</Button></form><section><h2 className="mb-4 font-medium">Your requests</h2>{q.data?.length?<div className="divide-y">{q.data.map(t=><article key={t.id} className="space-y-2 py-4"><div className="flex flex-wrap justify-between gap-2"><h3 className="font-medium">{t.subject}</h3><Badge variant="secondary">{t.status.replaceAll("_"," ")}</Badge></div><p className="whitespace-pre-wrap text-sm text-muted-foreground">{t.message}</p>{t.response&&<p className="border-l-2 border-primary pl-3 text-sm">{t.response}</p>}<p className="text-xs text-muted-foreground">#{t.id.slice(0,8)} · {new Date(t.created_at).toLocaleString()}</p></article>)}</div>:<EmptyState icon={LifeBuoy} title="No requests yet" body="Your support requests will appear here."/>}</section></div></div>;}

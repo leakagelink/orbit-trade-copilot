@@ -1,0 +1,13 @@
+import {createFileRoute} from "@tanstack/react-router";
+import {useState} from "react";
+import {HeartPulse,RefreshCw} from "lucide-react";
+import {supabase} from "@/integrations/supabase/client";
+import {fetchBinanceChart} from "@/lib/chart-feed";
+import {PageHeader} from "@/components/app-shell";
+import {Button} from "@/components/ui/button";
+import {Badge} from "@/components/ui/badge";
+import {toolkitHead} from "@/components/toolkit-shared";
+export const Route=createFileRoute("/_authenticated/status")({head:()=>toolkitHead("Service status","On-demand connectivity checks for your trading workspace."),component:Status});
+function Status(){const [busy,setBusy]=useState(false),[checked,setChecked]=useState<string|null>(null),[results,setResults]=useState<Array<{name:string;ok:boolean;ms:number}>>([]);
+async function check(){setBusy(true);const tasks=[{name:"Account authentication",run:async()=>{const r=await supabase.auth.getUser();if(r.error||!r.data.user)throw new Error();}},{name:"Workspace data",run:async()=>{const r=await supabase.from("profiles").select("id").limit(1);if(r.error)throw new Error();}},{name:"Crypto display feed",run:async()=>{await fetchBinanceChart("BTC/USDT","1m");}}];const r=await Promise.all(tasks.map(async t=>{const start=performance.now();try{await t.run();return {name:t.name,ok:true,ms:Math.round(performance.now()-start)};}catch{return {name:t.name,ok:false,ms:Math.round(performance.now()-start)};}}));setResults(r);setChecked(new Date().toLocaleString());setBusy(false);}
+return <div><PageHeader title="Service status" description="Connectivity from this device—not an uptime guarantee." actions={<Button disabled={busy} onClick={check}><RefreshCw className={`h-4 w-4 ${busy?"animate-spin":""}`}/>Run checks</Button>}/><div className="space-y-6 px-5 pb-8 md:px-7"><p className="text-sm text-muted-foreground">{checked?`Last checked ${checked}`:"No checks run yet."}</p><div className="divide-y border-y">{(results.length?results:["Account authentication","Workspace data","Crypto display feed"].map(name=>({name,ok:false,ms:-1}))).map(r=><div key={r.name} className="flex flex-wrap items-center justify-between gap-3 py-5"><span className="flex items-center gap-2"><HeartPulse className="h-4 w-4 text-primary"/>{r.name}</span><div className="flex items-center gap-3"><span className="font-mono text-xs text-muted-foreground">{r.ms>=0?`${r.ms} ms`:"—"}</span><Badge variant={r.ms<0?"secondary":r.ok?"default":"destructive"}>{r.ms<0?"Not checked":r.ok?"Reachable":"Unavailable"}</Badge></div></div>)}</div><p className="text-xs text-muted-foreground">Exchange order execution, broker availability, AI and scheduled engine health are not measured by these checks.</p></div></div>;}
