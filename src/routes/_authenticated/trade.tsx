@@ -58,7 +58,7 @@ function TradePage() {
 
   const connId = accountId === "paper" ? null : accountId;
   const market = marketOf(symbol) ?? MARKETS[0];
-  const nonCrypto = market.category !== "crypto";
+  const nonCrypto = market?.category !== "crypto";
 
   const accounts = useQuery({
     queryKey: ["trade_accounts"],
@@ -69,8 +69,8 @@ function TradePage() {
     },
   });
   const usable = useMemo(
-    () => (accounts.data ?? []).filter((c) => (nonCrypto ? c.exchange === "oanda" && market.oanda : c.exchange !== "oanda")),
-    [accounts.data, nonCrypto, market.oanda],
+    () => (accounts.data ?? []).filter((c) => (nonCrypto ? c.exchange === "oanda" && market?.oanda : c.exchange !== "oanda")),
+    [accounts.data, nonCrypto, market?.oanda],
   );
   const chosen = usable.find((c) => c.id === connId);
   const isWallet = !chosen;
@@ -160,7 +160,7 @@ function TradePage() {
       <div className="market-summary mx-4 mb-5 flex flex-wrap items-center justify-between gap-4 px-5 md:mx-7">
         <div className="flex items-center gap-3">
           <span className="grid h-11 w-11 place-items-center rounded-lg border bg-card text-primary"><CandlestickChart className="h-6 w-6" /></span>
-          <div><div className="text-lg font-semibold">{symbol}</div><div className="text-xs text-muted-foreground">{market.name}</div></div>
+          <div><div className="text-lg font-semibold">{symbol}</div><div className="text-xs text-muted-foreground">{market?.name ?? symbol}</div></div>
         </div>
         <div className="flex flex-wrap gap-6 sm:gap-10">
           <div><div className="mb-1 text-[10px] font-mono text-muted-foreground">LAST PRICE</div><div className="font-mono text-xl">{price?.toLocaleString(undefined, { maximumFractionDigits: 5 }) ?? "—"}</div></div>
