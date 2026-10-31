@@ -64,6 +64,13 @@
       "when": 1793423325067,
       "tag": "0008_three_tier_subscription_access",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793433187166,
+      "tag": "0009_trading_toolkit",
+      "breakpoints": true
     }
   ]
 }

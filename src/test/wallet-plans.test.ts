@@ -4,6 +4,16 @@ import { walletClose, walletOpen } from "@/lib/wallet-math";
 import { MARKETS, quoteUsdSource } from "@/lib/markets";
 
 describe("plan access", () => {
+  it("trading toolkit extras require Pro or Elite", () => {
+    for (const path of ["/watchlist", "/journal", "/calendar", "/notifications"]) {
+      expect(canOpen(path, "free")).toBe(false);
+      expect(canOpen(path, "pro")).toBe(true);
+      expect(canOpen(path, "elite")).toBe(true);
+    }
+  });
+  it("security and support remain available to Free accounts", () => {
+    for (const path of ["/settings", "/support", "/status"]) expect(canOpen(path, "free")).toBe(true);
+  });
   it("free plan can open only manual trading, wallet and account pages", () => {
     for (const p of ["/trade", "/wallet", "/exchanges", "/risk", "/settings", "/plans"]) expect(canOpen(p, false)).toBe(true);
   });
