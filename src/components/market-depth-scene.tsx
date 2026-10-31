@@ -24,8 +24,8 @@ export function MarketDepthScene({ candles }: { candles: Candle[] }) {
       container.appendChild(renderer.domElement);
       const scene = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 100);
-      camera.position.set(0, 6, 21);
-      camera.lookAt(0, 0, 0);
+      camera.position.set(0, 3.8, 10);
+      camera.lookAt(0, 0.8, 0);
       const group = new THREE.Group();
       scene.add(group);
       scene.add(new THREE.HemisphereLight(0xffffff, 0x333333, 2.6));
@@ -57,7 +57,7 @@ export function MarketDepthScene({ candles }: { candles: Candle[] }) {
         wick.position.set(x, (y(c.h) + y(c.l)) / 2, 0);
         group.add(body, wick);
       });
-      const grid = new THREE.GridHelper(24, 32);
+      const grid = new THREE.GridHelper(18, 24);
       grid.material = gridMaterial;
       grid.position.y = -1.5;
       group.add(grid);
@@ -71,7 +71,7 @@ export function MarketDepthScene({ candles }: { candles: Candle[] }) {
         if (!width || !height) return;
         renderer.setSize(width, height);
         camera.aspect = width / height;
-        camera.position.z = width < 600 ? 30 : 21;
+        camera.position.z = width < 600 ? 13 : 10;
         camera.updateProjectionMatrix();
       });
       resize.observe(container);

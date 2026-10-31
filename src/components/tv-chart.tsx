@@ -7,11 +7,12 @@ export interface PriceLineSpec { price: number; color: string; title: string }
 const FALLBACK: Record<string, string> = { "--gain": "#4ade80", "--loss": "#f87171", "--primary": "#22c55e", "--border": "#2a2f3a", "--muted-foreground": "#9aa3b2" };
 function cssVar(name: string) {
   const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-  const ctx = document.createElement("canvas").getContext("2d")!;
-  ctx.fillStyle = "#000001";
-  ctx.fillStyle = v || "#888";
-  const out = ctx.fillStyle as string;
-  return out === "#000001" || /oklch|oklab|color\(/.test(out) ? (FALLBACK[name] ?? "#9aa3b2") : out;
+  const ctx = document.createElement("canvas").getContext("2d");
+  if (!ctx || !v) return FALLBACK[name] ?? "#9aa3b2";
+  ctx.fillStyle = v;
+  ctx.fillRect(0, 0, 1, 1);
+  const pixel = ctx.getImageData(0, 0, 1, 1).data;
+  return `rgba(${pixel[0]},${pixel[1]},${pixel[2]},${(pixel[3] ?? 255) / 255})`;
 }
 
 export function TvChart({ candles, lines = [], height = 420 }: { candles: Candle[]; lines?: PriceLineSpec[]; height?: number }) {
@@ -21,6 +22,7 @@ export function TvChart({ candles, lines = [], height = 420 }: { candles: Candle
 
   useEffect(() => {
     let disposed = false;
+    let observer: MutationObserver | undefined;
     (async () => {
       try {
       const lw = await import("lightweight-charts");
@@ -38,10 +40,18 @@ export function TvChart({ candles, lines = [], height = 420 }: { candles: Candle
       const volume = chart.addSeries(lw.HistogramSeries, { priceFormat: { type: "volume" }, priceScaleId: "vol", color: grid });
       chart.priceScale("vol").applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
       api.current = { chart, series, volume, lines: [] };
+      observer = new MutationObserver(() => {
+        const fg = cssVar("--muted-foreground"), grid = cssVar("--border"), gain = cssVar("--gain"), loss = cssVar("--loss");
+        chart.applyOptions({ layout: { textColor: fg }, grid: { vertLines: { color: grid }, horzLines: { color: grid } }, rightPriceScale: { borderColor: grid }, timeScale: { borderColor: grid } });
+        series.applyOptions({ upColor: gain, downColor: loss, wickUpColor: gain, wickDownColor: loss });
+        volume.applyOptions({ color: grid });
+        api.current?.lines.forEach((line, index) => { const spec = lines[index]; if (spec) line.applyOptions({ color: cssVar(spec.color) }); });
+      });
+      observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
       el.current.dispatchEvent(new Event("tv-ready"));
       } catch (e) { console.error("TvChart init failed:", e); }
     })();
-    return () => { disposed = true; api.current?.chart.remove(); api.current = null; };
+    return () => { disposed = true; observer?.disconnect(); api.current?.chart.remove(); api.current = null; };
   }, []);
 
   useEffect(() => {
