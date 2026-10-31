@@ -30,6 +30,7 @@ import { Route as AuthenticatedWalletRouteImport } from './routes/_authenticated
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as AuthenticatedStrategiesIndexRouteImport } from './routes/_authenticated/strategies.index'
 import { Route as AuthenticatedStrategiesIdRouteImport } from './routes/_authenticated/strategies.$id'
+import { Route as ApiPublicAlertsTickRouteImport } from './routes/api/public/alerts/tick'
 import { Route as ApiPublicEngineTickRouteImport } from './routes/api/public/engine/tick'
 
 const IndexRoute = IndexRouteImport.update({
@@ -138,6 +139,11 @@ const AuthenticatedStrategiesIdRoute =
     path: '/strategies/$id',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiPublicAlertsTickRoute = ApiPublicAlertsTickRouteImport.update({
+  id: '/api/public/alerts/tick',
+  path: '/api/public/alerts/tick',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicEngineTickRoute = ApiPublicEngineTickRouteImport.update({
   id: '/api/public/engine/tick',
   path: '/api/public/engine/tick',
@@ -165,6 +171,7 @@ export interface FileRoutesByFullPath {
   '/api/chat': typeof ApiChatRoute
   '/strategies/$id': typeof AuthenticatedStrategiesIdRoute
   '/strategies/': typeof AuthenticatedStrategiesIndexRoute
+  '/api/public/alerts/tick': typeof ApiPublicAlertsTickRoute
   '/api/public/engine/tick': typeof ApiPublicEngineTickRoute
 }
 export interface FileRoutesByTo {
@@ -188,6 +195,7 @@ export interface FileRoutesByTo {
   '/api/chat': typeof ApiChatRoute
   '/strategies/$id': typeof AuthenticatedStrategiesIdRoute
   '/strategies': typeof AuthenticatedStrategiesIndexRoute
+  '/api/public/alerts/tick': typeof ApiPublicAlertsTickRoute
   '/api/public/engine/tick': typeof ApiPublicEngineTickRoute
 }
 export interface FileRoutesById {
@@ -213,6 +221,7 @@ export interface FileRoutesById {
   '/api/chat': typeof ApiChatRoute
   '/_authenticated/strategies/$id': typeof AuthenticatedStrategiesIdRoute
   '/_authenticated/strategies/': typeof AuthenticatedStrategiesIndexRoute
+  '/api/public/alerts/tick': typeof ApiPublicAlertsTickRoute
   '/api/public/engine/tick': typeof ApiPublicEngineTickRoute
 }
 export interface FileRouteTypes {
@@ -238,6 +247,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/strategies/$id'
     | '/strategies/'
+    | '/api/public/alerts/tick'
     | '/api/public/engine/tick'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -261,6 +271,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/strategies/$id'
     | '/strategies'
+    | '/api/public/alerts/tick'
     | '/api/public/engine/tick'
   id:
     | '__root__'
@@ -285,6 +296,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/_authenticated/strategies/$id'
     | '/_authenticated/strategies/'
+    | '/api/public/alerts/tick'
     | '/api/public/engine/tick'
   fileRoutesById: FileRoutesById
 }
@@ -295,6 +307,7 @@ export interface RootRouteChildren {
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   ApiChatRoute: typeof ApiChatRoute
+  ApiPublicAlertsTickRoute: typeof ApiPublicAlertsTickRoute
   ApiPublicEngineTickRoute: typeof ApiPublicEngineTickRoute
 }
 
@@ -447,6 +460,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStrategiesIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/alerts/tick': {
+      id: '/api/public/alerts/tick'
+      path: '/api/public/alerts/tick'
+      fullPath: '/api/public/alerts/tick'
+      preLoaderRoute: typeof ApiPublicAlertsTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/engine/tick': {
       id: '/api/public/engine/tick'
       path: '/api/public/engine/tick'
@@ -503,6 +523,7 @@ const rootRouteChildren: RootRouteChildren = {
   ForgotPasswordRoute: ForgotPasswordRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   ApiChatRoute: ApiChatRoute,
+  ApiPublicAlertsTickRoute: ApiPublicAlertsTickRoute,
   ApiPublicEngineTickRoute: ApiPublicEngineTickRoute,
 }
 export const routeTree = rootRouteImport
