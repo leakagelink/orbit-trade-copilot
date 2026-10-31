@@ -86,8 +86,8 @@ function WalletPage() {
           ); })}
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-[340px_1fr]">
-          <div className="space-y-3 rounded-lg border bg-card p-4">
+        <div className="grid min-w-0 gap-4 lg:grid-cols-[340px_1fr]">
+          <div className="min-w-0 space-y-3 rounded-lg border bg-card p-4">
             <div className="text-sm font-medium">Deposit or withdraw</div>
             <div className="space-y-1.5">
               <Label htmlFor="amt" className="text-xs">Amount (USD)</Label>
@@ -103,7 +103,7 @@ function WalletPage() {
             <p className="text-xs text-muted-foreground">Up to {fmtMoney(WALLET_MAX_DEPOSIT)} per deposit. Money in open trades comes back when you close them.</p>
           </div>
 
-          <div className="rounded-lg border bg-card">
+          <div className="min-w-0 rounded-lg border bg-card">
             <div className="border-b px-4 py-2 text-sm font-medium">History</div>
             {q.isLoading ? <Skeleton className="m-4 h-24" /> : !d?.tx.length ? (
               <p className="p-4 text-sm text-muted-foreground">No transactions yet — make your first deposit.</p>

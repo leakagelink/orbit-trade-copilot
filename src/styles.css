@@ -218,6 +218,10 @@ body { letter-spacing: 0; }
 .wallet-stat:first-child { border-color: color-mix(in oklab, var(--primary) 35%, var(--border)); }
 @keyframes workspace-enter { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
 @media (max-width: 767px) {
+  .trading-workspace { padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
+  .mobile-bottom-nav { padding-bottom: env(safe-area-inset-bottom, 0px); box-shadow: var(--surface-shadow); }
+  .mobile-nav-item:hover, .mobile-nav-item:active { transform: none; }
+  .mobile-nav-item[aria-current="page"]::before { content: ""; position: absolute; top: 0; height: 2px; width: 28px; background: var(--primary); }
   .workspace-main > div > .p-4 { padding: 0 16px 20px; }
   .market-scene { height: 140px; }
   .workspace-main .text-2xl { font-size: 22px; }
