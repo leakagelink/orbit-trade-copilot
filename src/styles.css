@@ -52,6 +52,8 @@
   --color-loss: var(--loss);
   --color-warning: var(--warning);
   --color-highlight: var(--highlight);
+  --color-hero-foreground: var(--hero-foreground);
+  --color-hero-muted: var(--hero-muted);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
@@ -68,6 +70,9 @@
 }
 
 :root {
+  --hero-foreground: oklch(0.97 0.004 180);
+  --hero-muted: oklch(0.8 0.008 180);
+  --hero-scrim: oklch(0.12 0.004 180 / 45%);
   --radius: 0.5rem;
   --background: oklch(0.96 0.004 180);
   --foreground: oklch(0.23 0.008 180);
@@ -224,6 +229,25 @@ body { letter-spacing: 0; }
 .wallet-stat:hover { transform: translateY(-3px); border-color: var(--primary); }
 .wallet-stat:first-child { border-color: color-mix(in oklab, var(--primary) 35%, var(--border)); }
 @keyframes workspace-enter { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
+.landing-page { overflow-x: clip; }
+.landing-page :is(h1,h2,h3,p,li) { overflow-wrap: anywhere; }
+.landing-page .grid > *, .landing-page .flex > * { min-width: 0; }
+.landing-page section[id] { scroll-margin-top: 88px; }
+.landing-hero { min-height: min(740px, calc(100svh - 130px)); }
+.landing-hero::after { content: ""; position: absolute; inset: 0; background: var(--hero-scrim); pointer-events: none; }
+.landing-hero > img { object-position: center; }
+.landing-reveal { animation: workspace-enter 650ms ease-out both; }
+.landing-feature { transition: transform 200ms ease, border-color 200ms ease; }
+.landing-feature:hover { transform: translateY(-4px); border-color: var(--primary); }
+.landing-terminal { box-shadow: var(--surface-shadow); }
+.landing-page summary { cursor: pointer; list-style: none; }
+.landing-page summary::-webkit-details-marker { display: none; }
+.landing-page details[open] summary svg { transform: rotate(45deg); }
+@media (max-width: 767px) {
+  .landing-hero { min-height: min(680px, calc(100svh - 112px)); }
+  .landing-hero > img { object-position: 62% center; }
+  .landing-page .trading-button { min-height: 44px; }
+}
 @media (max-width: 767px) {
   body :is(input, textarea) { font-size: 16px; }
   .responsive-sheet :is(p, span) { overflow-wrap: anywhere; }
