@@ -9,6 +9,7 @@ import { Activity, Plus, Trash2, Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Conversation, ConversationContent, ConversationEmptyState, ConversationScrollButton } from "@/components/ai-elements/conversation";
 import { Message, MessageContent, MessageResponse } from "@/components/ai-elements/message";
 import { PromptInput, PromptInputBody, PromptInputFooter, PromptInputSubmit, PromptInputTextarea, PromptInputTools } from "@/components/ai-elements/prompt-input";
@@ -61,7 +62,7 @@ function Assistant() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-49px)] md:h-screen">
+    <div className="assistant-workspace flex min-h-0 min-w-0">
       <aside className="hidden w-60 shrink-0 flex-col border-r lg:flex">
         <div className="p-3"><Button variant="outline" className="w-full" onClick={newSession}><Plus className="mr-1 h-4 w-4" />New chat</Button></div>
         <div className="flex-1 space-y-0.5 overflow-y-auto px-2 pb-3">
@@ -74,6 +75,13 @@ function Assistant() {
         </div>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
+        <div className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b p-3 lg:hidden">
+          <Select value={session ?? ""} onValueChange={(value) => navigate({ to: "/assistant", search: { session: value } })}>
+            <SelectTrigger aria-label="Chat history"><SelectValue placeholder="Chat history" /></SelectTrigger>
+            <SelectContent>{sessions.data?.map(s => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}</SelectContent>
+          </Select>
+          <Button variant="outline" size="icon" aria-label="New chat" onClick={newSession}><Plus /></Button>
+        </div>
         {session ? <ChatWindow key={session} sessionId={session} onSaved={() => qc.invalidateQueries({ queryKey: ["ai_sessions"] })} /> : <div className="p-6"><Skeleton className="h-40" /></div>}
       </div>
     </div>
@@ -149,7 +157,7 @@ function Chat({ sessionId, initial, onSaved }: { sessionId: string; initial: UIM
 
   return (
     <>
-      <Conversation className="flex-1">
+      <Conversation className="min-h-0 min-w-0 flex-1">
         <ConversationContent className="mx-auto w-full max-w-3xl">
           {messages.length === 0 ? (
             <ConversationEmptyState icon={<Activity className="h-8 w-8 text-primary" />} title="Quantra AI" description="Strategy design, indicators and risk. No live market data yet — the AI won't invent prices.">
@@ -162,7 +170,7 @@ function Chat({ sessionId, initial, onSaved }: { sessionId: string; initial: UIM
             const cfg = m.role === "assistant" && !(busy && m.id === messages.at(-1)?.id) ? extractStrategy(text) : null;
             return (
               <Message key={m.id} from={m.role}>
-                <MessageContent className={m.role === "user" ? "bg-primary text-primary-foreground" : ""}>
+                <MessageContent className={cn("min-w-0 max-w-full break-words [&_pre]:max-w-full [&_pre]:overflow-x-auto", m.role === "user" && "bg-primary text-primary-foreground")}>
                   {m.parts.map((p, i) => p.type === "text" ? <MessageResponse key={i}>{p.text}</MessageResponse> : p.type === "reasoning" && p.text ? <p key={i} className="border-l-2 pl-3 text-xs text-muted-foreground">{p.text}</p> : null)}
                   {cfg && <Button size="sm" variant="outline" className="mt-2 w-fit" onClick={() => saveStrategy(cfg)}><Save className="mr-1 h-3.5 w-3.5" />Save as strategy</Button>}
                 </MessageContent>
@@ -173,13 +181,13 @@ function Chat({ sessionId, initial, onSaved }: { sessionId: string; initial: UIM
         </ConversationContent>
         <ConversationScrollButton />
       </Conversation>
-      <div className="mx-auto w-full max-w-3xl p-4">
+      <div className="mx-auto w-full max-w-3xl shrink-0 p-3 sm:p-4">
         <PromptInput onSubmit={(msg) => send(msg.text ?? "")}>
           <PromptInputBody>
             <PromptInputTextarea value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask about a strategy, indicator or risk setup…" />
           </PromptInputBody>
           <PromptInputFooter>
-            <PromptInputTools><span className="px-2 text-xs text-muted-foreground">Not financial advice. AI cannot place orders.</span></PromptInputTools>
+            <PromptInputTools className="min-w-0"><span className="min-w-0 px-2 text-[10px] text-muted-foreground sm:text-xs">Not financial advice. AI cannot place orders.</span></PromptInputTools>
             <PromptInputSubmit status={status} onStop={stop} disabled={!busy && !input.trim()} />
           </PromptInputFooter>
         </PromptInput>
