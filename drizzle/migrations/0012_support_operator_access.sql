@@ -1,0 +1,3 @@
+GRANT UPDATE(status,response) ON public.support_tickets TO authenticated;
+CREATE POLICY support_operator_read ON public.support_tickets FOR SELECT TO authenticated USING(public.has_role(auth.uid(),'admin') OR public.has_role(auth.uid(),'super_admin'));
+CREATE POLICY support_operator_reply ON public.support_tickets FOR UPDATE TO authenticated USING(public.has_role(auth.uid(),'admin') OR public.has_role(auth.uid(),'super_admin')) WITH CHECK(public.has_role(auth.uid(),'admin') OR public.has_role(auth.uid(),'super_admin'));
