@@ -80,7 +80,7 @@ function PlansPage() {
     } finally { setChecking(false); }
   }
 
-  const sub = plan.data ? { plan: plan.data.plan === "free" ? null : plan.data.plan, status: plan.data.status, periodEnd: plan.data.periodEnd } : null;
+  const sub = plan.data ? { plan: plan.data.subPlan, status: plan.data.status, periodEnd: plan.data.periodEnd } : null;
 
   return (
     <div>
