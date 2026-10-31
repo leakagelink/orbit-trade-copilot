@@ -120,6 +120,13 @@
       "when": 1793472117445,
       "tag": "0016_nowpayments_crypto_checkout",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1793472623294,
+      "tag": "0017_free_access_until_nov_4",
+      "breakpoints": true
     }
   ]
 }
