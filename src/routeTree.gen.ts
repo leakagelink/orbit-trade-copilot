@@ -23,6 +23,7 @@ import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedExchangesRouteImport } from './routes/_authenticated/exchanges'
 import { Route as AuthenticatedJournalRouteImport } from './routes/_authenticated/journal'
+import { Route as AuthenticatedMailboxRouteImport } from './routes/_authenticated/mailbox'
 import { Route as AuthenticatedNotificationsRouteImport } from './routes/_authenticated/notifications'
 import { Route as AuthenticatedPlansRouteImport } from './routes/_authenticated/plans'
 import { Route as AuthenticatedRiskRouteImport } from './routes/_authenticated/risk'
@@ -106,6 +107,11 @@ const AuthenticatedExchangesRoute = AuthenticatedExchangesRouteImport.update({
 const AuthenticatedJournalRoute = AuthenticatedJournalRouteImport.update({
   id: '/journal',
   path: '/journal',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedMailboxRoute = AuthenticatedMailboxRouteImport.update({
+  id: '/mailbox',
+  path: '/mailbox',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedNotificationsRoute =
@@ -201,6 +207,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/exchanges': typeof AuthenticatedExchangesRoute
   '/journal': typeof AuthenticatedJournalRoute
+  '/mailbox': typeof AuthenticatedMailboxRoute
   '/notifications': typeof AuthenticatedNotificationsRoute
   '/plans': typeof AuthenticatedPlansRoute
   '/risk': typeof AuthenticatedRiskRoute
@@ -231,6 +238,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/exchanges': typeof AuthenticatedExchangesRoute
   '/journal': typeof AuthenticatedJournalRoute
+  '/mailbox': typeof AuthenticatedMailboxRoute
   '/notifications': typeof AuthenticatedNotificationsRoute
   '/plans': typeof AuthenticatedPlansRoute
   '/risk': typeof AuthenticatedRiskRoute
@@ -263,6 +271,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/exchanges': typeof AuthenticatedExchangesRoute
   '/_authenticated/journal': typeof AuthenticatedJournalRoute
+  '/_authenticated/mailbox': typeof AuthenticatedMailboxRoute
   '/_authenticated/notifications': typeof AuthenticatedNotificationsRoute
   '/_authenticated/plans': typeof AuthenticatedPlansRoute
   '/_authenticated/risk': typeof AuthenticatedRiskRoute
@@ -295,6 +304,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/exchanges'
     | '/journal'
+    | '/mailbox'
     | '/notifications'
     | '/plans'
     | '/risk'
@@ -325,6 +335,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/exchanges'
     | '/journal'
+    | '/mailbox'
     | '/notifications'
     | '/plans'
     | '/risk'
@@ -356,6 +367,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/exchanges'
     | '/_authenticated/journal'
+    | '/_authenticated/mailbox'
     | '/_authenticated/notifications'
     | '/_authenticated/plans'
     | '/_authenticated/risk'
@@ -484,6 +496,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedJournalRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/mailbox': {
+      id: '/_authenticated/mailbox'
+      path: '/mailbox'
+      fullPath: '/mailbox'
+      preLoaderRoute: typeof AuthenticatedMailboxRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/notifications': {
       id: '/_authenticated/notifications'
       path: '/notifications'
@@ -602,6 +621,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedExchangesRoute: typeof AuthenticatedExchangesRoute
   AuthenticatedJournalRoute: typeof AuthenticatedJournalRoute
+  AuthenticatedMailboxRoute: typeof AuthenticatedMailboxRoute
   AuthenticatedNotificationsRoute: typeof AuthenticatedNotificationsRoute
   AuthenticatedPlansRoute: typeof AuthenticatedPlansRoute
   AuthenticatedRiskRoute: typeof AuthenticatedRiskRoute
@@ -626,6 +646,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedExchangesRoute: AuthenticatedExchangesRoute,
   AuthenticatedJournalRoute: AuthenticatedJournalRoute,
+  AuthenticatedMailboxRoute: AuthenticatedMailboxRoute,
   AuthenticatedNotificationsRoute: AuthenticatedNotificationsRoute,
   AuthenticatedPlansRoute: AuthenticatedPlansRoute,
   AuthenticatedRiskRoute: AuthenticatedRiskRoute,
