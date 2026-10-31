@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { ArrowUpRight, ArrowDownRight, Bot, Sparkles, Lock, Wallet } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, Bot, Sparkles, Lock, Wallet, CandlestickChart } from "lucide-react";
 import { ClientOnly } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/app-shell";
@@ -20,6 +20,7 @@ import { EXCHANGES, exchangeName } from "@/lib/exchanges";
 import { TIMEFRAMES } from "@/lib/strategy";
 import { closeManualPosition, getMarketCandles, placeManualOrder, aiTradeIdea, type TradeIdea } from "@/lib/trade.functions";
 import { TvChart } from "@/components/tv-chart";
+import { MarketDepthScene } from "@/components/market-depth-scene";
 import { fmtMoney } from "@/lib/metrics";
 
 const D = "Buy and sell crypto, forex and commodities from your wallet, with AI trade ideas on Pro.";
@@ -56,7 +57,7 @@ function TradePage() {
   const getIdea = useServerFn(aiTradeIdea);
 
   const connId = accountId === "paper" ? null : accountId;
-  const market = marketOf(symbol)!;
+  const market = marketOf(symbol) ?? MARKETS[0];
   const nonCrypto = market.category !== "crypto";
 
   const accounts = useQuery({
@@ -105,7 +106,8 @@ function TradePage() {
 
   function pickCat(c: MarketCategory) {
     setCat(c);
-    const first = MARKETS.find((m) => m.category === c)!;
+    const first = MARKETS.find((m) => m.category === c);
+    if (!first) return;
     setSymbol(first.symbol);
     setIdea(null);
     setAccountId("paper");
@@ -154,15 +156,27 @@ function TradePage() {
 
   return (
     <div>
-      <PageHeader title="Trade" description={D} />
+      <PageHeader title="Trading terminal" description="Crypto / Forex / Commodities" actions={<Badge variant="outline"><Wallet className="mr-1.5 h-3 w-3" />{isWallet ? "Demo wallet" : chosen?.label}</Badge>} />
+      <div className="market-summary mx-4 mb-5 flex flex-wrap items-center justify-between gap-4 px-5 md:mx-7">
+        <div className="flex items-center gap-3">
+          <span className="grid h-11 w-11 place-items-center rounded-lg border bg-card text-primary"><CandlestickChart className="h-6 w-6" /></span>
+          <div><div className="text-lg font-semibold">{symbol}</div><div className="text-xs text-muted-foreground">{market.name}</div></div>
+        </div>
+        <div className="flex flex-wrap gap-6 sm:gap-10">
+          <div><div className="mb-1 text-[10px] font-mono text-muted-foreground">LAST PRICE</div><div className="font-mono text-xl">{price?.toLocaleString(undefined, { maximumFractionDigits: 5 }) ?? "—"}</div></div>
+          <div><div className="mb-1 text-[10px] font-mono text-muted-foreground">OPEN POSITIONS</div><div className="font-mono text-xl">{symbolPositions.length}</div></div>
+          <div className="hidden sm:block"><div className="mb-1 text-[10px] font-mono text-muted-foreground">TIMEFRAME</div><div className="font-mono text-xl">{tf}</div></div>
+        </div>
+      </div>
+      {candles.data?.candles.length ? <ClientOnly><MarketDepthScene candles={candles.data.candles} /></ClientOnly> : null}
       <div className="grid gap-4 p-4 xl:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0 space-y-4">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 pt-5">
             {(Object.keys(CATEGORY_LABEL) as MarketCategory[]).map((c) => (
               <Button key={c} size="sm" variant={cat === c ? "default" : "outline"} onClick={() => pickCat(c)}>{CATEGORY_LABEL[c]}</Button>
             ))}
             <Select value={symbol} onValueChange={(v) => { setSymbol(v); setIdea(null); }}>
-              <SelectTrigger className="w-64"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-full sm:w-64"><SelectValue /></SelectTrigger>
               <SelectContent className="max-h-96">
                 {[...new Set(MARKETS.filter((m) => m.category === cat).map((m) => m.group ?? ""))].map((g) => (
                   <SelectGroup key={g}>
@@ -176,7 +190,6 @@ function TradePage() {
               <SelectTrigger className="w-24"><SelectValue /></SelectTrigger>
               <SelectContent>{TIMEFRAMES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
             </Select>
-            {price != null && <span className="font-mono text-lg">{price.toLocaleString(undefined, { maximumFractionDigits: 5 })}</span>}
             {pro ? (
               <Button size="sm" variant="outline" onClick={analyze} disabled={ideaBusy}>
                 <Sparkles className="mr-1 h-4 w-4" />{ideaBusy ? "Analyzing…" : "AI analyze"}
@@ -194,7 +207,7 @@ function TradePage() {
           ) : (
             <div className="rounded-lg border bg-card p-2">
               <ClientOnly fallback={<Skeleton className="h-[420px]" />}>
-                <TvChart candles={candles.data!.candles} lines={chartLines} />
+                <TvChart candles={candles.data?.candles ?? []} lines={chartLines} />
               </ClientOnly>
             </div>
           )}
@@ -221,8 +234,8 @@ function TradePage() {
             </div>
           )}
 
-          <div className="rounded-lg border bg-card">
-            <div className="border-b px-4 py-2 text-sm font-medium">Open positions</div>
+          <div className="overflow-x-auto rounded-lg border bg-card">
+            <div className="flex items-center gap-2 border-b px-4 py-3 text-sm font-medium">Open positions <Badge variant="secondary">{positions.data?.length ?? 0}</Badge></div>
             {!positions.data?.length ? (
               <p className="p-4 text-sm text-muted-foreground">No manual positions.</p>
             ) : (
@@ -248,11 +261,11 @@ function TradePage() {
         </div>
 
         <div className="space-y-4">
-          <div className="space-y-3 rounded-lg border bg-card p-4">
-            <div className="text-sm font-medium">Order ticket</div>
+          <div className="order-ticket space-y-4 rounded-lg border bg-card p-5 xl:mt-5">
+            <div className="flex items-center justify-between text-sm font-semibold">Place order <Badge variant="secondary">Market</Badge></div>
             <div className="grid grid-cols-2 gap-2">
-              <Button variant={side === "buy" ? "default" : "outline"} className={side === "buy" ? "bg-gain text-black hover:bg-gain/90" : ""} onClick={() => setSide("buy")}><ArrowUpRight className="mr-1 h-4 w-4" />Buy</Button>
-              <Button variant={side === "sell" ? "default" : "outline"} className={side === "sell" ? "bg-loss text-white hover:bg-loss/90" : ""} onClick={() => setSide("sell")}><ArrowDownRight className="mr-1 h-4 w-4" />Sell</Button>
+              <Button variant={side === "buy" ? "buy" : "outline"} onClick={() => setSide("buy")}><ArrowUpRight className="mr-1 h-4 w-4" />Buy</Button>
+              <Button variant={side === "sell" ? "sell" : "outline"} onClick={() => setSide("sell")}><ArrowDownRight className="mr-1 h-4 w-4" />Sell</Button>
             </div>
             {sellBlocked && <p className="text-xs text-destructive">Spot crypto accounts can't open shorts. Use paper mode or OANDA to sell first.</p>}
             <div className="space-y-1.5">

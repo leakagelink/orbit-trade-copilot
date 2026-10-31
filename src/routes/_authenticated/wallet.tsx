@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
-import { ArrowDownToLine, ArrowUpFromLine, Info } from "lucide-react";
+import { ArrowDownToLine, ArrowUpFromLine, Info, Wallet, Layers, TrendingUp, ChartNoAxesCombined } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
@@ -61,7 +61,7 @@ function WalletPage() {
   const d = q.data;
   return (
     <div>
-      <PageHeader title="Wallet" description={D} actions={<Button size="sm" asChild><Link to="/trade">Trade</Link></Button>} />
+      <PageHeader title="Your wallet" description="Demo capital & trading activity" actions={<Button size="sm" asChild><Link to="/trade">Open terminal</Link></Button>} />
       <div className="space-y-4 p-4">
         <div className="flex gap-2 rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm">
           <Info className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
@@ -74,14 +74,16 @@ function WalletPage() {
             ["In open trades", d?.inTrades],
             ["Unrealized PnL", d?.upnl],
             ["Equity", d ? d.balance + d.inTrades + d.upnl : undefined],
-          ].map(([label, v]) => (
-            <div key={label as string} className="rounded-lg border bg-card p-4">
-              <div className="text-xs text-muted-foreground">{label as string}</div>
+          ].map(([label, v], index) => {
+            const Icon = [Wallet, Layers, TrendingUp, ChartNoAxesCombined][index] ?? Wallet;
+            return (
+            <div key={label as string} className="wallet-stat min-w-0 rounded-lg border bg-card p-5">
+              <div className="mb-5 flex items-center justify-between gap-2 text-xs text-muted-foreground">{label as string}<Icon className="h-4 w-4 shrink-0 text-primary" /></div>
               {q.isLoading ? <Skeleton className="mt-2 h-7 w-28" /> : (
-                <div className={`mt-1 font-mono text-2xl ${label === "Unrealized PnL" ? (Number(v) >= 0 ? "text-gain" : "text-loss") : ""}`}>{fmtMoney(Number(v ?? 0))}</div>
+                <div className={`mt-1 break-words font-mono text-xl ${label === "Unrealized PnL" ? (Number(v) >= 0 ? "text-gain" : "text-loss") : ""}`}>{fmtMoney(Number(v ?? 0))}</div>
               )}
             </div>
-          ))}
+          ); })}
         </div>
 
         <div className="grid gap-4 lg:grid-cols-[340px_1fr]">
