@@ -1,13 +1,16 @@
 # Roadmap
 
 ## Trading toolkit and account safety
-- [ ] Paid watchlist and server-checked price alerts
-- [ ] Paid trading journal and trade-history CSV export
-- [ ] Economic calendar with real provider data
-- [ ] Durable trade, bot, connection and price notifications
-- [ ] Two-step verification, workspace device activity and revoke-other-sessions control
-- [ ] Support tickets and truthful service checks
-- [ ] Verify access rules, persistence and mobile layouts
+- [x] Paid watchlist and server-checked price alerts with atomic one-time delivery and stale-quote rejection
+- [x] Paid trading journal and paginated, formula-safe trade-history CSV export
+- [x] Economic calendar with real TradingView events, isolated cross-origin rendering and attribution
+- [x] Durable trade, bot, connection and price notifications; new workspace-session warnings in Settings
+- [x] Two-step verification, public-table/server enforcement, workspace device activity and revoke-other-sessions controls
+- [x] Support tickets, role-protected operator replies and measured on-demand connectivity checks
+- [x] Free restrictions and signed-in support save/reload checked; calendar events/navigation checked; paid layouts inspected with display-only plan override; mobile no overflow; 46 combined safety/regression tests passed
+- [ ] Paid save/export/alert delivery end-to-end — no Pro/Elite test account exists; no subscriptions were changed for testing
+- [ ] Authenticator enrollment/re-login and operator replies end-to-end — requires an actual authenticator-enabled session and support-operator account; current account was not modified
+- [ ] Scheduled alert delivery on hosted app — schedule installed; app must be published, and provider quotes must be reachable from hosting
 
 ## Homepage redesign
 - [x] Replace homepage with full trading-platform presentation, market coverage, workflows, safeguards, FAQ and three-tier comparison
