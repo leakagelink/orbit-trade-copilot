@@ -7,6 +7,7 @@ import { ArrowUpRight, ArrowDownRight, Bot, Sparkles, Lock, Wallet, CandlestickC
 import { ClientOnly } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/app-shell";
+import { OnboardingChecklist } from "@/components/onboarding-checklist";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
