@@ -4,7 +4,7 @@ export type BillingInterval = "monthly" | "yearly";
 export const PLAN_IDS: PlanId[] = ["free", "pro", "elite"];
 
 /** Pages the Free plan can open. Everything else needs a paid plan. */
-export const FREE_PATHS = ["/trade", "/wallet", "/exchanges", "/risk", "/settings", "/plans", "/support", "/status", "/mailbox"] as const;
+export const FREE_PATHS = ["/trade", "/wallet", "/exchanges", "/risk", "/settings", "/plans", "/support", "/status", "/mailbox", "/learn", "/referrals", "/leaderboard", "/admin"] as const;
 
 export function requiredPlan(path: string): PlanId {
   if (["/scalping", "/arbitrage"].some(p => path === p || path.startsWith(p + "/"))) return "elite";

@@ -46,7 +46,7 @@ function Leaderboard() {
                 <tr key={`${r.rank}-${r.trader}`} className={r.is_me ? "bg-accent/50" : ""}>
                   <td className="p-3 font-mono">{Number(r.rank) <= 3 ? <Trophy className="h-4 w-4 text-primary" /> : r.rank}</td>
                   <td className="p-3">{r.trader}{r.is_me && " (you)"}</td>
-                  <td className={`p-3 text-right font-mono ${Number(r.net_pnl) >= 0 ? "text-profit" : "text-loss"}`}>{Number(r.net_pnl).toFixed(2)}</td>
+                  <td className={`p-3 text-right font-mono ${Number(r.net_pnl) >= 0 ? "text-gain" : "text-loss"}`}>{Number(r.net_pnl).toFixed(2)}</td>
                   <td className="p-3 text-right font-mono">{r.trades}</td>
                   <td className="p-3 text-right font-mono">{Number(r.win_rate).toFixed(1)}%</td>
                 </tr>

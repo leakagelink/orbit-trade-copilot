@@ -7,6 +7,7 @@ import { ArrowUpRight, ArrowDownRight, Bot, Sparkles, Lock, Wallet, CandlestickC
 import { ClientOnly } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/app-shell";
+import { OnboardingChecklist } from "@/components/onboarding-checklist";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -169,6 +170,7 @@ function TradePage() {
   return (
     <div>
       <PageHeader title="Trading terminal" description="Crypto / Forex / Commodities" actions={<Badge variant="outline"><Wallet className="mr-1.5 h-3 w-3" />{isWallet ? "Demo wallet" : chosen?.label}</Badge>} />
+      <div className="mx-4 mb-5 md:mx-7"><OnboardingChecklist /></div>
       <div className="market-summary mx-4 mb-5 flex flex-wrap items-center justify-between gap-4 px-5 md:mx-7">
         <div className="flex items-center gap-3">
           <span className="grid h-11 w-11 place-items-center rounded-lg border bg-card text-primary"><CandlestickChart className="h-6 w-6" /></span>

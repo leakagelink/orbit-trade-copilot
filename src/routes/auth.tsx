@@ -1,5 +1,5 @@
 import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Logo } from "@/components/app-shell";
 
-const searchSchema = z.object({ redirect: z.string().optional(), mode: z.enum(["login", "register"]).optional() });
+const searchSchema = z.object({ redirect: z.string().optional(), mode: z.enum(["login", "register"]).optional(), ref: z.string().max(16).optional() });
 
 function safePath(p?: string) {
   if (!p) return "/dashboard";
@@ -44,6 +44,7 @@ export const Route = createFileRoute("/auth")({
 function AuthPage() {
   const search = Route.useSearch();
   const navigate = useNavigate();
+  useEffect(() => { if (search.ref && /^[A-Za-z0-9]{4,16}$/.test(search.ref)) localStorage.setItem("pending_ref", search.ref.toUpperCase()); }, [search.ref]);
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState<string | null>(null);
 

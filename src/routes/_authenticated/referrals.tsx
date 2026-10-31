@@ -28,7 +28,7 @@ function Referrals() {
       return { code: p.data?.referral_code ?? "", list: r.data ?? [] };
     },
   });
-  const link = q.data?.code ? `${typeof window !== "undefined" ? window.location.origin : ""}/auth?mode=signup&ref=${q.data.code}` : "";
+  const link = q.data?.code ? `${typeof window !== "undefined" ? window.location.origin : ""}/auth?mode=register&ref=${q.data.code}` : "";
   return (
     <div>
       <PageHeader title="Invite friends" description="Friends who sign up within 7 days using your link are counted here." />

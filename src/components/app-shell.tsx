@@ -5,7 +5,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import {
   LayoutDashboard, Bot, Cable, Blocks, Settings, LogOut, Moon, Sun, Menu, MessageSquareText, Activity,
   FlaskConical, ChartColumn, ShieldAlert, CandlestickChart, Wallet, Crown, Lock, ArrowLeftRight, Zap, ChevronRight, ArrowUpRight, Ellipsis,
-  Star, BookOpen, CalendarDays, Bell, LifeBuoy, HeartPulse, Mail,
+  Star, BookOpen, CalendarDays, Bell, LifeBuoy, HeartPulse, Mail, GraduationCap, Gift, Trophy, Store, ShieldCheck, Languages,
 } from "lucide-react";
 import { usePlan } from "@/hooks/use-plan";
 import { canOpen, requiredPlan, PLAN_FEATURES } from "@/lib/plans";
@@ -15,6 +15,8 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { MfaGate } from "@/components/mfa-gate";
 import { recordSession } from "@/lib/security.functions";
+import { useIsAdmin } from "@/hooks/use-is-admin";
+import { navLabel, useLang } from "@/lib/i18n";
 
 const NAV = [
   { to: "/trade", label: "Trade", icon: CandlestickChart },
@@ -31,6 +33,10 @@ const NAV = [
   { to: "/exchanges", label: "Exchanges", icon: Cable },
   { to: "/settings", label: "Settings", icon: Settings },
   { to: "/plans", label: "Plans", icon: Crown },
+  { to: "/marketplace", label: "Strategy marketplace", icon: Store },
+  { to: "/leaderboard", label: "Demo leaderboard", icon: Trophy },
+  { to: "/learn", label: "Learn trading", icon: GraduationCap },
+  { to: "/referrals", label: "Invite friends", icon: Gift },
   { to: "/watchlist", label: "Watchlist & alerts", icon: Star },
   { to: "/journal", label: "Trading journal", icon: BookOpen },
   { to: "/calendar", label: "Economic calendar", icon: CalendarDays },
@@ -38,6 +44,7 @@ const NAV = [
   { to: "/support", label: "Support", icon: LifeBuoy },
   { to: "/mailbox", label: "Support mailbox", icon: Mail },
   { to: "/status", label: "Service status", icon: HeartPulse },
+  { to: "/admin", label: "Admin panel", icon: ShieldCheck },
 ] as const;
 
 export function Logo({ className }: { className?: string }) {
@@ -76,9 +83,13 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const plan = usePlan();
   const tier = plan.data?.plan ?? "free";
+  const isAdmin = useIsAdmin();
+  const [lang, setLang] = useLang();
   return (
     <nav className="workspace-nav flex flex-col gap-1">
-      {NAV.map(({ to, label, icon: Icon }) => {
+      <Button variant="ghost" size="sm" className="mb-1 justify-start gap-3 text-[13px]" onClick={() => setLang(lang === "en" ? "hi" : "en")}><Languages className="h-4 w-4" />{lang === "en" ? "हिंदी में देखें" : "View in English"}</Button>
+      {NAV.filter(n => n.to !== "/admin" || isAdmin.data).map(({ to, label: en, icon: Icon }) => {
+        const label = navLabel(to, en, lang);
         const active = path === to || path.startsWith(to + "/");
         const locked = !plan.isLoading && !canOpen(to, tier);
         const group = to === "/trade" ? "WORKSPACE" : to === "/assistant" ? "INTELLIGENCE" : to === "/backtests" ? "MANAGEMENT" : null;
@@ -118,6 +129,7 @@ function SecuredShell({ children }: { children: ReactNode }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const plan = usePlan();
   const record = useServerFn(recordSession);
+  useEffect(() => { const code = localStorage.getItem("pending_ref"); if (code) supabase.rpc("claim_referral", { _code: code }).then(() => localStorage.removeItem("pending_ref")); }, []);
   useEffect(() => { record().catch(() => {}); const timer = setInterval(() => record().catch(() => {}), 60000); return () => clearInterval(timer); }, [record]);
   const unread = useQuery({queryKey:["notifications","unread"],enabled:plan.data?.pro===true,queryFn:async()=>{const r=await supabase.from("notifications").select("id",{count:"exact",head:true}).is("read_at",null);if(r.error)throw new Error("Notifications unavailable");return r.count??0;},refetchInterval:30000});
   const current = NAV.find(item => path === item.to || path.startsWith(item.to + "/"));
