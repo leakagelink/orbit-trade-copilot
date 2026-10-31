@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { LegalPage, legalHead, COMPANY } from "@/components/legal-page";
 
 export const Route = createFileRoute("/privacy")({
-  head: () => legalHead("Privacy Policy", "What data AlgoVirt collects, how exchange keys are protected and your privacy choices."),
+  head: () => legalHead("Privacy Policy", "What data AlgoVirt collects, how exchange keys are protected and your privacy choices.", "/privacy"),
   component: () => (
     <LegalPage title="Privacy Policy">
       <h2>What we collect</h2>

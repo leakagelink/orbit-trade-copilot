@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { LegalPage, legalHead } from "@/components/legal-page";
 
 export const Route = createFileRoute("/risk-disclosure")({
-  head: () => legalHead("Risk Disclosure", "Important risks of trading crypto, forex and commodities, and of using bots, AI, scalping and arbitrage."),
+  head: () => legalHead("Risk Disclosure", "Important risks of trading crypto, forex and commodities, and of using bots, AI, scalping and arbitrage.", "/risk-disclosure"),
   component: () => (
     <LegalPage title="Risk Disclosure">
       <p>Trading crypto, forex and commodities carries a high risk of loss. Only trade money you can afford to lose.</p>
