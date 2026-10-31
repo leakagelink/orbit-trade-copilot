@@ -4,9 +4,10 @@ import { WALLET_ROUND_TRIP_PCT, scalpBracket, scalpExit, scalpStats, scalpTempla
 import { validateStrategy } from "@/lib/strategy";
 
 describe("scalping access", () => {
-  it("is Pro-only", () => {
-    expect(canOpen("/scalping", false)).toBe(false);
-    expect(canOpen("/scalping", true)).toBe(true);
+  it("is Elite-only", () => {
+    expect(canOpen("/scalping", "free")).toBe(false);
+    expect(canOpen("/scalping", "pro")).toBe(false);
+    expect(canOpen("/scalping", "elite")).toBe(true);
   });
 });
 

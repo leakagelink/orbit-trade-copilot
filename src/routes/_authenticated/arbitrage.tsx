@@ -18,7 +18,7 @@ import { ARBITRAGE_EXCHANGES, ARBITRAGE_PAIRS, executionAllowed, type ArbitrageE
 import { scanArbitrageFn, executeArbitrageFn, arbitrageReviewFn, reconcileArbitrageFn } from "@/lib/arbitrage.functions";
 import { exchangeName } from "@/lib/exchanges";
 
-const D = "Compare crypto exchange prices, review net spreads and execute prefunded spot arbitrage with Pro.";
+const D = "Compare crypto exchange prices, review net spreads and execute prefunded spot arbitrage with Elite.";
 export const Route = createFileRoute("/_authenticated/arbitrage")({
   head: () => ({ meta: [{ title: "Arbitrage — Quantra" }, { name: "description", content: D }, { property: "og:title", content: "Arbitrage — Quantra" }, { property: "og:description", content: D }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" }] }),
   component: ArbitragePage,
@@ -44,10 +44,10 @@ function ArbitragePage() {
   const [scan, setScan] = useState<Awaited<ReturnType<typeof scanArbitrageFn>> | null>(null), [review, setReview] = useState("");
   const [picked, setPicked] = useState<Opportunity | null>(null), [confirmation, setConfirmation] = useState("");
   const [buyConnection, setBuyConnection] = useState(""), [sellConnection, setSellConnection] = useState(""), [requestKey, setRequestKey] = useState("");
-  const connections = useQuery({ queryKey: ["exchange_connections"], enabled: plan.data?.pro === true,
+  const connections = useQuery({ queryKey: ["exchange_connections"], enabled: plan.data?.elite === true,
     queryFn: async () => { const { data, error } = await supabase.from("exchange_connections").select("*").order("created_at"); if (error) throw new Error(error.message); return data; },
   });
-  const history = useQuery({ queryKey: ["arbitrage_runs"], enabled: plan.data?.pro === true,
+  const history = useQuery({ queryKey: ["arbitrage_runs"], enabled: plan.data?.elite === true,
     queryFn: async () => { const { data, error } = await supabase.from("arbitrage_runs").select("*").order("created_at", { ascending: false }).limit(30); if (error) throw new Error(error.message); return data; },
     refetchInterval: 15000,
   });
@@ -84,7 +84,7 @@ function ArbitragePage() {
   }
   const eligibleAccounts = (exchange: string) => connections.data?.filter((c) => c.exchange === exchange && c.status === "connected" && c.account_type === "spot") ?? [];
   return <div>
-    <PageHeader title="Arbitrage" actions={<><Badge variant="outline">Pro</Badge><Button variant="outline" asChild><Link to="/exchanges"><ArrowLeftRight className="mr-2 h-4 w-4" />Exchange accounts</Link></Button></>} />
+    <PageHeader title="Arbitrage" actions={<><Badge variant="outline">Elite</Badge><Button variant="outline" asChild><Link to="/exchanges"><ArrowLeftRight className="mr-2 h-4 w-4" />Exchange accounts</Link></Button></>} />
     <div className="space-y-6 p-4 md:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-5">
         <div><h2 className="text-sm font-medium">Cross-exchange spot</h2><p className="mt-1 text-xs text-muted-foreground">USDT markets · executable depth · fees on both legs</p></div>

@@ -4,8 +4,8 @@ vi.mock("@/lib/exchange-adapters.server", () => ({ fetchArbitrageBook: mocks.boo
 vi.mock("@/lib/manual.server", () => ({ loadAccount: mocks.account }));
 vi.mock("@/lib/engine.server", () => ({ accountRiskBlock: mocks.risk }));
 import { executeArbitrage, type ExecuteInput } from "@/lib/arbitrage.server";
-import { requirePro } from "@/lib/plan.server";
-import { UPGRADE_MESSAGE } from "@/lib/plans";
+import { requireElite } from "@/lib/plan.server";
+import { ELITE_UPGRADE_MESSAGE } from "@/lib/plans";
 
 function database() {
   const saved: Record<string, unknown>[] = [];
@@ -51,9 +51,13 @@ describe("server arbitrage execution", () => {
     await expect(executeArbitrage(db as unknown as DB, "user-1", { ...input, mode: "live" })).rejects.toThrow("Type LIVE");
     expect(mocks.account).not.toHaveBeenCalled(); expect(mocks.order).not.toHaveBeenCalled();
   });
-  it("server plan guard denies Free arbitrage callers", async () => {
+  it("server plan guard denies non-Elite arbitrage callers", async () => {
     const db = { rpc: vi.fn().mockResolvedValue({ data: false, error: null }) };
-    await expect(requirePro(db as unknown as Parameters<typeof requirePro>[0], "user-1")).rejects.toThrow(UPGRADE_MESSAGE);
-    expect(db.rpc).toHaveBeenCalledWith("has_pro_access", { _uid: "user-1" });
+    await expect(requireElite(db as unknown as Parameters<typeof requireElite>[0], "user-1")).rejects.toThrow(ELITE_UPGRADE_MESSAGE);
+    expect(db.rpc).toHaveBeenCalledWith("has_elite_access", { _uid: "user-1" });
+  });
+  it("server plan guard accepts confirmed Elite access", async () => {
+    const db = { rpc: vi.fn().mockResolvedValue({ data: true, error: null }) };
+    await expect(requireElite(db as unknown as Parameters<typeof requireElite>[0], "user-1")).resolves.toBeUndefined();
   });
 });
