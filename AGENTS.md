@@ -10,6 +10,7 @@
 <!-- LOVABLE:END -->
 
 ## Architecture rules
+- Shared trading visuals live in global semantic tokens and AppShell; decorative 3D market candles dynamically load Three.js in a browser effect using actual chart data, respecting reduced motion — keeps trading logic untouched and SSR browser-safe.
 - Exchange API secrets live only in `connection_credentials` (service-role only, AES-GCM via `src/lib/crypto.server.ts`); browser code never reads them — keeps keys out of the client.
 - Orders, positions, trades and snapshots are read-only for users; only server code writes them — prevents fabricated trading records.
 - Strategy validation lives in `src/lib/strategy.ts` and is shared by UI and server — one source of truth for deploy eligibility.
