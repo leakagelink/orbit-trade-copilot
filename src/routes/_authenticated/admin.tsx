@@ -8,23 +8,12 @@ import { toolkitHead, QueryError } from "@/components/toolkit-shared";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useIsAdmin } from "@/hooks/use-is-admin";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => toolkitHead("Admin panel", "Platform overview, users and support for Quantra administrators."),
   component: Admin,
 });
-
-export function useIsAdmin() {
-  return useQuery({ queryKey: ["is-admin"], staleTime: 300_000, queryFn: async () => {
-    const { data: u } = await supabase.auth.getUser();
-    if (!u.user) return false;
-    const [a, s] = await Promise.all([
-      supabase.rpc("has_role", { _user_id: u.user.id, _role: "admin" }),
-      supabase.rpc("has_role", { _user_id: u.user.id, _role: "super_admin" }),
-    ]);
-    return a.data === true || s.data === true;
-  } });
-}
 
 const STATS: [string, string][] = [["users", "Total users"], ["new_7d", "New this week"], ["pro", "Pro"], ["elite", "Elite"], ["open_tickets", "Open support tickets"], ["trades_7d", "Trades this week"], ["live_bots", "Live bots running"], ["referrals", "Referrals"]];
 
