@@ -32,7 +32,7 @@ describe("Binance candle feed recovery", () => {
   });
 
   it("reports a failure rather than fabricating candles when both hosts fail", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("Unavailable", { status: 503 })));
+    vi.stubGlobal("fetch", vi.fn().mockImplementation(async () => new Response("Unavailable", { status: 503 })));
     await expect(fetchCandles("binance", "BTC/USDT", "1h", false)).rejects.toThrow("503");
   });
 });
