@@ -1376,11 +1376,39 @@ export type Database = {
         }
         Relationships: []
       }
+      workspace_sessions: {
+        Row: {
+          device: string
+          first_seen_at: string
+          id: string
+          last_seen_at: string
+          revoked_at: string | null
+          user_id: string
+        }
+        Insert: {
+          device: string
+          first_seen_at?: string
+          id: string
+          last_seen_at?: string
+          revoked_at?: string | null
+          user_id: string
+        }
+        Update: {
+          device?: string
+          first_seen_at?: string
+          id?: string
+          last_seen_at?: string
+          revoked_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      account_mfa_allowed: { Args: never; Returns: boolean }
       has_elite_access: { Args: { _uid: string }; Returns: boolean }
       has_pro_access: { Args: { _uid: string }; Returns: boolean }
       has_role: {
