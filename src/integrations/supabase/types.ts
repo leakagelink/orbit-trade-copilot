@@ -925,6 +925,9 @@ export type Database = {
           created_at: string
           display_name: string | null
           id: string
+          leaderboard_opt_in: boolean
+          onboarding_dismissed: boolean
+          referral_code: string | null
           timezone: string | null
           updated_at: string
         }
@@ -934,6 +937,9 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id: string
+          leaderboard_opt_in?: boolean
+          onboarding_dismissed?: boolean
+          referral_code?: string | null
           timezone?: string | null
           updated_at?: string
         }
@@ -943,8 +949,35 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id?: string
+          leaderboard_opt_in?: boolean
+          onboarding_dismissed?: boolean
+          referral_code?: string | null
           timezone?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      referrals: {
+        Row: {
+          created_at: string
+          id: string
+          referred_id: string
+          referrer_id: string
+          reward_status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          referred_id: string
+          referrer_id: string
+          reward_status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          referred_id?: string
+          referrer_id?: string
+          reward_status?: string
         }
         Relationships: []
       }
@@ -977,12 +1010,15 @@ export type Database = {
       }
       strategies: {
         Row: {
+          clone_count: number
           config: Json
           created_at: string
           current_version: number
           description: string | null
           id: string
+          is_published: boolean
           name: string
+          published_at: string | null
           source: string
           status: Database["public"]["Enums"]["strategy_status"]
           updated_at: string
@@ -990,12 +1026,15 @@ export type Database = {
           validation_errors: Json
         }
         Insert: {
+          clone_count?: number
           config?: Json
           created_at?: string
           current_version?: number
           description?: string | null
           id?: string
+          is_published?: boolean
           name: string
+          published_at?: string | null
           source?: string
           status?: Database["public"]["Enums"]["strategy_status"]
           updated_at?: string
@@ -1003,12 +1042,15 @@ export type Database = {
           validation_errors?: Json
         }
         Update: {
+          clone_count?: number
           config?: Json
           created_at?: string
           current_version?: number
           description?: string | null
           id?: string
+          is_published?: boolean
           name?: string
+          published_at?: string | null
           source?: string
           status?: Database["public"]["Enums"]["strategy_status"]
           updated_at?: string
@@ -1500,6 +1542,32 @@ export type Database = {
     }
     Functions: {
       account_mfa_allowed: { Args: never; Returns: boolean }
+      admin_overview: { Args: never; Returns: Json }
+      admin_users: {
+        Args: { _search?: string }
+        Returns: {
+          display_name: string
+          email: string
+          id: string
+          joined: string
+          last_sign_in: string
+          plan: string
+          trades: number
+        }[]
+      }
+      bump_strategy_clone: { Args: { _id: string }; Returns: undefined }
+      claim_referral: { Args: { _code: string }; Returns: string }
+      demo_leaderboard: {
+        Args: never
+        Returns: {
+          is_me: boolean
+          net_pnl: number
+          rank: number
+          trader: string
+          trades: number
+          win_rate: number
+        }[]
+      }
       has_elite_access: { Args: { _uid: string }; Returns: boolean }
       has_pro_access: { Args: { _uid: string }; Returns: boolean }
       has_role: {
@@ -1527,6 +1595,18 @@ export type Database = {
           _ticket: string
         }
         Returns: string
+      }
+      marketplace_strategies: {
+        Args: never
+        Returns: {
+          author: string
+          clone_count: number
+          config: Json
+          description: string
+          id: string
+          name: string
+          published_at: string
+        }[]
       }
       trigger_price_alert: {
         Args: { _id: string; _price: number }
