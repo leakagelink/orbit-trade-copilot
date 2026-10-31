@@ -599,6 +599,38 @@ export type Database = {
           },
         ]
       }
+      mailbox_states: {
+        Row: {
+          folder: string
+          read_at: string | null
+          starred: boolean
+          ticket_id: string
+          user_id: string
+        }
+        Insert: {
+          folder?: string
+          read_at?: string | null
+          starred?: boolean
+          ticket_id: string
+          user_id: string
+        }
+        Update: {
+          folder?: string
+          read_at?: string | null
+          starred?: boolean
+          ticket_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mailbox_states_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           body: string | null
@@ -1074,6 +1106,65 @@ export type Database = {
         }
         Relationships: []
       }
+      support_drafts: {
+        Row: {
+          body: string
+          id: string
+          subject: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          body?: string
+          id?: string
+          subject?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          id?: string
+          subject?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      support_messages: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          sender_id: string
+          sender_kind: string
+          ticket_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          sender_id: string
+          sender_kind: string
+          ticket_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          sender_id?: string
+          sender_kind?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_messages_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       support_tickets: {
         Row: {
           category: string
@@ -1417,6 +1508,16 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      is_support_operator: { Args: never; Returns: boolean }
+      mailbox_send: {
+        Args: {
+          _body: string
+          _recipient: string
+          _subject: string
+          _ticket: string
+        }
+        Returns: string
       }
       trigger_price_alert: {
         Args: { _id: string; _price: number }

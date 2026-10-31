@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { LineChart as LineIcon, Cable } from "lucide-react";
+import { LineChart as LineIcon, Cable, Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader, EmptyState } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
@@ -81,7 +81,7 @@ function Dashboard() {
 
   return (
     <div>
-      <PageHeader title="Dashboard" description="All figures come from your recorded trades — nothing is estimated." />
+      <PageHeader title="Dashboard" description="All figures come from your recorded trades — nothing is estimated." actions={<Button variant="outline" asChild><Link to="/mailbox"><Mail className="h-4 w-4"/>Support mailbox</Link></Button>} />
       <div className="space-y-6 p-6">
         {!q.data || !view ? (
           <div className="grid gap-3 sm:grid-cols-4">{Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-20" />)}</div>

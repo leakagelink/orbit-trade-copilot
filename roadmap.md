@@ -1,5 +1,11 @@
 # Roadmap
 
+## Support-only mailbox
+- [ ] Private threaded user/support messages, replies and owner-only drafts
+- [ ] Inbox, sent, search, unread, star, archive and trash controls
+- [ ] Dashboard/mailbox navigation and support operator view
+- [ ] Verify persistence, restrictions and mobile layout
+
 ## Trading toolkit and account safety
 - [x] Paid watchlist and server-checked price alerts with atomic one-time delivery and stale-quote rejection
 - [x] Paid trading journal and paginated, formula-safe trade-history CSV export
