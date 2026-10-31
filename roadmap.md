@@ -1,5 +1,10 @@
 # Roadmap
 
+## Crypto plan payments (NOWPayments)
+- [ ] Connect NOWPayments in the new workspace
+- [ ] Pro $249/mo, $1999/yr; Elite $449/mo, $3899/yr shown on Plans page with crypto checkout
+- [ ] Payment-confirmation endpoint activates the plan only after NOWPayments confirms the payment
+
 ## Launch readiness and growth
 - [x] Terms, Privacy, Risk Disclosure and Refund pages linked from the homepage
 - [x] Admin panel (role-checked overview and user list)
