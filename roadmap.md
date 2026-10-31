@@ -1,9 +1,9 @@
 # Roadmap
 
 ## Homepage redesign
-- [ ] Replace homepage with full trading-platform presentation, market coverage, workflows, safeguards, FAQ and three-tier comparison
-- [ ] Add cohesive 3D trading imagery and mobile-friendly signup calls to action
-- [ ] Verify homepage interactions, signup navigation and mobile/desktop layouts
+- [x] Replace homepage with full trading-platform presentation, market coverage, workflows, safeguards, FAQ and three-tier comparison
+- [x] Add cohesive 3D trading imagery and mobile-friendly signup calls to action
+- [x] Verify workflow tabs, yearly selection, FAQ, mobile menu and signup destination; no overflow at 393/320px, no browser errors, 21 tests passed and build OK
 
 ## Three subscription tiers
 - [x] Free / Pro / Elite with monthly and yearly selector, existing-feature comparison and no invented prices
