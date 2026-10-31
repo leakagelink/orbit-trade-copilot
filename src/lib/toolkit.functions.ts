@@ -50,3 +50,11 @@ export const checkMyAlerts = createServerFn({ method: "POST" }).middleware([requ
   const { requirePro } = await import("./plan.server"); await requirePro(context.supabase,context.userId);
   const { evaluateAlerts } = await import("./alerts.server"); return evaluateAlerts(context.userId);
 });
+
+export const replyTicket = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) => z.object({ id:z.string().uuid(),response:z.string().trim().min(1).max(4000),status:z.enum(["open","in_progress","resolved"]) }).parse(i)).handler(async({context,data})=>{
+    const [admin,superAdmin]=await Promise.all([context.supabase.rpc("has_role",{_user_id:context.userId,_role:"admin"}),context.supabase.rpc("has_role",{_user_id:context.userId,_role:"super_admin"})]);
+    if(admin.error||superAdmin.error||(!admin.data&&!superAdmin.data))throw new Error("Only support operators can reply");
+    const r=await context.supabase.from("support_tickets").update({response:data.response,status:data.status}).eq("id",data.id).select("id").single();
+    if(r.error)throw new Error("Could not save reply");return {ok:true};
+  });
