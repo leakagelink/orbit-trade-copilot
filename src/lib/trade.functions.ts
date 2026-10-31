@@ -75,7 +75,7 @@ export const closeManualPosition = createServerFn({ method: "POST" })
     return r;
   });
 
-// ---- Scalping (Pro): one-click trades whose stop/target/time limit are set on the server from the live price ----
+// ---- Scalping (Elite): one-click trades whose stop/target/time limit are set on the server from the live price ----
 export const placeScalp = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) =>
@@ -85,8 +85,8 @@ export const placeScalp = createServerFn({ method: "POST" })
     }).parse(i),
   )
   .handler(async ({ data, context }) => {
-    const { requirePro } = await import("./plan.server");
-    await requirePro(context.supabase, context.userId);
+    const { requireElite } = await import("./plan.server");
+    await requireElite(context.supabase, context.userId);
     const { db, a } = await tradingAccount(context.userId, data);
     const { openManual } = await import("./manual.server");
     return openManual(db, context.userId, a, {
@@ -99,8 +99,7 @@ export const placeScalp = createServerFn({ method: "POST" })
 export const checkScalps = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { requirePro } = await import("./plan.server");
-    await requirePro(context.supabase, context.userId);
+    // Risk exits remain available to the owner even after their plan changes.
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { manageManualPositions } = await import("./manual.server");
     return { closed: await manageManualPositions(supabaseAdmin, context.userId) };

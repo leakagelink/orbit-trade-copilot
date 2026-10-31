@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { PlanId } from "@/lib/plans";
 
 /** Current user's plan. `pro` is decided by the database (paid plan or admin). */
 export function usePlan() {
@@ -7,12 +8,16 @@ export function usePlan() {
     queryKey: ["plan"],
     queryFn: async () => {
       const { data: u } = await supabase.auth.getUser();
-      if (!u.user) return { pro: false, plan: "free", status: null as string | null, periodEnd: null as string | null };
-      const [{ data: pro }, { data: sub }] = await Promise.all([
+      if (!u.user) return { pro: false, elite: false, plan: "free" as PlanId, status: null as string | null, periodEnd: null as string | null };
+      const [paid, advanced, subscription] = await Promise.all([
         supabase.rpc("has_pro_access", { _uid: u.user.id }),
+        supabase.rpc("has_elite_access", { _uid: u.user.id }),
         supabase.from("subscriptions").select("plan,status,current_period_end").eq("user_id", u.user.id).maybeSingle(),
       ]);
-      return { pro: pro === true, plan: sub?.plan ?? "free", status: sub?.status ?? null, periodEnd: sub?.current_period_end ?? null };
+      if (paid.error || advanced.error || subscription.error) throw new Error("Unable to load your plan");
+      const sub = subscription.data;
+      const plan: PlanId = advanced.data === true ? "elite" : paid.data === true ? "pro" : "free";
+      return { pro: paid.data === true, elite: advanced.data === true, plan, status: sub?.status ?? null, periodEnd: sub?.current_period_end ?? null };
     },
     staleTime: 60_000,
   });

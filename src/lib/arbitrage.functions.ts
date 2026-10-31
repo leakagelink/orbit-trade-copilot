@@ -9,20 +9,20 @@ const scanSchema = z.object({ pair: z.enum(ARBITRAGE_PAIRS), budget: z.number().
 });
 export const scanArbitrageFn = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => scanSchema.parse(i)).handler(async ({ data, context }) => {
-    const { requirePro } = await import("./plan.server"); await requirePro(context.supabase, context.userId);
+    const { requireElite } = await import("./plan.server"); await requireElite(context.supabase, context.userId);
     const { scanArbitrage } = await import("./arbitrage.server"); return scanArbitrage(data);
   });
 export const executeArbitrageFn = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => scanSchema.extend({ requestKey: z.string().uuid(), buyExchange: z.enum(ARBITRAGE_EXCHANGES), sellExchange: z.enum(ARBITRAGE_EXCHANGES),
     buyConnectionId: z.string().uuid().nullable(), sellConnectionId: z.string().uuid().nullable(), mode: z.enum(["paper", "live"]), confirmation: z.string().max(4), minimumNetPct: z.number().min(0).max(100),
   }).parse(i)).handler(async ({ data, context }) => {
-    const { requirePro } = await import("./plan.server"); await requirePro(context.supabase, context.userId);
+    const { requireElite } = await import("./plan.server"); await requireElite(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { executeArbitrage } = await import("./arbitrage.server"); return executeArbitrage(supabaseAdmin, context.userId, data);
   });
 export const arbitrageReviewFn = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => scanSchema.parse(i)).handler(async ({ data, context }) => {
-    const { requirePro } = await import("./plan.server"); await requirePro(context.supabase, context.userId);
+    const { requireElite } = await import("./plan.server"); await requireElite(context.supabase, context.userId);
     const { scanArbitrage } = await import("./arbitrage.server"); const scan = await scanArbitrage(data);
     if (!scan.opportunities.length) throw new Error("Not enough exchange data for AI review");
     const { generateResponse } = await import("@lovable.dev/ai-gateway");
@@ -38,7 +38,7 @@ export const arbitrageReviewFn = createServerFn({ method: "POST" }).middleware([
 
 export const reconcileArbitrageFn = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => z.object({ runId: z.string().uuid() }).parse(i)).handler(async ({ data, context }) => {
-    const { requirePro } = await import("./plan.server"); await requirePro(context.supabase, context.userId);
+    // Lookup-only recovery remains available to the owner after downgrade; no new orders.
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { reconcileArbitrage } = await import("./arbitrage.server");
     return reconcileArbitrage(supabaseAdmin, context.userId, data.runId);
