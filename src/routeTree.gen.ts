@@ -27,9 +27,12 @@ import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedExchangesRouteImport } from './routes/_authenticated/exchanges'
 import { Route as AuthenticatedJournalRouteImport } from './routes/_authenticated/journal'
+import { Route as AuthenticatedLeaderboardRouteImport } from './routes/_authenticated/leaderboard'
+import { Route as AuthenticatedLearnRouteImport } from './routes/_authenticated/learn'
 import { Route as AuthenticatedMailboxRouteImport } from './routes/_authenticated/mailbox'
 import { Route as AuthenticatedNotificationsRouteImport } from './routes/_authenticated/notifications'
 import { Route as AuthenticatedPlansRouteImport } from './routes/_authenticated/plans'
+import { Route as AuthenticatedReferralsRouteImport } from './routes/_authenticated/referrals'
 import { Route as AuthenticatedRiskRouteImport } from './routes/_authenticated/risk'
 import { Route as AuthenticatedScalpingRouteImport } from './routes/_authenticated/scalping'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
@@ -133,6 +136,17 @@ const AuthenticatedJournalRoute = AuthenticatedJournalRouteImport.update({
   path: '/journal',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedLeaderboardRoute =
+  AuthenticatedLeaderboardRouteImport.update({
+    id: '/leaderboard',
+    path: '/leaderboard',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedLearnRoute = AuthenticatedLearnRouteImport.update({
+  id: '/learn',
+  path: '/learn',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedMailboxRoute = AuthenticatedMailboxRouteImport.update({
   id: '/mailbox',
   path: '/mailbox',
@@ -147,6 +161,11 @@ const AuthenticatedNotificationsRoute =
 const AuthenticatedPlansRoute = AuthenticatedPlansRouteImport.update({
   id: '/plans',
   path: '/plans',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedReferralsRoute = AuthenticatedReferralsRouteImport.update({
+  id: '/referrals',
+  path: '/referrals',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedRiskRoute = AuthenticatedRiskRouteImport.update({
@@ -235,9 +254,12 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/exchanges': typeof AuthenticatedExchangesRoute
   '/journal': typeof AuthenticatedJournalRoute
+  '/leaderboard': typeof AuthenticatedLeaderboardRoute
+  '/learn': typeof AuthenticatedLearnRoute
   '/mailbox': typeof AuthenticatedMailboxRoute
   '/notifications': typeof AuthenticatedNotificationsRoute
   '/plans': typeof AuthenticatedPlansRoute
+  '/referrals': typeof AuthenticatedReferralsRoute
   '/risk': typeof AuthenticatedRiskRoute
   '/scalping': typeof AuthenticatedScalpingRoute
   '/settings': typeof AuthenticatedSettingsRoute
@@ -270,9 +292,12 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/exchanges': typeof AuthenticatedExchangesRoute
   '/journal': typeof AuthenticatedJournalRoute
+  '/leaderboard': typeof AuthenticatedLeaderboardRoute
+  '/learn': typeof AuthenticatedLearnRoute
   '/mailbox': typeof AuthenticatedMailboxRoute
   '/notifications': typeof AuthenticatedNotificationsRoute
   '/plans': typeof AuthenticatedPlansRoute
+  '/referrals': typeof AuthenticatedReferralsRoute
   '/risk': typeof AuthenticatedRiskRoute
   '/scalping': typeof AuthenticatedScalpingRoute
   '/settings': typeof AuthenticatedSettingsRoute
@@ -307,9 +332,12 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/exchanges': typeof AuthenticatedExchangesRoute
   '/_authenticated/journal': typeof AuthenticatedJournalRoute
+  '/_authenticated/leaderboard': typeof AuthenticatedLeaderboardRoute
+  '/_authenticated/learn': typeof AuthenticatedLearnRoute
   '/_authenticated/mailbox': typeof AuthenticatedMailboxRoute
   '/_authenticated/notifications': typeof AuthenticatedNotificationsRoute
   '/_authenticated/plans': typeof AuthenticatedPlansRoute
+  '/_authenticated/referrals': typeof AuthenticatedReferralsRoute
   '/_authenticated/risk': typeof AuthenticatedRiskRoute
   '/_authenticated/scalping': typeof AuthenticatedScalpingRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
@@ -344,9 +372,12 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/exchanges'
     | '/journal'
+    | '/leaderboard'
+    | '/learn'
     | '/mailbox'
     | '/notifications'
     | '/plans'
+    | '/referrals'
     | '/risk'
     | '/scalping'
     | '/settings'
@@ -379,9 +410,12 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/exchanges'
     | '/journal'
+    | '/leaderboard'
+    | '/learn'
     | '/mailbox'
     | '/notifications'
     | '/plans'
+    | '/referrals'
     | '/risk'
     | '/scalping'
     | '/settings'
@@ -415,9 +449,12 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/exchanges'
     | '/_authenticated/journal'
+    | '/_authenticated/leaderboard'
+    | '/_authenticated/learn'
     | '/_authenticated/mailbox'
     | '/_authenticated/notifications'
     | '/_authenticated/plans'
+    | '/_authenticated/referrals'
     | '/_authenticated/risk'
     | '/_authenticated/scalping'
     | '/_authenticated/settings'
@@ -576,6 +613,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedJournalRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/leaderboard': {
+      id: '/_authenticated/leaderboard'
+      path: '/leaderboard'
+      fullPath: '/leaderboard'
+      preLoaderRoute: typeof AuthenticatedLeaderboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/learn': {
+      id: '/_authenticated/learn'
+      path: '/learn'
+      fullPath: '/learn'
+      preLoaderRoute: typeof AuthenticatedLearnRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/mailbox': {
       id: '/_authenticated/mailbox'
       path: '/mailbox'
@@ -595,6 +646,13 @@ declare module '@tanstack/react-router' {
       path: '/plans'
       fullPath: '/plans'
       preLoaderRoute: typeof AuthenticatedPlansRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/referrals': {
+      id: '/_authenticated/referrals'
+      path: '/referrals'
+      fullPath: '/referrals'
+      preLoaderRoute: typeof AuthenticatedReferralsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/risk': {
@@ -701,9 +759,12 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedExchangesRoute: typeof AuthenticatedExchangesRoute
   AuthenticatedJournalRoute: typeof AuthenticatedJournalRoute
+  AuthenticatedLeaderboardRoute: typeof AuthenticatedLeaderboardRoute
+  AuthenticatedLearnRoute: typeof AuthenticatedLearnRoute
   AuthenticatedMailboxRoute: typeof AuthenticatedMailboxRoute
   AuthenticatedNotificationsRoute: typeof AuthenticatedNotificationsRoute
   AuthenticatedPlansRoute: typeof AuthenticatedPlansRoute
+  AuthenticatedReferralsRoute: typeof AuthenticatedReferralsRoute
   AuthenticatedRiskRoute: typeof AuthenticatedRiskRoute
   AuthenticatedScalpingRoute: typeof AuthenticatedScalpingRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
@@ -726,9 +787,12 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedExchangesRoute: AuthenticatedExchangesRoute,
   AuthenticatedJournalRoute: AuthenticatedJournalRoute,
+  AuthenticatedLeaderboardRoute: AuthenticatedLeaderboardRoute,
+  AuthenticatedLearnRoute: AuthenticatedLearnRoute,
   AuthenticatedMailboxRoute: AuthenticatedMailboxRoute,
   AuthenticatedNotificationsRoute: AuthenticatedNotificationsRoute,
   AuthenticatedPlansRoute: AuthenticatedPlansRoute,
+  AuthenticatedReferralsRoute: AuthenticatedReferralsRoute,
   AuthenticatedRiskRoute: AuthenticatedRiskRoute,
   AuthenticatedScalpingRoute: AuthenticatedScalpingRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
