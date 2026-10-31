@@ -1,0 +1,12 @@
+import {useEffect,useState,type ReactNode} from "react";
+import {supabase} from "@/integrations/supabase/client";
+import {Button} from "@/components/ui/button";
+import {Input} from "@/components/ui/input";
+import {Label} from "@/components/ui/label";
+import {ShieldCheck} from "lucide-react";
+export function MfaGate({children}:{children:ReactNode}){
+ const [state,setState]=useState<"loading"|"ready"|"challenge"|"error">("loading"),[factor,setFactor]=useState(""),[code,setCode]=useState(""),[error,setError]=useState(""),[busy,setBusy]=useState(false);
+ useEffect(()=>{let alive=true;async function check(){try{const a=await supabase.auth.mfa.getAuthenticatorAssuranceLevel();if(a.error)throw a.error;if(a.data.nextLevel==="aal2"&&a.data.currentLevel!=="aal2"){const f=await supabase.auth.mfa.listFactors();if(f.error)throw f.error;const totp=f.data.totp[0];if(!totp)throw new Error("No supported authenticator factor found");if(alive){setFactor(totp.id);setState("challenge");}}else if(alive)setState("ready");}catch(e){if(alive){setState("error");setError(e instanceof Error?e.message:"Security check failed");}}}check();return()=>{alive=false;};},[]);
+ if(state==="ready")return <>{children}</>;
+ return <div className="mx-auto max-w-sm space-y-4 px-5 py-16"><ShieldCheck className="h-10 w-10 text-primary"/><h1 className="text-xl font-semibold">Two-step verification</h1>{state==="loading"?<p className="text-sm text-muted-foreground">Checking account security…</p>:<><p role="alert" className="text-sm text-destructive">{error}</p>{state==="challenge"&&<form className="space-y-4" onSubmit={async e=>{e.preventDefault();setBusy(true);const r=await supabase.auth.mfa.challengeAndVerify({factorId:factor,code});setBusy(false);if(r.error)setError("Code not accepted. Try the latest authenticator code.");else{setError("");setState("ready");}}}><Label htmlFor="mfa-code">Authenticator code</Label><Input id="mfa-code" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required value={code} onChange={e=>setCode(e.target.value)}/><Button disabled={busy}>Verify</Button></form>}<Button variant="outline" onClick={async()=>{await supabase.auth.signOut({scope:"local"});window.location.assign("/auth");}}>Sign out</Button></>}</div>;
+}
