@@ -939,6 +939,7 @@ export type Database = {
       }
       subscriptions: {
         Row: {
+          billing_interval: string | null
           cancel_at_period_end: boolean
           created_at: string
           current_period_end: string | null
@@ -954,6 +955,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          billing_interval?: string | null
           cancel_at_period_end?: boolean
           created_at?: string
           current_period_end?: string | null
@@ -969,6 +971,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          billing_interval?: string | null
           cancel_at_period_end?: boolean
           created_at?: string
           current_period_end?: string | null
@@ -1238,6 +1241,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      has_elite_access: { Args: { _uid: string }; Returns: boolean }
       has_pro_access: { Args: { _uid: string }; Returns: boolean }
       has_role: {
         Args: {

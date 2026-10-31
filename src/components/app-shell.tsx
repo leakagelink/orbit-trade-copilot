@@ -6,7 +6,7 @@ import {
   FlaskConical, ChartColumn, ShieldAlert, CandlestickChart, Wallet, Crown, Lock, ArrowLeftRight, Zap, ChevronRight, ArrowUpRight, Ellipsis,
 } from "lucide-react";
 import { usePlan } from "@/hooks/use-plan";
-import { canOpen, PLAN_FEATURES } from "@/lib/plans";
+import { canOpen, requiredPlan, PLAN_FEATURES } from "@/lib/plans";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -64,12 +64,12 @@ export function ThemeToggle() {
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const plan = usePlan();
-  const pro = plan.data?.pro ?? false;
+  const tier = plan.data?.plan ?? "free";
   return (
     <nav className="workspace-nav flex flex-col gap-1">
       {NAV.map(({ to, label, icon: Icon }) => {
         const active = path === to || path.startsWith(to + "/");
-        const locked = !plan.isLoading && !canOpen(to, pro);
+        const locked = !plan.isLoading && !canOpen(to, tier);
         const group = to === "/trade" ? "WORKSPACE" : to === "/assistant" ? "INTELLIGENCE" : to === "/backtests" ? "MANAGEMENT" : null;
         return (
           <div key={to}>
@@ -85,7 +85,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
           >
             <Icon className={cn("h-4 w-4", active && "text-sidebar-primary")} />
             {label}
-            {locked && <Lock className="ml-auto h-3 w-3 text-muted-foreground" aria-label="Pro plan" />}
+            {locked && <Lock className="ml-auto h-3 w-3 text-muted-foreground" aria-label={`${PLAN_FEATURES[requiredPlan(to)].name} plan`} />}
             {active && !locked && <ChevronRight className="ml-auto h-3 w-3 text-primary" />}
           </Link>
           </div>
@@ -117,7 +117,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const footer = (
     <div className="mt-auto space-y-2 border-t border-sidebar-border pt-4">
       <Link to="/plans" className="flex items-center justify-between rounded-md bg-secondary/70 px-3 py-2.5 text-xs">
-        <span className="flex items-center gap-2"><Crown className="h-3.5 w-3.5 text-warning" />{plan.data?.pro ? "Pro workspace" : "Free workspace"}</span>
+        <span className="flex items-center gap-2"><Crown className="h-3.5 w-3.5 text-warning" />{PLAN_FEATURES[plan.data?.plan ?? "free"].name} workspace</span>
         <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground" />
       </Link>
       <div className="truncate px-3 font-mono text-xs text-muted-foreground">{email}</div>
@@ -165,7 +165,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <nav aria-label="Mobile navigation" className="mobile-bottom-nav fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t bg-sidebar md:hidden">
         {NAV.slice(0, 3).map(({ to, label, icon: Icon }) => {
           const active = path === to || path.startsWith(to + "/");
-          const locked = !plan.isLoading && !canOpen(to, plan.data?.pro ?? false);
+          const locked = !plan.isLoading && !canOpen(to, plan.data?.plan ?? "free");
           return (
             <Button key={to} variant="ghost" asChild className={cn("mobile-nav-item relative h-16 min-w-0 flex-col gap-1 rounded-none px-1 text-[10px]", active ? "text-primary" : "text-muted-foreground")}>
               <Link to={to} aria-current={active ? "page" : undefined} onClick={() => setOpen(false)}>
@@ -188,15 +188,16 @@ function PlanGate({ children }: { children: ReactNode }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const plan = usePlan();
   const free = canOpen(path, false);
+  const needed = requiredPlan(path);
   if (!free && plan.isLoading) return null;
-  if (!free && !plan.data?.pro) {
+  if (!canOpen(path, plan.data?.plan ?? "free")) {
     return (
       <div className="mx-auto max-w-lg px-6 py-16 text-center">
         <div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-lg bg-primary/15"><Crown className="h-6 w-6 text-primary" /></div>
-        <h1 className="text-xl font-semibold tracking-tight">This is a Pro feature</h1>
-        <p className="mt-2 text-sm text-muted-foreground">The Free plan includes manual trading and the wallet. Upgrade to Pro for:</p>
+        <h1 className="text-xl font-semibold">This is an {PLAN_FEATURES[needed].name} feature</h1>
+        <p className="mt-2 text-sm text-muted-foreground">Upgrade to {PLAN_FEATURES[needed].name} for:</p>
         <ul className="mx-auto mt-4 max-w-xs space-y-1 text-left text-sm">
-          {PLAN_FEATURES.pro.features.slice(1).map((f) => <li key={f}>• {f}</li>)}
+          {PLAN_FEATURES[needed].features.slice(1).map((f) => <li key={f}>• {f}</li>)}
         </ul>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <Button asChild><Link to="/plans">See plans</Link></Button>
