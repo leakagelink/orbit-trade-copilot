@@ -22,6 +22,7 @@ import { closeManualPosition, getMarketCandles, placeManualOrder, aiTradeIdea, t
 import { TvChart } from "@/components/tv-chart";
 import { MarketDepthScene } from "@/components/market-depth-scene";
 import { fmtMoney } from "@/lib/metrics";
+import { fetchBinanceChart } from "@/lib/chart-feed";
 
 const D = "Buy and sell crypto, forex and commodities from your wallet, with AI trade ideas on Pro.";
 export const Route = createFileRoute("/_authenticated/trade")({
@@ -85,7 +86,18 @@ function TradePage() {
 
   const candles = useQuery({
     queryKey: ["trade_candles", symbol, tf, chosen?.id ?? null, paperEx],
-    queryFn: () => getCandles({ data: { symbol, timeframe: tf, connectionId: chosen?.id ?? null, paperExchange: paperEx as never } }),
+    queryFn: async () => {
+      // Public display data bypasses hosting-region blocks; execution stays server-side.
+      const exchange = chosen?.exchange ?? paperEx;
+      if (!nonCrypto && exchange === "binance" && !chosen?.is_testnet) {
+        try {
+          return { candles: await fetchBinanceChart(symbol, tf), error: null };
+        } catch {
+          // A browser region or network can block the public feed too.
+        }
+      }
+      return getCandles({ data: { symbol, timeframe: tf, connectionId: chosen?.id ?? null, paperExchange: paperEx as never } });
+    },
     refetchInterval: 30_000,
     retry: false,
   });
