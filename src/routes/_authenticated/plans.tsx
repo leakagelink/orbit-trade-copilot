@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Check, Crown, Zap, CandlestickChart, ShieldCheck, Bitcoin, Loader2, RefreshCw } from "lucide-react";
+import { Check, Crown, Zap, CandlestickChart, ShieldCheck, Bitcoin, Loader2, RefreshCw, X } from "lucide-react";
 import { PageHeader } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -52,6 +53,14 @@ function PlansPage() {
   const pending = (payments.data ?? []).some(p => !p.activated_at && ["created", "waiting", "confirming", "confirmed", "sending", "finished"].includes(p.status));
   const icons = { free: CandlestickChart, pro: Zap, elite: Crown };
 
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
+
+  // When NOWPayments returns to /plans inside the in-app checkout frame, hand the result to the main page.
+  useEffect(() => {
+    if (!payment || window.self === window.top) return;
+    try { window.top!.location.replace(window.location.href); } catch { /* cross-origin parent: ignore */ }
+  }, [payment]);
+
   useEffect(() => {
     if (payment !== "success") return;
     const t = window.setInterval(() => qc.invalidateQueries({ queryKey: ["plan"] }), 15_000);
@@ -62,11 +71,19 @@ function PlansPage() {
     setBusy(id);
     try {
       const { url } = await checkout({ data: { plan: id, interval } });
-      window.location.assign(url);
+      setCheckoutUrl(url);
+      qc.invalidateQueries({ queryKey: ["crypto-payments"] });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not start checkout");
+    } finally {
       setBusy(null);
     }
+  }
+
+  function closeCheckout() {
+    setCheckoutUrl(null);
+    qc.invalidateQueries({ queryKey: ["crypto-payments"] });
+    qc.invalidateQueries({ queryKey: ["plan"] });
   }
 
   async function check() {
@@ -146,7 +163,7 @@ function PlansPage() {
                     <td className="py-2">{new Date(r.created_at).toLocaleDateString()}</td>
                     <td>{PLAN_FEATURES[r.plan as PaidPlanId]?.name ?? r.plan} · {r.billing_interval === "yearly" ? "Yearly" : "Monthly"}</td>
                     <td className="font-mono">{usd(Number(r.amount_usd))}{r.pay_currency ? ` · ${r.pay_currency.toUpperCase()}` : ""}</td>
-                    <td>{r.activated_at ? <span className="text-gain">Active{r.period_end ? ` until ${new Date(r.period_end).toLocaleDateString()}` : ""}</span> : PAYMENT_STATUS_LABEL[r.status] ?? r.status}{!r.activated_at && r.status === "created" && r.invoice_url && <a className="ml-2 text-primary underline" href={r.invoice_url}>Open</a>}</td>
+                    <td>{r.activated_at ? <span className="text-gain">Active{r.period_end ? ` until ${new Date(r.period_end).toLocaleDateString()}` : ""}</span> : PAYMENT_STATUS_LABEL[r.status] ?? r.status}{!r.activated_at && r.status === "created" && r.invoice_url && <button type="button" className="ml-2 min-h-11 text-primary underline" onClick={() => setCheckoutUrl(r.invoice_url)}>Open</button>}</td>
                   </tr>
                 ))}
               </tbody>
@@ -156,6 +173,17 @@ function PlansPage() {
       )}
       <p className="text-xs text-muted-foreground">Prices are in US dollars, paid in crypto through NOWPayments. Each payment covers one month or one year and does not renew automatically; paying again before it ends adds time. Wallet funds are virtual. Live trades use your own connected exchange or broker. Trading profits are not guaranteed.</p>
       </div>
+      {checkoutUrl && createPortal(
+        <div role="dialog" aria-modal="true" aria-label="Crypto payment" className="fixed inset-0 z-[1000] flex flex-col bg-background">
+          <div className="flex items-center justify-between gap-3 border-b px-4 py-2" style={{ paddingTop: "max(0.5rem, env(safe-area-inset-top))" }}>
+            <div className="flex min-w-0 items-center gap-2 text-sm font-medium"><Bitcoin className="h-4 w-4 shrink-0 text-primary" /><span className="truncate">Secure crypto payment</span></div>
+            <Button size="sm" variant="outline" className="min-h-11" onClick={closeCheckout}><X className="mr-1 h-4 w-4" />Close</Button>
+          </div>
+          <iframe src={checkoutUrl} title="NOWPayments checkout" className="min-h-0 w-full flex-1 border-0 bg-background" allow="clipboard-write; payment" />
+          <p className="border-t px-4 py-2 text-center text-xs text-muted-foreground" style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))" }}>After paying, tap Close — your plan turns on automatically once the payment is confirmed.</p>
+        </div>,
+        document.body,
+      )}
     </div>
   );
 }
