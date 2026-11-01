@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { z } from "zod";
@@ -172,15 +173,16 @@ function PlansPage() {
       )}
       <p className="text-xs text-muted-foreground">Prices are in US dollars, paid in crypto through NOWPayments. Each payment covers one month or one year and does not renew automatically; paying again before it ends adds time. Wallet funds are virtual. Live trades use your own connected exchange or broker. Trading profits are not guaranteed.</p>
       </div>
-      {checkoutUrl && (
-        <div role="dialog" aria-modal="true" aria-label="Crypto payment" className="fixed inset-0 z-[100] flex flex-col bg-background">
+      {checkoutUrl && createPortal(
+        <div role="dialog" aria-modal="true" aria-label="Crypto payment" className="fixed inset-0 z-[1000] flex flex-col bg-background">
           <div className="flex items-center justify-between gap-3 border-b px-4 py-2" style={{ paddingTop: "max(0.5rem, env(safe-area-inset-top))" }}>
             <div className="flex min-w-0 items-center gap-2 text-sm font-medium"><Bitcoin className="h-4 w-4 shrink-0 text-primary" /><span className="truncate">Secure crypto payment</span></div>
             <Button size="sm" variant="outline" className="min-h-11" onClick={closeCheckout}><X className="mr-1 h-4 w-4" />Close</Button>
           </div>
           <iframe src={checkoutUrl} title="NOWPayments checkout" className="min-h-0 w-full flex-1 border-0 bg-background" allow="clipboard-write; payment" />
           <p className="border-t px-4 py-2 text-center text-xs text-muted-foreground" style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))" }}>After paying, tap Close — your plan turns on automatically once the payment is confirmed.</p>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
