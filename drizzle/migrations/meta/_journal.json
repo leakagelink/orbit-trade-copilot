@@ -127,6 +127,13 @@
       "when": 1793472623294,
       "tag": "0017_free_access_until_nov_4",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1793850828599,
+      "tag": "0018_free_access_until_nov_8",
+      "breakpoints": true
     }
   ]
 }
