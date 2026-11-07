@@ -118,8 +118,8 @@ export async function executeArbitrage(db: Admin, userId: string, input: Execute
   try {
     const buyId = crypto.randomUUID(), sellId = crypto.randomUUID();
     const { error } = await db.from("orders").insert([
-      { id: buyId, user_id: userId, exchange: input.buyExchange, exchange_connection_id: input.buyConnectionId, trading_pair: input.pair, mode: "live", side: "buy", order_type: "market", quantity: opportunity.quantity, idempotency_key: `arb:${run.id}:buy` },
-      { id: sellId, user_id: userId, exchange: input.sellExchange, exchange_connection_id: input.sellConnectionId, trading_pair: input.pair, mode: "live", side: "sell", order_type: "market", quantity: opportunity.quantity, idempotency_key: `arb:${run.id}:sell` },
+      { id: buyId, user_id: userId, exchange: input.buyExchange, exchange_connection_id: input.buyConnectionId, trading_pair: input.pair, mode: "live", side: "buy", order_type: "market", price: opportunity.buyPrice, quantity: opportunity.quantity, idempotency_key: `arb:${run.id}:buy` },
+      { id: sellId, user_id: userId, exchange: input.sellExchange, exchange_connection_id: input.sellConnectionId, trading_pair: input.pair, mode: "live", side: "sell", order_type: "market", price: opportunity.sellPrice, quantity: opportunity.quantity, idempotency_key: `arb:${run.id}:sell` },
     ]);
     if (error) throw new Error("Unable to claim both exchange orders");
     const step = await getStepSize(input.sellExchange, input.pair, sellAccount.testnet);

@@ -15,7 +15,7 @@ export async function runEngineTick() {
   const { data: bots, error } = await db
     .from("trading_bots")
     .select("*, bot_configurations(*), strategies(config)")
-    .in("status", ["paper_trading", "running"]);
+    .in("status", ["paper_trading", "running", "paused", "stopped", "error"]);
   if (error) throw new Error(error.message);
   const results: { bot: string; result: string }[] = [];
   const pro = new Map<string, boolean>();
@@ -48,16 +48,22 @@ interface Venue { live: boolean; testnet: boolean; creds: Creds | null; connId: 
 async function venueFor(db: Admin, bot: Row): Promise<Venue | string> {
   if (bot.mode !== "live") return { live: false, testnet: false, creds: null, connId: bot.exchange_connection_id };
   if (!bot.exchange_connection_id) return "Live bot has no trading account";
-  const { data: conn } = await db.from("exchange_connections").select("id,status,is_testnet,exchange").eq("id", bot.exchange_connection_id).maybeSingle();
+  const { data: conn } = await db.from("exchange_connections").select("id,status,is_testnet,exchange").eq("id", bot.exchange_connection_id).eq("user_id",bot.user_id).maybeSingle();
   if (!conn || conn.status !== "connected") return "Trading account is not verified — click Verify on the Exchanges page";
   if (conn.exchange !== bot.exchange) return "Bot exchange does not match its trading account";
-  const { data: sealed } = await db.from("connection_credentials").select("ciphertext,iv").eq("connection_id", conn.id).maybeSingle();
+  const { data: sealed } = await db.from("connection_credentials").select("ciphertext,iv").eq("connection_id", conn.id).eq("user_id",bot.user_id).maybeSingle();
   if (!sealed) return "Trading account has no stored keys";
   const { decryptJson } = await import("./crypto.server");
   return { live: true, testnet: conn.is_testnet, creds: await decryptJson<Creds>(sealed.ciphertext, sealed.iv), connId: conn.id };
 }
 
 async function tickBot(db: Admin, bot: Row, pro: boolean): Promise<string> {
+  const entriesEnabled = ["paper_trading","running"].includes(bot.status);
+  if (!entriesEnabled) {
+    const positions = await db.from("positions").select("id",{count:"exact",head:true}).eq("bot_id",bot.id).eq("user_id",bot.user_id).eq("is_open",true);
+    if (positions.error) throw new Error("Open positions could not be checked");
+    if (!positions.count) return "inactive: no positions";
+  }
   const log = (m: string, d?: object, l = "info") => logTo(db, bot, m, d, l);
   const halt = async (status: "paused" | "error", reason: string) => {
     await db.from("trading_bots").update({ status, status_reason: reason }).eq("id", bot.id);
@@ -81,7 +87,9 @@ async function tickBot(db: Admin, bot: Row, pro: boolean): Promise<string> {
   const now = Date.now();
   const closed = all.filter((c) => c.t + timeframeMs(bot.timeframe) <= now);
   if (closed.length < 60) return "not enough data";
-  const live = all[all.length - 1]!.c;
+  const latest = all.at(-1);
+  if (!latest || !Number.isFinite(latest.c) || latest.c <= 0) return "market price unavailable";
+  const live = latest.c;
   const i = closed.length - 1;
   const series = computeAll(cfg, closed);
   await db.from("trading_bots").update({ last_heartbeat_at: new Date().toISOString(), status_reason: null }).eq("id", bot.id);
@@ -97,6 +105,9 @@ async function tickBot(db: Admin, bot: Row, pro: boolean): Promise<string> {
     if (reason) await closePosition(db, bot, venue, p, live, reason);
     else await db.from("positions").update({ current_price: live, unrealized_pnl: (live - Number(p.entry_price)) * Number(p.quantity) }).eq("id", p.id);
   }
+  if (!entriesEnabled) return "inactive: managing exits only";
+  const unresolved = await db.from("orders").select("id",{count:"exact",head:true}).eq("bot_id",bot.id).in("status",["pending","open","partially_filled"]);
+  if (unresolved.error || unresolved.count) return "unresolved orders: new entries blocked";
 
   // Free plan: bots never open new trades. Existing positions keep their exits managed, then the bot pauses.
   if (!pro) {
@@ -119,22 +130,25 @@ async function tickBot(db: Admin, bot: Row, pro: boolean): Promise<string> {
   if (block) { await log(`Entry skipped: ${block}`, undefined, "warn"); return `risk: ${block}`; }
 
   // Claim the candle with a unique order row before touching the exchange: prevents duplicate orders.
-  const key = `${bot.id}:entry:${closed[i]!.t}`;
+  const candle = closed[i];
+  if (!candle) return "candle unavailable";
+  const key = `${bot.id}:entry:${candle.t}`;
   const { data: ord, error } = await db.from("orders").insert({
     user_id: bot.user_id, bot_id: bot.id, exchange: bot.exchange, exchange_connection_id: venue.connId, trading_pair: bot.trading_pair,
-    side: "buy", order_type: "market", quantity: cost / live, status: "pending", mode: venue.live ? "live" : "paper", idempotency_key: key,
+    side: "buy", order_type: "market", price: live, quantity: cost / live, status: "pending", mode: venue.live ? "live" : "paper", idempotency_key: key,
   }).select("id").single();
   if (error) return "entry already taken this candle";
 
   let qty: number, fill: number, fee: number, exOrderId: string | null = null;
   if (venue.live) {
+    if (!venue.creds) return halt("paused","Trading credentials are unavailable");
     try {
-      const f = await placeMarketOrder(bot.exchange, venue.creds!, venue.testnet, bot.trading_pair, "buy", cost, ord.id);
+      const f = await placeMarketOrder(bot.exchange, venue.creds, venue.testnet, bot.trading_pair, "buy", cost, ord.id);
       ({ qty, avgPrice: fill, feeQuote: fee } = f); exOrderId = f.orderId;
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      await db.from("orders").update({ status: "rejected", reject_reason: msg.slice(0, 500) }).eq("id", ord.id);
-      return halt("paused", `Buy order rejected: ${msg.slice(0, 200)}`);
+      await db.from("orders").update({ status: "pending", reject_reason: `Outcome unknown; reconciliation required: ${msg.slice(0, 400)}` }).eq("id", ord.id);
+      return halt("paused", "Buy outcome unknown — reconciliation required; no automatic resubmission");
     }
   } else {
     fill = live * (1 + SLIP); qty = cost / fill; fee = fill * qty * FEE;
@@ -161,15 +175,16 @@ async function closePosition(db: Admin, bot: Row, venue: Venue, p: Row, price: n
   if (error) return; // already being closed
   let fill: number, exitFee: number, exOrderId: string | null = null;
   if (venue.live) {
+    if (!venue.creds) throw new Error("Trading credentials unavailable; exit intent retained");
     try {
       qty = floorToStep(qty, await getStepSize(bot.exchange, bot.trading_pair, venue.testnet));
-      const f = await placeMarketOrder(bot.exchange, venue.creds!, venue.testnet, bot.trading_pair, "sell", qty, ord.id);
+      const f = await placeMarketOrder(bot.exchange, venue.creds, venue.testnet, bot.trading_pair, "sell", qty, ord.id);
       fill = f.avgPrice; exitFee = f.feeQuote; qty = f.qty; exOrderId = f.orderId;
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      // Free the idempotency key so the next tick retries the exit.
-      await db.from("orders").update({ status: "rejected", reject_reason: msg.slice(0, 500), idempotency_key: `${key}:failed:${Date.now()}` }).eq("id", ord.id);
-      await logTo(db, bot, `Sell order rejected (will retry next minute): ${msg.slice(0, 200)}`, undefined, "error");
+      // An exchange may have accepted the order before the timeout. Retain the intent permanently.
+      await db.from("orders").update({ status: "pending", reject_reason: `Outcome unknown; reconciliation required: ${msg.slice(0, 400)}` }).eq("id", ord.id);
+      await logTo(db, bot, "Sell outcome unknown; original intent retained, no automatic resubmission", undefined, "error");
       return;
     }
   } else {
@@ -206,7 +221,9 @@ export async function emergencyCloseAll(userId: string) {
       const venue = await venueFor(db, bot);
       if (typeof venue === "string") throw new Error(venue);
       const cs = await fetchCandles(bot.exchange, bot.trading_pair, "1m", venue.testnet, 2);
-      await closePosition(db, bot, venue, p, cs[cs.length - 1]!.c, "emergency_stop");
+      const latest = cs.at(-1);
+      if (!latest) throw new Error("Market price unavailable");
+      await closePosition(db, bot, venue, p, latest.c, "emergency_stop");
       const { data: still } = await db.from("positions").select("is_open").eq("id", p.id).single();
       if (still?.is_open) failed.push(bot.trading_pair); else closed++;
     } catch (e) {
@@ -218,17 +235,20 @@ export async function emergencyCloseAll(userId: string) {
 
 /** Account-wide limits from risk_settings. Returns a reason when a new entry must be blocked. */
 export async function accountRiskBlock(db: Admin, userId: string, newCost: number): Promise<string | null> {
-  const { data: r } = await db.from("risk_settings").select("*").eq("user_id", userId).maybeSingle();
-  if (!r) return null;
+  if (!Number.isFinite(newCost) || newCost <= 0) return "invalid entry cost";
+  const { data: r, error: riskError } = await db.from("risk_settings").select("*").eq("user_id", userId).maybeSingle();
+  if (riskError || !r) return "account risk settings unavailable; save risk settings first";
   if (r.trading_halted) return "trading halted (emergency stop)";
-  const { data: pos } = await db.from("positions").select("entry_price,quantity").eq("user_id", userId).eq("is_open", true);
+  const { data: pos, error: positionError } = await db.from("positions").select("entry_price,quantity,unrealized_pnl").eq("user_id", userId).eq("is_open", true);
+  if (positionError || !pos) return "account exposure unavailable";
   if (r.max_total_positions != null && (pos?.length ?? 0) >= r.max_total_positions) return "account max open positions reached";
   const exposure = (pos ?? []).reduce((a, p) => a + Number(p.entry_price) * Number(p.quantity), 0);
   if (r.max_open_exposure != null && exposure + newCost > Number(r.max_open_exposure)) return "account max exposure reached";
   if (r.max_daily_loss != null) {
     const start = new Date(); start.setUTCHours(0, 0, 0, 0);
-    const { data: t } = await db.from("trades").select("realized_pnl,fees").eq("user_id", userId).gte("closed_at", start.toISOString());
-    const pnl = (t ?? []).reduce((a, x) => a + Number(x.realized_pnl) - Number(x.fees), 0);
+    const { data: t, error: tradeError } = await db.from("trades").select("realized_pnl,fees").eq("user_id", userId).gte("closed_at", start.toISOString());
+    if (tradeError || !t) return "account loss evidence unavailable";
+    const pnl = t.reduce((a, x) => a + Number(x.realized_pnl) - Number(x.fees), 0) + pos.reduce((a,p) => a + Math.min(0,Number(p.unrealized_pnl)),0);
     if (pnl <= -Number(r.max_daily_loss)) return "account daily loss limit reached";
   }
   return null;

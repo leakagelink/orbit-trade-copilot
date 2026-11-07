@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { startPaperBot, enableLiveTrading, switchToPaper } from "@/lib/bots.functions";
+import { startPaperBot, enableLiveTrading, switchToPaper, createPaperBot, manageBot } from "@/lib/bots.functions";
 import { toast } from "sonner";
 import { Bot, Pause, Play, Plus, Square, Trash2, ScrollText, Zap, Undo2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,7 +21,7 @@ import { EXCHANGES, exchangeName } from "@/lib/exchanges";
 
 const D = "Configure automated trading bots with capital, sizing and risk limits.";
 export const Route = createFileRoute("/_authenticated/bots")({
-  head: () => ({ meta: [{ title: "Trading Bots — AlgoVirt" }, { name: "description", content: D }, { property: "og:title", content: "Trading Bots — AlgoVirt" }, { property: "og:description", content: D }] }),
+  head: () => ({ meta: [{ title: "Trading Bots — AlgoVirt" }, { name: "description", content: D }, { property: "og:title", content: "Trading Bots — AlgoVirt" }, { property: "og:description", content: D }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   validateSearch: (s: Record<string, unknown>): { strategy?: string } => (typeof s["strategy"] === "string" ? { strategy: s["strategy"] } : {}),
   component: Bots,
 });
@@ -49,6 +49,7 @@ function Bots() {
   const [logsFor, setLogsFor] = useState<{ id: string; name: string } | null>(null);
   const refresh = () => qc.invalidateQueries({ queryKey: ["bots"] });
   const start = useServerFn(startPaperBot);
+  const manage = useServerFn(manageBot);
   const toPaper = useServerFn(switchToPaper);
   const [liveFor, setLiveFor] = useState<{ id: string; name: string } | null>(null);
   async function backToPaper(id: string) {
@@ -61,16 +62,14 @@ function Bots() {
   }
 
   async function setStatus(id: string, status: "paused" | "stopped", msg: string) {
-    const { data: u } = await supabase.auth.getUser();
-    const { error } = await supabase.from("trading_bots").update({ status }).eq("id", id);
-    if (error) return void toast.error(error.message);
-    await supabase.from("bot_logs").insert({ bot_id: id, user_id: u.user!.id, message: msg });
+    try { await manage({ data: { id, action: status } }); toast.success(msg); }
+    catch (e) { return void toast.error(e instanceof Error ? e.message : "Could not stop bot"); }
     refresh();
   }
   async function remove(id: string) {
     if (!confirm("Delete this bot?")) return;
-    const { error } = await supabase.from("trading_bots").delete().eq("id", id);
-    if (error) return void toast.error(error.message);
+    try { await manage({ data: { id, action: "delete" } }); }
+    catch (e) { return void toast.error(e instanceof Error ? e.message : "Could not delete bot"); }
     refresh();
   }
 
@@ -127,6 +126,7 @@ function Bots() {
 }
 
 function NewBotDialog({ open, onOpenChange, data, onDone, preset }: { preset?: string | undefined; open: boolean; onOpenChange: (o: boolean) => void; data: Awaited<ReturnType<typeof load>>; onDone: () => void }) {
+  const create = useServerFn(createPaperBot);
   const valid = data.strategies.filter((s) => s.status === "validated" || s.status === "deployed");
   const [strategyId, setStrategyId] = useState(preset && valid.some((s) => s.id === preset) ? preset : "");
   const [connId, setConnId] = useState("none");
@@ -141,22 +141,10 @@ function NewBotDialog({ open, onOpenChange, data, onDone, preset }: { preset?: s
     const num = (k: string) => { const v = String(f.get(k) ?? ""); return v === "" ? null : Number(v); };
     const conn = data.conns.find((c) => c.id === connId);
     setBusy(true);
-    const { data: u } = await supabase.auth.getUser();
-    const { data: bot, error } = await supabase.from("trading_bots").insert({
-      user_id: u.user!.id, name: String(f.get("name")).slice(0, 60), strategy_id: strategyId,
-      exchange_connection_id: conn?.id ?? null, exchange: conn?.exchange ?? exchange,
-      trading_pair: String(f.get("pair")).toUpperCase(), timeframe, mode: "paper", status: "draft",
-      allocated_capital: num("capital") ?? 0,
-    }).select("id").single();
-    if (error) { setBusy(false); return void toast.error(error.message); }
-    const { error: cErr } = await supabase.from("bot_configurations").insert({
-      bot_id: bot.id, user_id: u.user!.id,
-      position_size_pct: num("size") ?? 10, max_exposure_pct: num("exposure") ?? 50,
-      stop_loss_pct: num("sl"), take_profit_pct: num("tp"), max_open_positions: num("maxpos") ?? 1, daily_loss_limit_pct: num("dll"),
-    });
-    await supabase.from("bot_logs").insert({ bot_id: bot.id, user_id: u.user!.id, message: "Bot created in draft (paper mode)" });
-    setBusy(false);
-    if (cErr) return void toast.error(cErr.message);
+    try {
+      await create({data:{name:String(f.get("name")),strategyId,connectionId:conn?.id??null,exchange:conn?.exchange??exchange,pair:String(f.get("pair")).toUpperCase(),timeframe,capital:num("capital")??0,size:num("size")??10,exposure:num("exposure")??50,sl:num("sl")??0,tp:num("tp"),maxpos:num("maxpos")??1,dll:num("dll")}});
+    } catch(e) { toast.error(e instanceof Error ? e.message : "Could not create bot"); return; }
+    finally { setBusy(false); }
     toast.success("Bot created");
     onDone();
     onOpenChange(false);
@@ -210,7 +198,7 @@ function LogsSheet({ bot, onClose }: { bot: { id: string; name: string } | null;
   const q = useQuery({
     queryKey: ["bot_logs", bot?.id],
     enabled: !!bot,
-    queryFn: async () => (await supabase.from("bot_logs").select("*").eq("bot_id", bot!.id).order("created_at", { ascending: false }).limit(200)).data ?? [],
+    queryFn: async () => { if (!bot) return []; return (await supabase.from("bot_logs").select("*").eq("bot_id", bot.id).order("created_at", { ascending: false }).limit(200)).data ?? []; },
   });
   return (
     <Sheet open={!!bot} onOpenChange={(o) => !o && onClose()}>
@@ -230,9 +218,10 @@ function GoLiveDialog({ bot, onClose, onDone }: { bot: { id: string; name: strin
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   async function go() {
+    if (!bot) return;
     setBusy(true);
     try {
-      const r = await enable({ data: { id: bot!.id, confirm: "LIVE" } });
+      const r = await enable({ data: { id: bot.id, confirm: "LIVE" } });
       toast.success(r.testnet ? "Live trading enabled on testnet" : "LIVE trading enabled — real money");
       onDone(); onClose(); setText("");
     } catch (e) { toast.error(e instanceof Error ? e.message : "Could not enable live trading"); }

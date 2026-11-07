@@ -84,7 +84,7 @@ export const disconnectExchange = createServerFn({ method: "POST" })
     if (!own) throw new Error("Connection not found");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     await supabaseAdmin.from("connection_credentials").delete().eq("connection_id", data.id);
-    await context.supabase.from("exchange_connections").update({ status: "disconnected", last_error: null }).eq("id", data.id);
+    await supabaseAdmin.from("exchange_connections").update({ status: "disconnected", last_error: null }).eq("id", data.id);
     await context.supabase.from("audit_logs").insert({ user_id: context.userId, action: "exchange.disconnect", entity_type: "exchange_connection", entity_id: data.id });
     return { ok: true };
   });
@@ -99,7 +99,7 @@ export const verifyExchange = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { decryptJson } = await import("./crypto.server");
     const { fetchBalances } = await import("./exchange-adapters.server");
-    const { data: sealed } = await supabaseAdmin.from("connection_credentials").select("ciphertext,iv").eq("connection_id", data.id).maybeSingle();
+    const { data: sealed } = await supabaseAdmin.from("connection_credentials").select("ciphertext,iv").eq("connection_id", data.id).eq("user_id",context.userId).maybeSingle();
     if (!sealed) throw new Error("No stored keys — update keys first");
     try {
       const creds = await decryptJson<{ apiKey: string; apiSecret: string; passphrase?: string }>(sealed.ciphertext, sealed.iv);

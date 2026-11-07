@@ -1,5 +1,14 @@
 # Roadmap
 
+## Approved safety and trading intelligence upgrade
+- [ ] Server-only bot mutations and connection verification; owner-bound engine reads
+- [ ] Fail-closed risk reads, ambiguous-order locks and paused-bot exit management
+- [ ] Atomic risk reservations, durable reconciliation and complete kill-switch recovery
+- [ ] Reproducible evidence, net-cost ledger and immutable audit provenance
+- [ ] Independent scoring, integrity detection and controlled promotion workflows
+- [ ] Explainable scorecards and allocation recommendations
+- [ ] External engines and Indian live trading — separate infrastructure/broker/compliance approvals required
+
 ## AI research — Phase 3
 - [x] Add owner-private trader, three risk assessments and portfolio synthesis with upstream failure guards
 - [x] Persist advisory historical scenarios with deterministic levels; no sizing or order submission

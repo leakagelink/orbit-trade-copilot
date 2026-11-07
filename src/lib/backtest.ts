@@ -1,4 +1,4 @@
-// Pure backtester: long-only, same rules/risk semantics as the paper engine.
+// Pure historical simulator: signals use completed prior bars; next-bar fills, not live qualification.
 import { computeAll, evalRules, type Candle } from "./indicators";
 import type { StrategyConfig } from "./strategy";
 
@@ -15,14 +15,16 @@ export function runBacktest(cfg: StrategyConfig, cs: Candle[], o: BtOptions) {
   const equity: { t: number; v: number }[] = [];
 
   for (let i = 1; i < cs.length; i++) {
-    const c = cs[i]!;
-    const exitSig = evalRules(cfg.exit, m, i);
+    const c = cs[i];
+    if (!c) continue;
+    const exitSig = evalRules(cfg.exit, m, i - 1);
     for (let k = open.length - 1; k >= 0; k--) {
-      const p = open[k]!;
+      const p = open[k];
+      if (!p) continue;
       let px: number | null = null, reason = "";
-      if (p.sl != null && c.l <= p.sl) { px = p.sl; reason = "stop_loss"; } // conservative: stop wins ties
+      if (p.sl != null && c.l <= p.sl) { px = Math.min(c.o,p.sl); reason = "stop_loss"; } // gaps fill worse; stop wins ties
       else if (p.tp != null && c.h >= p.tp) { px = p.tp; reason = "take_profit"; }
-      else if (exitSig) { px = c.c; reason = "exit_signal"; }
+      else if (exitSig) { px = c.o; reason = "exit_signal"; }
       if (px == null) continue;
       const fill = px * (1 - slip);
       const exitFee = fill * p.qty * fee;
@@ -30,8 +32,8 @@ export function runBacktest(cfg: StrategyConfig, cs: Candle[], o: BtOptions) {
       trades.push({ entryT: p.entryT, exitT: c.t, entry: p.entry, exit: fill, qty: p.qty, pnl: (fill - p.entry) * p.qty, fees: p.fee + exitFee, reason });
       open.splice(k, 1);
     }
-    if (open.length < maxPos && evalRules(cfg.entry, m, i)) {
-      const fill = c.c * (1 + slip);
+    if (open.length < maxPos && evalRules(cfg.entry, m, i - 1)) {
+      const fill = c.o * (1 + slip);
       const budget = Math.min(cash, (o.capital * size) / 100);
       const qty = budget / (fill * (1 + fee));
       if (qty > 0 && budget > 0) {
@@ -43,10 +45,11 @@ export function runBacktest(cfg: StrategyConfig, cs: Candle[], o: BtOptions) {
     equity.push({ t: c.t, v: cash + open.reduce((a, p) => a + p.qty * c.c, 0) });
   }
   const last = cs[cs.length - 1];
-  for (const p of open) { // mark-to-market close at the end
-    const fill = last!.c * (1 - slip), f = fill * p.qty * fee;
+  for (const p of last ? open : []) { // mark-to-market close at the end
+    if (!last) break;
+    const fill = last.c * (1 - slip), f = fill * p.qty * fee;
     cash += fill * p.qty - f;
-    trades.push({ entryT: p.entryT, exitT: last!.t, entry: p.entry, exit: fill, qty: p.qty, pnl: (fill - p.entry) * p.qty, fees: p.fee + f, reason: "end_of_test" });
+    trades.push({ entryT: p.entryT, exitT: last.t, entry: p.entry, exit: fill, qty: p.qty, pnl: (fill - p.entry) * p.qty, fees: p.fee + f, reason: "end_of_test" });
   }
   return { trades, equity, stats: tradeStats(trades, equity, o.capital, o.tfMs) };
 }
@@ -55,9 +58,9 @@ export function tradeStats(trades: { pnl: number; fees: number }[], equity: { v:
   const net = trades.map((t) => t.pnl - t.fees);
   const wins = net.filter((x) => x > 0), losses = net.filter((x) => x <= 0);
   const gw = wins.reduce((a, b) => a + b, 0), gl = -losses.reduce((a, b) => a + b, 0);
-  let peak = -Infinity, dd = 0;
+  let peak = capital, dd = 0;
   for (const e of equity) { peak = Math.max(peak, e.v); if (peak > 0) dd = Math.max(dd, (peak - e.v) / peak); }
-  const rets = equity.slice(1).map((e, i) => (equity[i]!.v > 0 ? e.v / equity[i]!.v - 1 : 0));
+  const rets = equity.slice(1).map((e, i) => { const prior=equity[i]; return prior && prior.v > 0 ? e.v / prior.v - 1 : 0; });
   const mean = rets.reduce((a, b) => a + b, 0) / (rets.length || 1);
   const sd = Math.sqrt(rets.reduce((a, r) => a + (r - mean) ** 2, 0) / (rets.length || 1));
   const perYear = (365 * 86_400_000) / tfMs;

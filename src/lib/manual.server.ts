@@ -18,7 +18,7 @@ export async function loadAccount(db: Admin, userId: string, connId: string | nu
   const { data: conn } = await db.from("exchange_connections").select("id,user_id,exchange,status,is_testnet").eq("id", connId).maybeSingle();
   if (!conn || conn.user_id !== userId) throw new Error("Trading account not found");
   if (conn.status !== "connected") throw new Error("Verify this trading account on the Exchanges page first");
-  const { data: sealed } = await db.from("connection_credentials").select("ciphertext,iv").eq("connection_id", conn.id).maybeSingle();
+  const { data: sealed } = await db.from("connection_credentials").select("ciphertext,iv").eq("connection_id", conn.id).eq("user_id",userId).maybeSingle();
   if (!sealed) throw new Error("Trading account has no stored keys");
   const { decryptJson } = await import("./crypto.server");
   return { connId: conn.id, exchange: conn.exchange, testnet: conn.is_testnet, creds: await decryptJson<Creds>(sealed.ciphertext, sealed.iv) };
@@ -54,6 +54,8 @@ export async function openManual(db: Admin, userId: string, a: Account, input: O
   if (inp.sl != null && (inp.side === "buy" ? inp.sl >= price : inp.sl <= price)) throw new Error(`Stop loss must be ${inp.side === "buy" ? "below" : "above"} the current price (${price})`);
   if (inp.tp != null && (inp.side === "buy" ? inp.tp <= price : inp.tp >= price)) throw new Error(`Take profit must be ${inp.side === "buy" ? "above" : "below"} the current price (${price})`);
   const notional = isOanda ? inp.amount * price : inp.amount;
+  const unresolved = await db.from("orders").select("id",{count:"exact",head:true}).eq("user_id",userId).eq("mode",live?"live":"paper").in("status",["pending","open","partially_filled"]);
+  if (unresolved.error || unresolved.count) throw new Error("Pending orders require reconciliation before another entry");
   const block = await accountRiskBlock(db, userId, notional);
   if (block) throw new Error(`Blocked by risk settings: ${block}`);
 
@@ -68,7 +70,7 @@ export async function openManual(db: Admin, userId: string, a: Account, input: O
 
   const { data: ord, error } = await db.from("orders").insert({
     user_id: userId, exchange: a.exchange, exchange_connection_id: a.connId, trading_pair: inp.symbol, side: inp.side, order_type: "market",
-    quantity: isOanda ? inp.amount : inp.amount / price, status: "pending", mode: live ? "live" : "paper", idempotency_key: `manual:${positionId}`,
+    price, quantity: isOanda ? inp.amount : inp.amount / price, status: "pending", mode: live ? "live" : "paper", idempotency_key: `manual:${positionId}`,
   }).select("id").single();
   if (error) {
     if (!live) await walletApply(db, userId, walletOpen(inp.amount, price, inp.side, quoteUsd).debit, "trade_close", positionId, "Refund: order not placed");
@@ -89,7 +91,7 @@ export async function openManual(db: Admin, userId: string, a: Account, input: O
     }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    await db.from("orders").update({ status: "rejected", reject_reason: msg.slice(0, 500) }).eq("id", ord.id);
+    await db.from("orders").update({ status: live ? "pending" : "rejected", reject_reason: live ? "Outcome unknown; reconciliation required" : msg.slice(0, 500) }).eq("id", ord.id);
     throw new Error(msg);
   }
   await db.from("orders").update({ status: "filled", quantity: qty, filled_quantity: qty, avg_fill_price: fill, exchange_order_id: extId }).eq("id", ord.id);
@@ -133,7 +135,7 @@ export async function closeManual(db: Admin, p: Row, reason: string) {
     }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    await db.from("orders").update({ status: "rejected", reject_reason: msg.slice(0, 500), idempotency_key: `${key}:failed:${Date.now()}` }).eq("id", ord.id);
+    await db.from("orders").update(a.connId ? {status:"pending",reject_reason:"Outcome unknown; reconciliation required"} : { status: "rejected", reject_reason: msg.slice(0, 500), idempotency_key: `${key}:failed:${Date.now()}` }).eq("id", ord.id);
     throw new Error(msg);
   }
   if (credit != null) await walletApply(db, p.user_id, credit, "trade_close", p.id, `Close ${p.trading_pair} (${reason})`);
