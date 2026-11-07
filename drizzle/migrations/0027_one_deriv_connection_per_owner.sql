@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX exchange_connections_one_deriv_per_owner ON public.exchange_connections (user_id) WHERE exchange = 'deriv' AND status <> 'disconnected';

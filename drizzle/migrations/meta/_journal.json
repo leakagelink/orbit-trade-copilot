@@ -190,6 +190,13 @@
       "when": 1794045625571,
       "tag": "0026_lock_research_evidence_browser_writes",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1794048395327,
+      "tag": "0027_one_deriv_connection_per_owner",
+      "breakpoints": true
     }
   ]
 }

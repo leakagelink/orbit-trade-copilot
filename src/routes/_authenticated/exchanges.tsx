@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EXCHANGES, exchangeName, type ExchangeMeta } from "@/lib/exchanges";
+import { derivConnectionReserved } from "@/lib/deriv";
 import { connectExchange, disconnectExchange, updateExchangeCredentials, verifyExchange } from "@/lib/exchanges.functions";
 
 const D = "Connect your exchange and broker accounts. API credentials are encrypted on the server.";
@@ -37,6 +38,8 @@ function Exchanges() {
     },
   });
   const [picked, setPicked] = useState<ExchangeMeta | null>(null);
+  const derivReserved = derivConnectionReserved(q.data ?? []);
+  const derivStatus = q.data?.find((c) => c.exchange === "deriv" && c.status !== "disconnected")?.status;
   const [reconnect, setReconnect] = useState<{ id: string; exchange: string } | null>(null);
   const [toDisconnect, setToDisconnect] = useState<string | null>(null);
   const disconnect = useServerFn(disconnectExchange);
@@ -70,7 +73,7 @@ function Exchanges() {
               {q.data.map((c) => (
                 <div key={c.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <div className="flex min-w-0 flex-wrap items-center gap-2"><span className="min-w-0 break-words font-medium">{c.label}</span><Badge variant={STATUS_VARIANT[c.status]}>{c.status}</Badge>{c.is_testnet && <Badge variant="outline">testnet</Badge>}</div>
+                    <div className="flex min-w-0 flex-wrap items-center gap-2"><span className="min-w-0 break-words font-medium">{c.label}</span><Badge variant={STATUS_VARIANT[c.status]}>{c.status === "connected" ? "Active" : c.status}</Badge>{c.is_testnet && <Badge variant="outline">{c.exchange === "deriv" ? "demo" : "testnet"}</Badge>}</div>
                     <div className="mt-1 font-mono text-xs text-muted-foreground">{exchangeName(c.exchange)} · {c.account_type}{c.exchange !== "deriv" && ` · key ${c.api_key_hint ?? "—"}`}</div>
                     {c.exchange === "deriv" && <Badge variant="outline">Connection only · orders unavailable</Badge>}
                     {(() => { const bal = (c.permissions as { balances?: { asset: string; free: number; locked: number }[] } | null)?.balances; return c.status === "connected" && bal ? <p className="mt-1 font-mono text-xs">{bal.length ? bal.slice(0, 6).map((b) => `${b.asset} ${+(b.free + b.locked).toPrecision(6)}`).join(" · ") : "No balances"}{c.last_synced_at && <span className="text-muted-foreground"> · synced {new Date(c.last_synced_at).toLocaleString()}</span>}</p> : null; })()}
@@ -78,7 +81,7 @@ function Exchanges() {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {c.status !== "disconnected" && <Button size="sm" variant="outline" disabled={verifying === c.id} onClick={() => runVerify(c.id)}><RefreshCw className={`mr-1 h-3.5 w-3.5 ${verifying === c.id ? "animate-spin" : ""}`} />Verify</Button>}
-                    <Button size="sm" variant="outline" onClick={() => setReconnect({ id: c.id, exchange: c.exchange })}><KeyRound className="mr-1 h-3.5 w-3.5" />{c.status === "disconnected" ? "Reconnect" : "Update keys"}</Button>
+                    {c.exchange !== "deriv" && <Button size="sm" variant="outline" onClick={() => setReconnect({ id: c.id, exchange: c.exchange })}><KeyRound className="mr-1 h-3.5 w-3.5" />{c.status === "disconnected" ? "Reconnect" : "Update keys"}</Button>}
                     {c.status !== "disconnected" && <Button size="sm" variant="ghost" onClick={() => setToDisconnect(c.id)}><Unplug className="mr-1 h-3.5 w-3.5" />Disconnect</Button>}
                   </div>
                 </div>
@@ -91,10 +94,10 @@ function Exchanges() {
           <h2 className="mb-3 text-sm font-medium">Add a connection</h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {EXCHANGES.map((e) => (
-              <Button variant="outline" key={e.id} disabled={!e.available} onClick={() => setPicked(e)} className="group block h-auto whitespace-normal rounded-lg border bg-card p-4 text-left transition-colors hover:border-primary disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border">
-                <div className="flex items-center justify-between"><span className="font-medium">{e.name}</span>{e.available ? <Plus className="h-4 w-4 text-muted-foreground group-hover:text-primary" /> : <Badge variant="outline">Soon</Badge>}</div>
+              <Button variant="outline" key={e.id} disabled={!e.available || (e.id === "deriv" && (derivReserved || q.isLoading || q.isError))} onClick={() => setPicked(e)} className="group block h-auto whitespace-normal rounded-lg border bg-card p-4 text-left transition-colors hover:border-primary disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border">
+                <div className="flex items-center justify-between"><span className="font-medium">{e.name}</span>{e.id === "deriv" && derivReserved ? <Badge variant={derivStatus === "connected" ? "default" : "secondary"}>{derivStatus === "connected" ? "Active" : "Already added"}</Badge> : e.available ? <Plus className="h-4 w-4 text-muted-foreground group-hover:text-primary" /> : <Badge variant="outline">Soon</Badge>}</div>
                 <div className="mt-1 text-xs text-muted-foreground">{e.market}</div>
-                <div className="mt-3 font-mono text-[10px] text-muted-foreground">{e.connectionOnly ? "PAT / App ID · demo or real" : e.orderTypes.join(" · ")}</div>
+                <div className="mt-3 font-mono text-[10px] text-muted-foreground">{e.id === "deriv" && derivReserved ? "Disconnect existing account to add another" : e.connectionOnly ? "PAT / App ID · demo or real" : e.orderTypes.join(" · ")}</div>
               </Button>
             ))}
           </div>

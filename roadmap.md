@@ -1,6 +1,7 @@
 # Roadmap
 
 ## Deriv connection
+- [x] Enforce one non-disconnected Deriv per owner with deployed unique index; reject token replacement until disconnect; verified connections display Active; 12 tests pass and signed-in existing pending connection blocks Add without changing the account
 - [x] Add owner-private Deriv PAT/App ID storage, read-only Options-account verification and exchange controls; Deriv orders remain unavailable and excluded from Trade/Bots
 - [x] 11 connection/safety tests pass; signed-in desktop/mobile PAT form and demo toggle checked with no overflow; build OK
 - [ ] Real Deriv save/verification — requires the owner's PAT and matching PAT App ID; no credentials or orders submitted during testing

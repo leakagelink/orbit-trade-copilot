@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { derivAppId, parseDerivBalances } from "../lib/deriv";
+import { derivAppId, parseDerivBalances, derivConnectionReserved } from "../lib/deriv";
 import { EXCHANGES } from "../lib/exchanges";
 
 const response = { data: [
@@ -7,6 +7,13 @@ const response = { data: [
   { account_id: "real-account", balance: "25.5", currency: "USD", account_type: "real" },
 ] };
 describe("Deriv connection", () => {
+  it("blocks a second Deriv until disconnect, including failed verification", () => {
+    for (const status of ["connected", "pending", "error", "expired"]) {
+      expect(derivConnectionReserved([{ exchange: "deriv", status }])).toBe(true);
+    }
+    expect(derivConnectionReserved([{ exchange: "deriv", status: "disconnected" }])).toBe(false);
+    expect(derivConnectionReserved([{ exchange: "binance", status: "connected" }])).toBe(false);
+  });
   it("offers connection without claiming order support", () => {
     expect(EXCHANGES.find((e) => e.id === "deriv")).toMatchObject({ available: true, orderTypes: [], connectionOnly: true });
   });

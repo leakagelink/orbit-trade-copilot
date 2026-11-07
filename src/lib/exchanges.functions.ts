@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { EXCHANGES } from "./exchanges";
-import { derivAppId } from "./deriv";
+import { derivAppId, DERIV_DISCONNECT_FIRST } from "./deriv";
 
 const credsSchema = z.object({
   apiKey: z.string().trim().min(8).max(256),
@@ -45,7 +45,7 @@ export const connectExchange = createServerFn({ method: "POST" })
       })
       .select("id")
       .single();
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(meta.id === "deriv" && error.code === "23505" ? DERIV_DISCONNECT_FIRST : error.message);
     const sealed = await encryptJson({ apiKey: data.apiKey, apiSecret: data.apiSecret, passphrase: data.passphrase });
     const { error: credErr } = await supabaseAdmin
       .from("connection_credentials")
@@ -68,7 +68,7 @@ export const updateExchangeCredentials = createServerFn({ method: "POST" })
     // RLS-scoped read proves ownership before privileged write.
     const { data: own } = await context.supabase.from("exchange_connections").select("id,exchange").eq("id", data.id).maybeSingle();
     if (!own) throw new Error("Connection not found");
-    if (own.exchange === "deriv") derivAppId.parse(data.apiSecret);
+    if (own.exchange === "deriv") throw new Error(DERIV_DISCONNECT_FIRST);
     else if (data.apiSecret.length < 8) throw new Error("API secret must have at least 8 characters");
     const { encryptJson } = await import("./crypto.server");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -88,8 +88,10 @@ export const disconnectExchange = createServerFn({ method: "POST" })
     const { data: own } = await context.supabase.from("exchange_connections").select("id").eq("id", data.id).maybeSingle();
     if (!own) throw new Error("Connection not found");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    await supabaseAdmin.from("connection_credentials").delete().eq("connection_id", data.id);
-    await supabaseAdmin.from("exchange_connections").update({ status: "disconnected", last_error: null }).eq("id", data.id);
+    const removed = await supabaseAdmin.from("connection_credentials").delete().eq("connection_id", data.id).eq("user_id", context.userId);
+    if (removed.error) throw new Error("Could not delete stored credentials; try disconnecting again");
+    const changed = await supabaseAdmin.from("exchange_connections").update({ status: "disconnected", last_error: null, permissions: {} }).eq("id", data.id).eq("user_id", context.userId);
+    if (changed.error) throw new Error("Could not finish disconnecting; try again");
     await context.supabase.from("audit_logs").insert({ user_id: context.userId, action: "exchange.disconnect", entity_type: "exchange_connection", entity_id: data.id });
     return { ok: true };
   });
@@ -99,8 +101,9 @@ export const verifyExchange = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    const { data: own } = await context.supabase.from("exchange_connections").select("id,exchange,is_testnet").eq("id", data.id).maybeSingle();
+    const { data: own } = await context.supabase.from("exchange_connections").select("id,exchange,is_testnet,status").eq("id", data.id).maybeSingle();
     if (!own) throw new Error("Connection not found");
+    if (own.status === "disconnected") throw new Error("This account is disconnected");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { decryptJson } = await import("./crypto.server");
     const { fetchBalances } = await import("./exchange-adapters.server");
@@ -110,13 +113,14 @@ export const verifyExchange = createServerFn({ method: "POST" })
       const creds = await decryptJson<{ apiKey: string; apiSecret: string; passphrase?: string }>(sealed.ciphertext, sealed.iv);
       const balances = await fetchBalances(own.exchange, creds, own.is_testnet);
       const now = new Date().toISOString();
-      await supabaseAdmin.from("exchange_connections").update({
+      const saved = await supabaseAdmin.from("exchange_connections").update({
         status: "connected", last_error: null, last_synced_at: now, permissions: { verified_at: now, balances: balances.slice(0, 50) } as unknown as never,
-      }).eq("id", data.id);
+      }).eq("id", data.id).eq("user_id", context.userId).neq("status", "disconnected").select("id").maybeSingle();
+      if (saved.error || !saved.data) throw new Error("Connection changed during verification; refresh and try again");
       return { ok: true as const, assets: balances.length };
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      await supabaseAdmin.from("exchange_connections").update({ status: "error", last_error: msg.slice(0, 500) }).eq("id", data.id);
+      await supabaseAdmin.from("exchange_connections").update({ status: "error", last_error: msg.slice(0, 500) }).eq("id", data.id).eq("user_id", context.userId).neq("status", "disconnected");
       return { ok: false as const, error: msg };
     }
   });
