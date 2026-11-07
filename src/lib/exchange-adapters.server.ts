@@ -1,6 +1,7 @@
 // Exchange adapters: public market data + signed balance reads. Web Crypto only (Workers-safe).
 import type { Candle } from "./indicators";
 import { derivAppId, parseDerivBalances } from "./deriv";
+import {spotFeeCosts} from "./verified-costs";
 
 export interface Creds { apiKey: string; apiSecret: string; passphrase?: string }
 export interface Balance { asset: string; free: number; locked: number }
@@ -344,13 +345,11 @@ export async function placeMarketOrder(exchange: string, c: Creds, testnet: bool
       const s = qs.toString();
       const j = await getJson(`${host}/api/v3/order?${s}&signature=${hex(await hmac(c.apiSecret, s))}`, { method: "POST", headers: { "X-MBX-APIKEY": c.apiKey } });
       const qty = Number(j.executedQty), quote = Number(j.cummulativeQuoteQty);
-      if (!(qty > 0)) throw new Error(`Binance order ${j.status}`);
+      if (!(qty > 0)||j.status!=="FILLED") throw new Error(`Binance order not fully verified; reconciliation required`);
       const avg = quote / qty;
-      let baseFee = 0, feeQuote = 0;
-      for (const f of (j.fills ?? []) as { commission: string; commissionAsset: string }[]) {
-        if (f.commissionAsset === b) { baseFee += +f.commission; feeQuote += +f.commission * avg; } else if (f.commissionAsset === q) feeQuote += +f.commission;
-      }
-      return { orderId: String(j.orderId), qty: side === "buy" ? qty - baseFee : qty, avgPrice: avg, feeQuote };
+      if(!Array.isArray(j.fills)||!j.fills.length)throw new Error("Exchange fill fees unavailable; reconciliation required");
+      const costs=spotFeeCosts(side,b,q,avg,(j.fills as {commission:string;commissionAsset:string}[]).map(f=>({amount:Number(f.commission),asset:f.commissionAsset})));
+      return { orderId: String(j.orderId), qty: side === "buy" ? qty - costs.baseFee : qty, avgPrice: avg, feeQuote:costs.quoteFee };
     }
     case "bybit": {
       const host = testnet ? "https://api-testnet.bybit.com" : "https://api.bybit.com";
@@ -365,9 +364,9 @@ export async function placeMarketOrder(exchange: string, c: Creds, testnet: bool
       for (let i = 0; i < 5; i++) {
         await wait(400);
         const o = (await call("GET", "/v5/order/realtime", `category=spot&orderId=${r.orderId}`)).list?.[0];
-        if (o && Number(o.cumExecQty) > 0 && ["Filled", "PartiallyFilledCanceled", "Cancelled"].includes(o.orderStatus)) {
+        if (o && Number(o.cumExecQty) > 0 && o.orderStatus==="Filled") {
           const qty = +o.cumExecQty, avg = +o.avgPrice || +o.cumExecValue / qty, fee = +o.cumExecFee || 0;
-          return { orderId: r.orderId, qty: side === "buy" ? qty - fee : qty, avgPrice: avg, feeQuote: side === "buy" ? fee * avg : fee };
+          return { orderId: r.orderId, qty: side === "buy" ? qty - fee : qty, avgPrice: avg, feeQuote: side === "buy" ? fee*avg : fee };
         }
       }
       throw new Error(`Bybit order ${r.orderId} did not fill in time`);
@@ -402,14 +401,15 @@ export async function placeMarketOrder(exchange: string, c: Creds, testnet: bool
           const o = (await call("GET", `/api/v5/trade/order?instId=${b}-${q}&ordId=${orderId}`))[0];
           if (o && +o.accFillSz > 0 && o.state === "filled") {
             const fee = Math.abs(+o.fee || 0), qty = +o.accFillSz, avg = +o.avgPx;
-            const baseFee = o.feeCcy === b ? fee : 0;
-            return { orderId, qty: side === "buy" ? qty - baseFee : qty, avgPrice: avg, feeQuote: o.feeCcy === b ? fee * avg : fee };
+            const costs=spotFeeCosts(side,b,q,avg,[{amount:fee,asset:o.feeCcy}]);
+            return { orderId, qty: side === "buy" ? qty - costs.baseFee : qty, avgPrice: avg, feeQuote:costs.quoteFee };
           }
         } else {
           const o = await call("GET", `/api/v1/orders/${orderId}`);
           if (o && !o.isActive && +o.dealSize > 0) {
             const qty = +o.dealSize, avg = +o.dealFunds / qty, fee = +o.fee || 0;
-            return { orderId, qty, avgPrice: avg, feeQuote: o.feeCurrency === b ? fee * avg : fee };
+            const costs=spotFeeCosts(side,b,q,avg,[{amount:fee,asset:o.feeCurrency}]);
+            return { orderId, qty:side==="buy"?qty-costs.baseFee:qty, avgPrice: avg, feeQuote:costs.quoteFee };
           }
         }
       }

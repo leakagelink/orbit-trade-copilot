@@ -211,6 +211,13 @@
       "when": 1794049515343,
       "tag": "0029_durable_order_recovery_and_entry_costs",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1794049983058,
+      "tag": "0030_protect_reproducible_backtest_evidence",
+      "breakpoints": true
     }
   ]
 }

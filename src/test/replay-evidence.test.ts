@@ -1,0 +1,13 @@
+import {expect,it} from "vitest";
+import {runBacktest} from "../lib/backtest";
+import {replayMatches} from "../lib/replay-evidence";
+import {emptyStrategyConfig} from "../lib/strategy";
+const config={...emptyStrategyConfig(),entry:{logic:"all" as const,conditions:[{left:"price",operator:">" as const,right:"0"}]}};
+const candles=Array.from({length:10},(_,i)=>({t:i*3600000,o:100+i,h:101+i,l:99+i,c:100+i,v:1}));
+const manifest={simulatorVersion:"next-bar-v2",config,feePct:0.1,slippagePct:0.05,tfMs:3600000,candles};
+const simulated=runBacktest(config,candles,{capital:1000,feePct:0.1,slippagePct:0.05,tfMs:3600000});
+const e={manifest,trades:simulated.trades,equity:simulated.equity,evidenceHash:"a".repeat(64)};
+it("reproduces complete trades and equity from frozen configuration",async()=>{expect(await replayMatches(e,1000)).toBe(true);});
+it("detects removed trades even if the attacker recomputes a hash",async()=>{expect(await replayMatches({...e,trades:[]},1000)).toBe(false);});
+it("detects modified equity claims",async()=>{expect(await replayMatches({...e,equity:[{t:1,v:100000}]},1000)).toBe(false);});
+it("missing configuration cannot validate an agent claim",async()=>{expect(await replayMatches({...e,manifest:{...manifest,config:null}},1000)).toBe(false);});

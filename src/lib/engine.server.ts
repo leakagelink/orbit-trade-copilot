@@ -3,6 +3,7 @@ import { computeAll, evalRules } from "./indicators";
 import { fetchCandles, floorToStep, getStepSize, placeMarketOrder, timeframeMs, type Creds } from "./exchange-adapters.server";
 import { validateStrategy, type StrategyConfig } from "./strategy";
 import { performEmergencyRecovery } from "./emergency-recovery";
+import {reconciledRoundTripFees} from "./verified-costs";
 
 const FEE = 0.001; // 0.1% simulated taker fee (paper)
 const SLIP = 0.0005; // 0.05% simulated slippage (paper)
@@ -193,16 +194,16 @@ async function closePosition(db: Admin, bot: Row, venue: Venue, p: Row, price: n
   }
   const nowIso = new Date().toISOString();
   const entryFee = p.entry_fee_quote==null?(venue.live?null:entry*qty*FEE):Number(p.entry_fee_quote);
-  if(entryFee===null){await db.from("orders").update({reject_reason:"Confirmed exit; historical entry fee unknown, net ledger requires review"}).eq("id",ord.id);throw new Error("Exit confirmed but historical entry fee unknown; reconcile ledger, do not resubmit");}
+  const totalFees=reconciledRoundTripFees(entryFee,exitFee);
   const pnl = (fill - entry) * qty; // gross; fees stored separately
   await db.from("orders").update({ status: "filled", quantity: qty, filled_quantity: qty, avg_fill_price: fill, exchange_order_id: exOrderId }).eq("id", ord.id);
   await db.from("positions").update({ is_open: false, closed_at: nowIso, current_price: fill, unrealized_pnl: 0 }).eq("id", p.id);
   await db.from("trades").insert({
     user_id: bot.user_id, bot_id: bot.id, strategy_id: bot.strategy_id, order_id: ord.id, exchange: bot.exchange, exchange_connection_id: venue.connId,
-    trading_pair: bot.trading_pair, side: "buy", quantity: qty, entry_price: entry, exit_price: fill, fees: exitFee + entryFee,
+    trading_pair: bot.trading_pair, side: "buy", quantity: qty, entry_price: entry, exit_price: fill, fees: totalFees,
     slippage: venue.live ? 0 : price * SLIP * qty, realized_pnl: pnl, mode: venue.live ? "live" : "paper", opened_at: p.opened_at, closed_at: nowIso, close_reason: reason,
   });
-  await logTo(db, bot, `${venue.live ? "LIVE " : ""}Sold ${qty.toPrecision(6)} ${bot.trading_pair} at ${fill.toFixed(4)} (${reason.replace("_", " ")}), net PnL ${(pnl - exitFee - entryFee).toFixed(2)}`, { reason, pnl });
+  await logTo(db, bot, `${venue.live ? "LIVE " : ""}Sold ${qty.toPrecision(6)} ${bot.trading_pair} at ${fill.toFixed(4)} (${reason.replace("_", " ")}), net PnL ${(pnl-totalFees).toFixed(2)}`, { reason, pnl });
 }
 
 /** Emergency stop: halt the account, stop every bot and close every open position now. */

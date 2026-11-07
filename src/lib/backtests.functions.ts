@@ -30,13 +30,13 @@ export const runBacktestFn = createServerFn({ method: "POST" })
     const tfMs = timeframeMs(cfg.timeframe);
     const end = Date.now(), start = end - data.days * 86_400_000;
 
-    const { data: bt, error } = await context.supabase.from("backtests").insert({
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: bt, error } = await supabaseAdmin.from("backtests").insert({
       user_id: context.userId, strategy_id: s.id, strategy_version: s.current_version, trading_pair: pair, timeframe: cfg.timeframe,
       start_date: new Date(start).toISOString(), end_date: new Date(end).toISOString(),
       starting_capital: data.capital, fee_pct: data.feePct, slippage_pct: data.slippagePct, status: "running",
     }).select("id").single();
     if (error) throw new Error(error.message);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     try {
       const cs = (await fetchHistory(data.exchange, pair, cfg.timeframe, start, end)).filter(c=>c.t+tfMs<=end);
       if (cs.length < 60) throw new Error(`Only ${cs.length} candles available — choose a longer period or timeframe`);

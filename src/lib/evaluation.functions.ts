@@ -4,6 +4,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { evaluateHistoricalEvidence, evaluationEvidence } from "./evaluation";
 import { evidenceHash } from "./evidence-hash";
 import {scoringPolicy} from "./governance";
+import {replayMatches} from "./replay-evidence";
 export const listEvaluations=createServerFn({method:"GET"}).middleware([requireSupabaseAuth]).handler(async({context})=>{
   const {requirePro}=await import("./plan.server");await requirePro(context.supabase,context.userId);
   const [evaluations,backtests]=await Promise.all([context.supabase.from("strategy_evaluations").select("*").eq("user_id",context.userId).order("created_at",{ascending:false}).limit(100),context.supabase.from("backtests").select("id,trading_pair,created_at,strategies(name)").eq("user_id",context.userId).eq("status","completed").order("created_at",{ascending:false}).limit(100)]);
@@ -14,7 +15,7 @@ export const evaluateBacktest=createServerFn({method:"POST"}).middleware([requir
   const bt=await context.supabase.from("backtests").select("id,strategy_id,starting_capital,backtest_results(trade_log)").eq("id",data.id).eq("user_id",context.userId).eq("status","completed").maybeSingle();
   if(bt.error||!bt.data)throw new Error("Completed owned backtest required");
   const evidence=bt.data.backtest_results?.trade_log;const parsed=evaluationEvidence.safeParse(evidence);let hashMatches=false;
-  if(parsed.success)hashMatches=await evidenceHash({manifest:parsed.data.manifest,trades:parsed.data.trades,equity:parsed.data.equity})===parsed.data.evidenceHash;
+  if(parsed.success)hashMatches=await evidenceHash({manifest:parsed.data.manifest,trades:parsed.data.trades,equity:parsed.data.equity})===parsed.data.evidenceHash&&await replayMatches(evidence,Number(bt.data.starting_capital));
   const latest=await context.supabase.from("strategy_scoring_policies").select("config").order("created_at",{ascending:false}).limit(1).maybeSingle();if(latest.error)throw new Error("Scoring policy unavailable");
   const policy=scoringPolicy.safeParse(latest.data?.config);
   const report=evaluateHistoricalEvidence(evidence,hashMatches,policy.success?policy.data:undefined,Number(bt.data.starting_capital));

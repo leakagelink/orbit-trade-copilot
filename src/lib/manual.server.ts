@@ -4,6 +4,7 @@ import { fetchCandles, floorToStep, getStepSize, oandaCloseTrade, oandaMarketOrd
 import { accountRiskBlock } from "./engine.server";
 import { walletClose, walletOpen, walletUnrealized } from "./wallet-math";
 import { scalpBracket, scalpExit, validateScalp, type ScalpSettings } from "./scalping";
+import {reconciledRoundTripFees} from "./verified-costs";
 
 type Admin = Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"];
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -139,8 +140,7 @@ export async function closeManual(db: Admin, p: Row, reason: string) {
     throw new Error(msg);
   }
   if(a.connId&&a.exchange!=="oanda"){
-    if(p.entry_fee_quote==null)throw new Error("Exit confirmed but historical entry fee unknown; reconcile ledger, do not resubmit");
-    fees+=Number(p.entry_fee_quote);
+    fees=reconciledRoundTripFees(p.entry_fee_quote==null?null:Number(p.entry_fee_quote),fees);
   }
   if (credit != null) await walletApply(db, p.user_id, credit, "trade_close", p.id, `Close ${p.trading_pair} (${reason})`);
   const nowIso = new Date().toISOString();
