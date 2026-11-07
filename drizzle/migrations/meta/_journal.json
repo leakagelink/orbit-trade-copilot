@@ -197,6 +197,20 @@
       "when": 1794048395327,
       "tag": "0027_one_deriv_connection_per_owner",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1794049313793,
+      "tag": "0028_strategy_governance_and_integrity_review",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1794049515343,
+      "tag": "0029_durable_order_recovery_and_entry_costs",
+      "breakpoints": true
     }
   ]
 }

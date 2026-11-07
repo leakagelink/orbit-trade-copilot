@@ -1054,6 +1054,41 @@ export type Database = {
         }
         Relationships: []
       }
+      order_recovery_observations: {
+        Row: {
+          created_at: string
+          evidence: Json | null
+          id: string
+          order_id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          evidence?: Json | null
+          id?: string
+          order_id: string
+          status: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          evidence?: Json | null
+          id?: string
+          order_id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_recovery_observations_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           avg_fill_price: number | null
@@ -1181,6 +1216,8 @@ export type Database = {
           bot_id: string | null
           closed_at: string | null
           current_price: number | null
+          entry_fee_quote: number | null
+          entry_order_id: string | null
           entry_price: number
           exchange: string
           exchange_connection_id: string | null
@@ -1205,6 +1242,8 @@ export type Database = {
           bot_id?: string | null
           closed_at?: string | null
           current_price?: number | null
+          entry_fee_quote?: number | null
+          entry_order_id?: string | null
           entry_price: number
           exchange: string
           exchange_connection_id?: string | null
@@ -1229,6 +1268,8 @@ export type Database = {
           bot_id?: string | null
           closed_at?: string | null
           current_price?: number | null
+          entry_fee_quote?: number | null
+          entry_order_id?: string | null
           entry_price?: number
           exchange?: string
           exchange_connection_id?: string | null
@@ -1255,6 +1296,13 @@ export type Database = {
             columns: ["bot_id"]
             isOneToOne: false
             referencedRelation: "trading_bots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "positions_entry_order_id_fkey"
+            columns: ["entry_order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
             referencedColumns: ["id"]
           },
           {
@@ -1502,6 +1550,161 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      strategy_integrity_cases: {
+        Row: {
+          created_at: string
+          evaluation_id: string
+          id: string
+          reasons: Json
+          reviewed_at: string | null
+          status: string
+          strategy_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          evaluation_id: string
+          id?: string
+          reasons: Json
+          reviewed_at?: string | null
+          status?: string
+          strategy_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          evaluation_id?: string
+          id?: string
+          reasons?: Json
+          reviewed_at?: string | null
+          status?: string
+          strategy_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "strategy_integrity_cases_evaluation_id_fkey"
+            columns: ["evaluation_id"]
+            isOneToOne: true
+            referencedRelation: "strategy_evaluations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "strategy_integrity_cases_strategy_id_fkey"
+            columns: ["strategy_id"]
+            isOneToOne: false
+            referencedRelation: "strategies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      strategy_integrity_events: {
+        Row: {
+          action: string
+          actor_id: string
+          case_id: string
+          created_at: string
+          id: string
+          message: string
+          user_id: string
+        }
+        Insert: {
+          action: string
+          actor_id: string
+          case_id: string
+          created_at?: string
+          id?: string
+          message: string
+          user_id: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string
+          case_id?: string
+          created_at?: string
+          id?: string
+          message?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "strategy_integrity_events_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "strategy_integrity_cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      strategy_promotion_reviews: {
+        Row: {
+          bot_id: string
+          checklist: Json
+          created_at: string
+          id: string
+          status: string
+          strategy_id: string
+          user_id: string
+        }
+        Insert: {
+          bot_id: string
+          checklist: Json
+          created_at?: string
+          id?: string
+          status: string
+          strategy_id: string
+          user_id: string
+        }
+        Update: {
+          bot_id?: string
+          checklist?: Json
+          created_at?: string
+          id?: string
+          status?: string
+          strategy_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "strategy_promotion_reviews_bot_id_fkey"
+            columns: ["bot_id"]
+            isOneToOne: false
+            referencedRelation: "trading_bots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "strategy_promotion_reviews_strategy_id_fkey"
+            columns: ["strategy_id"]
+            isOneToOne: false
+            referencedRelation: "strategies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      strategy_scoring_policies: {
+        Row: {
+          config: Json
+          created_at: string
+          created_by: string
+          id: string
+          version: string
+        }
+        Insert: {
+          config: Json
+          created_at?: string
+          created_by: string
+          id?: string
+          version: string
+        }
+        Update: {
+          config?: Json
+          created_at?: string
+          created_by?: string
+          id?: string
+          version?: string
+        }
+        Relationships: []
       }
       strategy_versions: {
         Row: {
@@ -2023,6 +2226,10 @@ export type Database = {
           trades: number
         }[]
       }
+      appeal_strategy_integrity: {
+        Args: { _case: string; _message: string }
+        Returns: undefined
+      }
       apply_crypto_payment: {
         Args: {
           _actually_paid: number
@@ -2091,6 +2298,10 @@ export type Database = {
           name: string
           published_at: string
         }[]
+      }
+      review_strategy_integrity: {
+        Args: { _case: string; _decision: string; _message: string }
+        Returns: undefined
       }
       trigger_price_alert: {
         Args: { _id: string; _price: number }

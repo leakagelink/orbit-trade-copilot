@@ -10,6 +10,7 @@
 <!-- LOVABLE:END -->
 
 ## Architecture rules
+- Strategy governance keeps versioned admin-authored historical utilities separate from live authority; rejected evidence atomically quarantines strategy entries with immutable independent appeals/reviews, while exits stay available — partial scores cannot authorize capital or live bots.
 - Deriv connections store owner PAT/App ID in encrypted credentials and verify Options accounts via REST; they are connection-only and excluded from trading/bot selectors — prevents treating Options as crypto spot orders.
 - AI research is owner-private, Pro-gated and advisory; durable claims precede analysts, debate and decision stages, missing sources stay unavailable, and pure historical-volatility proposals never size or submit orders — keeps inference deduplicated and trading authority unchanged.
 - Subdirectories have their own `AGENTS.md`; read it before changing files there.

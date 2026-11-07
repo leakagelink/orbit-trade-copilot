@@ -3,7 +3,7 @@
 - Exchange I/O goes through `src/lib/exchange-adapters.server.ts` (Web Crypto HMAC, fetch only) and indicator math lives in pure `src/lib/indicators.ts` — Workers-safe and testable.
 - Backtests use prior-bar signals and next-open/gap-aware fills in `backtest.ts`; persist full config/candle manifests and ledgers — historical results remain reproducible, not live qualification.
 - Bot mutations and connection verification are server-authorized; engine reads bind owners, uncertain fills retain original intents, and inactive bots still manage exits — prevents browser promotion and blind order retries.
-- Independent evaluations consume canonical-hashed historical evidence and remain append-only; missing validation and unconfigured utility anchors cannot produce scores or promotion — prevents agent self-grading.
+- Independent evaluations consume canonical-hashed historical evidence and remain append-only; only versioned admin-authored anchors yield experimental historical utilities, while missing validation never yields a composite or promotion — prevents agent self-grading.
 - Paper research math is pure and forward-only, fills from completed daily bars after explicit confirmation, conservatively resolves ambiguous stops, and includes user cost assumptions — avoids historical look-ahead and fabricated live fills.
 - Research allowances are atomically claimed before inference; separate immutable paper and emergency-event records never authorize orders or wallet changes — bounds usage and isolates advisory evidence.
 - Binance production candles and history retry the official data-only host when the primary feed fails; testnet and signed/order endpoints never switch hosts — keeps charts available without changing venues or execution.

@@ -1,0 +1,14 @@
+import {expect,it} from "vitest";
+import {allocationGuard,historicalUtilities,promotionChecklist,scoringPolicy,initialWeights} from "../lib/governance";
+const policy=scoringPolicy.parse({version:"test-v1",minimumTrades:30,minimumDays:30,expectancyTargetPct:1,maximumDrawdownPct:20,weights:initialWeights});
+it("keeps the master prompt's seven weights at 100",()=>{expect(policy.weights).toEqual({performance:20,risk:20,robustness:15,execution:15,prediction:10,regime:10,integrity:10});});
+it("rejects weights that do not total 100",()=>{expect(scoringPolicy.safeParse({...policy,weights:{...initialWeights,risk:21}}).success).toBe(false);});
+it("withholds utilities below independent sample and duration floors",()=>{expect(historicalUtilities(Array(29).fill(10),[{t:1,v:1000},{t:2,v:1001}],1000,30,policy).performance).toBeNull();expect(historicalUtilities(Array(30).fill(10),[{t:1,v:1000},{t:2,v:1001}],1000,29,policy).risk).toBeNull();});
+it("calculates cost-adjusted historical utilities from actual supplied outcomes",()=>{const r=historicalUtilities(Array(30).fill(5),[{t:1,v:1000},{t:2,v:900}],1000,30,policy);expect(r.performance).toBe(50);expect(r.risk).toBe(50);expect(r.expectancyInterval).toEqual([50,50]);});
+const passing={quarantined:false,verifiedConnection:true,unresolvedOrders:0,halted:false,scored:true,holdout:true,paper:true,costs:true,independentReview:true};
+it("even a passing checklist does not authorize trading",()=>{expect(promotionChecklist(passing)).toMatchObject({status:"review_required",authorizesTrading:false});});
+it.each(["quarantined","unresolvedOrders","halted"])("safety failure %s overrides performance",key=>{const value=key==="unresolvedOrders"?1:true;expect(promotionChecklist({...passing,[key]:value}).status).toBe("blocked");});
+it.each(["scored","holdout","paper","costs","independentReview"])("missing %s evidence blocks promotion",key=>{expect(promotionChecklist({...passing,[key]:false}).status).toBe("blocked");});
+it("does not invent allocations for unqualified strategies",()=>{expect(allocationGuard(1000,100,2000,0)).toEqual({status:"insufficient_evidence",deployable:0,reserve:1000});});
+it("bounds proposed deployment by actual account exposure headroom",()=>{expect(allocationGuard(1000,900,1200,1)).toEqual({status:"review_required",deployable:300,reserve:700});expect(allocationGuard(1000,1300,1200,1).deployable).toBe(0);});
+it("missing account limits prevent recommendations",()=>{expect(allocationGuard(1000,0,null,1).status).toBe("unavailable");});

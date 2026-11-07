@@ -1,0 +1,8 @@
+ALTER TABLE public.positions ADD COLUMN entry_fee_quote numeric, ADD COLUMN entry_order_id uuid REFERENCES public.orders(id);
+COMMENT ON COLUMN public.positions.entry_fee_quote IS 'Server-confirmed entry fee in quote currency; null means unknown for legacy positions, never silently assumed zero';
+CREATE TABLE public.order_recovery_observations(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),user_id uuid NOT NULL,order_id uuid NOT NULL REFERENCES public.orders(id),status text NOT NULL CHECK(status IN('verified_fill','verified_zero_fill','needs_review','unavailable')),evidence jsonb,created_at timestamptz NOT NULL DEFAULT now());
+GRANT SELECT ON public.order_recovery_observations TO authenticated; GRANT ALL ON public.order_recovery_observations TO service_role;
+ALTER TABLE public.order_recovery_observations ENABLE ROW LEVEL SECURITY;
+CREATE POLICY recovery_observation_read ON public.order_recovery_observations FOR SELECT TO authenticated USING(user_id=auth.uid() AND public.account_mfa_allowed());
+CREATE TRIGGER recovery_observation_immutable BEFORE UPDATE OR DELETE ON public.order_recovery_observations FOR EACH ROW EXECUTE FUNCTION public.prevent_evaluation_mutation();
+COMMENT ON TABLE public.order_recovery_observations IS 'Read-only provider lookups by original durable client order IDs; never resubmit orders, mark positions closed or clear locks without atomic ledger reconciliation';

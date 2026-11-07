@@ -97,7 +97,7 @@ export async function openManual(db: Admin, userId: string, a: Account, input: O
   await db.from("orders").update({ status: "filled", quantity: qty, filled_quantity: qty, avg_fill_price: fill, exchange_order_id: extId }).eq("id", ord.id);
   await db.from("positions").insert({
     id: positionId, user_id: userId, exchange: a.exchange, exchange_connection_id: a.connId, trading_pair: inp.symbol, side: inp.side, quantity: qty,
-    entry_price: fill, current_price: price, mode: live ? "live" : "paper", unrealized_pnl: -fee, stop_loss: inp.sl, take_profit: inp.tp, external_ref: extRef,
+    entry_price: fill, current_price: price, mode: live ? "live" : "paper", unrealized_pnl: -fee, stop_loss: inp.sl, take_profit: inp.tp, external_ref: extRef,entry_fee_quote:fee,entry_order_id:ord.id,
     wallet_margin: live ? null : inp.amount, is_scalp: !!input.scalp, max_hold_until: holdUntil,
   });
   await db.from("audit_logs").insert({ user_id: userId, action: "trade.manual_open", entity_type: "position", entity_id: positionId, details: { symbol: inp.symbol, side: inp.side, amount: inp.amount, live, entry_fee: fee, scalp: input.scalp ? { ...input.scalp } : null } });
@@ -137,6 +137,10 @@ export async function closeManual(db: Admin, p: Row, reason: string) {
     const msg = e instanceof Error ? e.message : String(e);
     await db.from("orders").update(a.connId ? {status:"pending",reject_reason:"Outcome unknown; reconciliation required"} : { status: "rejected", reject_reason: msg.slice(0, 500), idempotency_key: `${key}:failed:${Date.now()}` }).eq("id", ord.id);
     throw new Error(msg);
+  }
+  if(a.connId&&a.exchange!=="oanda"){
+    if(p.entry_fee_quote==null)throw new Error("Exit confirmed but historical entry fee unknown; reconcile ledger, do not resubmit");
+    fees+=Number(p.entry_fee_quote);
   }
   if (credit != null) await walletApply(db, p.user_id, credit, "trade_close", p.id, `Close ${p.trading_pair} (${reason})`);
   const nowIso = new Date().toISOString();

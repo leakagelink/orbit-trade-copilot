@@ -1,5 +1,6 @@
 import { z } from "zod";
-export const SCORING_WEIGHTS = {performance:20,risk:20,robustness:15,execution:15,prediction:10,regime:10,integrity:10} as const;
+import {historicalUtilities,initialWeights,type ScoringPolicy} from "./governance";
+export const SCORING_WEIGHTS = initialWeights;
 export const evaluationEvidence = z.object({
   trades:z.array(z.object({entryT:z.number(),exitT:z.number(),entry:z.number().positive(),exit:z.number().positive(),qty:z.number().positive(),pnl:z.number(),fees:z.number().nonnegative(),reason:z.string()})),
   manifest:z.object({simulatorVersion:z.literal("next-bar-v2"),feePct:z.number().min(0).max(5),slippagePct:z.number().min(0).max(5),candles:z.array(z.object({t:z.number(),o:z.number().positive(),h:z.number().positive(),l:z.number().positive(),c:z.number().positive(),v:z.number().nonnegative()}))}).passthrough(),
@@ -8,7 +9,7 @@ export const evaluationEvidence = z.object({
 }).passthrough();
 
 /** Independent observed facts only. No inferred predictive accuracy or unapproved utility anchors. */
-export function evaluateHistoricalEvidence(input:unknown,hashMatches:boolean){
+export function evaluateHistoricalEvidence(input:unknown,hashMatches:boolean,policy?:ScoringPolicy,startingCapital?:number){
   const parsed=evaluationEvidence.safeParse(input);
   const violations:string[]=[],limitations:string[]=[];
   if(!parsed.success)return {status:"INSUFFICIENT_DATA" as const,composite:null,weights:SCORING_WEIGHTS,modelVersion:"initial-weights-v1",components:Object.keys(SCORING_WEIGHTS).map(key=>({key,score:null,confidenceInterval:null})),violations,limitations:["Complete next-bar simulation evidence is required."],metrics:null};
@@ -33,5 +34,9 @@ export function evaluateHistoricalEvidence(input:unknown,hashMatches:boolean){
   if(e.manifest.feePct===0||e.manifest.slippagePct===0)limitations.push("Zero-cost simulation is not eligible promotion evidence");
   limitations.push("No isolated holdout, paper/live fills, calibrated predictions or regime coverage supplied.","Utility anchors, sample precision thresholds and confidence interval methodology need configuration before scoring.");
   const net=e.trades.reduce((a,t)=>a+t.pnl-t.fees,0),fees=e.trades.reduce((a,t)=>a+t.fees,0);
-  return {status:violations.length?"REJECTED" as const:"INSUFFICIENT_DATA" as const,composite:null,weights:SCORING_WEIGHTS,modelVersion:"initial-weights-v1",components:Object.keys(SCORING_WEIGHTS).map(key=>({key,score:null,confidenceInterval:null})),violations,limitations,metrics:{trades:e.trades.length,netProfit:net,totalFees:fees,grossProfit:net+fees,slippageTreatment:"Already embedded in simulated fill prices; not deducted twice",expectancy:e.trades.length?net/e.trades.length:null}};
+  for(let i=0;i<e.equity.length;i++){const p=e.equity[i],prior=e.equity[i-1];if(!p)continue;if(!Number.isFinite(p.v)||p.v<0)violations.push("Invalid equity evidence");if(prior&&p.t<=prior.t)violations.push("Equity chronology is duplicated or reversed");}
+  const first=e.manifest.candles[0],last=e.manifest.candles.at(-1),days=first&&last?(last.t-first.t)/86400000:0;
+  const utilities=policy&&violations.length===0?historicalUtilities(e.trades.map(t=>t.pnl-t.fees),e.equity,startingCapital??NaN,days,policy):null;
+  if(policy)limitations.push("Experimental historical utility only, not live qualification. Expectancy interval: 95% normal approximation assuming independent trade outcomes; serial dependence can invalidate it. Drawdown is observed, not a forecast or confidence interval.");
+  return {status:violations.length?"REJECTED" as const:"INSUFFICIENT_DATA" as const,composite:null,weights:policy?.weights??SCORING_WEIGHTS,modelVersion:policy?.version??"initial-weights-v1",components:Object.keys(SCORING_WEIGHTS).map(key=>({key,score:key==="performance"?utilities?.performance??null:key==="risk"?utilities?.risk??null:null,confidenceInterval:key==="performance"?utilities?.expectancyInterval??null:null})),violations:[...new Set(violations)],limitations,metrics:{trades:e.trades.length,netProfit:net,totalFees:fees,grossProfit:net+fees,slippageTreatment:"Already embedded in simulated fill prices; not deducted twice",expectancy:e.trades.length?net/e.trades.length:null,observedDrawdownPct:utilities?.drawdownPct??null}};
 }

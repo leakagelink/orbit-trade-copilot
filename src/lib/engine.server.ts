@@ -157,7 +157,7 @@ async function tickBot(db: Admin, bot: Row, pro: boolean): Promise<string> {
   await db.from("orders").update({ status: "filled", quantity: qty, filled_quantity: qty, avg_fill_price: fill, exchange_order_id: exOrderId }).eq("id", ord.id);
   await db.from("positions").insert({
     user_id: bot.user_id, bot_id: bot.id, exchange: bot.exchange, exchange_connection_id: venue.connId, trading_pair: bot.trading_pair,
-    side: "buy", quantity: qty, entry_price: fill, current_price: live, mode: venue.live ? "live" : "paper", unrealized_pnl: 0,
+    side: "buy", quantity: qty, entry_price: fill, current_price: live, mode: venue.live ? "live" : "paper", unrealized_pnl: 0, entry_fee_quote:fee,entry_order_id:ord.id,
     stop_loss: slPct != null ? fill * (1 - slPct / 100) : null, take_profit: tpPct != null ? fill * (1 + tpPct / 100) : null,
   });
   await log(`${venue.live ? "LIVE " : ""}Bought ${qty.toPrecision(6)} ${bot.trading_pair} at ${fill.toFixed(4)}`, { order: ord.id, entry_fee: fee, exchange_order_id: exOrderId });
@@ -192,7 +192,8 @@ async function closePosition(db: Admin, bot: Row, venue: Venue, p: Row, price: n
     fill = price * (1 - SLIP); exitFee = fill * qty * FEE;
   }
   const nowIso = new Date().toISOString();
-  const entryFee = venue.live ? 0 : entry * qty * FEE;
+  const entryFee = p.entry_fee_quote==null?(venue.live?null:entry*qty*FEE):Number(p.entry_fee_quote);
+  if(entryFee===null){await db.from("orders").update({reject_reason:"Confirmed exit; historical entry fee unknown, net ledger requires review"}).eq("id",ord.id);throw new Error("Exit confirmed but historical entry fee unknown; reconcile ledger, do not resubmit");}
   const pnl = (fill - entry) * qty; // gross; fees stored separately
   await db.from("orders").update({ status: "filled", quantity: qty, filled_quantity: qty, avg_fill_price: fill, exchange_order_id: exOrderId }).eq("id", ord.id);
   await db.from("positions").update({ is_open: false, closed_at: nowIso, current_price: fill, unrealized_pnl: 0 }).eq("id", p.id);

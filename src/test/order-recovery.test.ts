@@ -1,0 +1,10 @@
+import {expect,it} from "vitest";
+import {orderRecoveryStatus} from "../lib/order-recovery";
+const filled={orderId:"original-id",state:"filled" as const,qty:1,avgPrice:100,quoteValue:100,feeQuote:0.1};
+it("missing orders never prove zero execution",()=>{expect(orderRecoveryStatus(null)).toBe("unavailable");});
+it("records confirmed fills without changing ledger authority",()=>{expect(orderRecoveryStatus(filled)).toBe("verified_fill");});
+it("partial or open orders keep review lock",()=>{expect(orderRecoveryStatus({...filled,state:"open"})).toBe("needs_review");});
+it("unknown fees prevent verified fill classification",()=>{expect(orderRecoveryStatus({...filled,feeQuote:null})).toBe("needs_review");});
+it("cancelled partial fills keep review lock",()=>{expect(orderRecoveryStatus({...filled,state:"cancelled"})).toBe("needs_review");});
+it("zero-fill proof requires terminal cancellation and zero cashflow",()=>{expect(orderRecoveryStatus({...filled,state:"cancelled",qty:0,quoteValue:0,avgPrice:0})).toBe("verified_zero_fill");expect(orderRecoveryStatus({...filled,state:"cancelled",qty:0})).toBe("needs_review");});
+it("invalid provider numbers keep review lock",()=>{expect(orderRecoveryStatus({...filled,qty:NaN})).toBe("needs_review");});

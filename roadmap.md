@@ -1,5 +1,13 @@
 # Roadmap
 
+## Native master-prompt completion requested 7 November 2026
+- [ ] Deterministic historical component scores and confidence intervals, explicitly experimental; missing evidence never produces a composite or live approval
+- [ ] Owner-private integrity cases, immutable appeal/review history and automatic entry quarantine; recovery remains available
+- [ ] Evidence coverage, ranking eligibility and advisory allocation guardrails in Strategy Intelligence
+- [ ] Regression tests and signed-in desktop/mobile verification
+- [ ] Social data and email/legal setup require authorized sources and owner identity; live recovery certification requires isolated provider accounts
+- [x] Owner chose native app upgrades, not separate paid hosting/original Python engines
+
 ## Exchange account selections
 - [x] Add Spot / Futures / Both for Binance, Bybit and OKX with owner-authorized later edits, preserving trading authority and other venues' selections
 - [x] 16 tests pass; signed-in Binance Both form verified; build OK

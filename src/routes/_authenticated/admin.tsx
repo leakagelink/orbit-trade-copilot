@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useIsAdmin } from "@/hooks/use-is-admin";
+import {GovernanceAdmin} from "@/components/governance-admin";
 import {
   adminUserDetail, adminSetPlan, adminSetRole, adminSetBan, adminDeleteUser, adminAdjustWallet,
   adminStopBot, adminListContent, adminSetReferral, adminModerateStrategy, adminNotifyUser,
@@ -58,7 +59,7 @@ function Admin() {
           {STATS.map(([k, l]) => <div key={k} className="bg-card p-4"><div className="text-xs text-muted-foreground">{l}</div><div className="mt-1 font-mono text-xl">{overview.data?.[k] ?? "—"}</div></div>)}
         </div>
         <Tabs defaultValue="users">
-          <TabsList className="flex h-auto flex-wrap"><TabsTrigger value="users">Users</TabsTrigger><TabsTrigger value="bots">Running bots</TabsTrigger><TabsTrigger value="referrals">Referrals</TabsTrigger><TabsTrigger value="strategies">Marketplace</TabsTrigger><TabsTrigger value="log">Activity log</TabsTrigger></TabsList>
+          <TabsList className="flex h-auto flex-wrap"><TabsTrigger value="users">Users</TabsTrigger><TabsTrigger value="bots">Running bots</TabsTrigger><TabsTrigger value="referrals">Referrals</TabsTrigger><TabsTrigger value="strategies">Marketplace</TabsTrigger><TabsTrigger value="integrity">Integrity & scoring</TabsTrigger><TabsTrigger value="log">Activity log</TabsTrigger></TabsList>
           <TabsContent value="users">
             <div className="rounded-lg border bg-card">
               <div className="flex items-center gap-2 border-b p-3"><Search className="h-4 w-4 text-muted-foreground" /><Input placeholder="Search email or name" value={search} onChange={e => setSearch(e.target.value)} className="max-w-sm" /></div>
@@ -71,6 +72,7 @@ function Admin() {
             </div>
           </TabsContent>
           <ContentTabs />
+          <TabsContent value="integrity"><GovernanceAdmin/></TabsContent>
         </Tabs>
       </div>
       {selected && <UserDialog userId={selected} onClose={() => setSelected(null)} />}
