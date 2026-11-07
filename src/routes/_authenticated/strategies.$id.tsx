@@ -22,7 +22,7 @@ import { SignalPreview } from "@/components/signal-preview";
 import { BacktestDialog } from "@/components/backtest-dialog";
 
 export const Route = createFileRoute("/_authenticated/strategies/$id")({
-  head: () => ({ meta: [{ title: "Strategy builder — AlgoVirt" }, { name: "description", content: "Edit indicators, entry/exit rules and risk for your strategy." }, { property: "og:title", content: "Strategy builder — AlgoVirt" }, { property: "og:description", content: "Edit indicators, entry/exit rules and risk for your strategy." }] }),
+  head: () => ({ meta: [{ title: "Strategy builder — AlgoVirt" }, { name: "description", content: "Edit indicators, entry/exit rules and risk for your strategy." }, { property: "og:title", content: "Strategy builder — AlgoVirt" }, { property: "og:description", content: "Edit indicators, entry/exit rules and risk for your strategy." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Builder,
 });
 

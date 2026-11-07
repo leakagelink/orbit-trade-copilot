@@ -1,11 +1,11 @@
 # Roadmap
 
 ## Remaining upgrade requested 7 November 2026
-- [ ] Connect advisory research to isolated, user-confirmed paper simulation history; never create orders or change wallet balances
-- [ ] Enforce atomic research-run allowances and display usage
-- [ ] Harden emergency-stop result reporting and expose unresolved recovery items without resubmitting orders
-- [ ] Complete historical cost/integrity checks and preserve fail-closed promotion
-- [ ] Verify new signed-in flows and safety regression tests
+- [x] Connect advisory research to isolated, user-confirmed forward paper history; signed-in BTC confirmation, reload and waiting observation verified; no orders or wallet changes
+- [x] Enforce atomic UTC-month research-run allowances (operational defaults Pro 10 / Elite 30, claimed attempts counted); usage display and deployed schema verified; token billing caps are not implemented
+- [x] Harden emergency-stop result reporting and expose unresolved recovery items without resubmitting orders; verified owner inventory, failure-injection tests and mobile screen; did not close existing positions during testing
+- [x] Add historical fee-manifest, candle chronology/range and timestamp integrity checks; preserve fail-closed promotion
+- [x] Verify signed-in forward-paper save/reload/observation and mobile recovery; 159 tests passed; browser write grants revoked and verified; no live orders executed
 - [ ] Social data, email sender, legal identity and live/provider/operator/MFA testing — require authorized providers, owner details or appropriate accounts; no fabricated setup
 
 ## Approved safety and trading intelligence upgrade
@@ -23,7 +23,7 @@
 - [x] Add owner-private trader, three risk assessments and portfolio synthesis with upstream failure guards
 - [x] Persist advisory historical scenarios with deterministic levels; no sizing or order submission
 - [x] 120 tests pass; signed-in BTC research saved five decision reports and one proposal, persisted on reload/download; desktop/mobile checked with no overflow or page errors
-- [ ] Paper-trading integration and AI quotas — subsequent phase, not connected to proposals yet
+- [x] Isolated user-confirmed forward paper scenarios and atomic research-run allowances; reports never submit orders; no token-denominated billing ceiling
 
 ## AI research — Phase 2
 - [x] Verified Yahoo headline metadata, ticker/date filtering and provenance; missing sources are not fabricated

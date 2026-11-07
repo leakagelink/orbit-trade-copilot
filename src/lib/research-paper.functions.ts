@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { paperResearchInput, paperScenario, observePaperResearch } from "./research-paper";
+import { researchRunLimit } from "./research-allowance";
 
 export const listPaperResearch = createServerFn({ method: "GET" }).middleware([requireSupabaseAuth]).handler(async ({ context }) => {
   const [papers, observations, allowances, runs, elite] = await Promise.all([
@@ -12,7 +13,7 @@ export const listPaperResearch = createServerFn({ method: "GET" }).middleware([r
     context.supabase.rpc("has_elite_access",{_uid:context.userId}),
   ]);
   if (papers.error || observations.error || allowances.error || runs.error || elite.error) throw new Error("Research paper history and usage unavailable");
-  return { papers:papers.data, observations:observations.data, used:allowances.data?.used??runs.count??0, limit:allowances.data?.run_limit??(elite.data?30:10) };
+  return { papers:papers.data, observations:observations.data, used:allowances.data?.used??runs.count??0, limit:allowances.data?.run_limit??researchRunLimit(elite.data===true) };
 });
 
 export const confirmPaperResearch = createServerFn({ method:"POST" }).middleware([requireSupabaseAuth]).inputValidator((i:unknown)=>paperResearchInput.parse(i)).handler(async ({data,context})=>{

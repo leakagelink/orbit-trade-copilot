@@ -17,7 +17,7 @@ const fmtMoney = (v: number) => fmtM(v, "USD");
 
 const D = "Your demo wallet: deposit, withdraw and fund manual trades.";
 export const Route = createFileRoute("/_authenticated/wallet")({
-  head: () => ({ meta: [{ title: "Wallet — AlgoVirt" }, { name: "description", content: D }, { property: "og:title", content: "Wallet — AlgoVirt" }, { property: "og:description", content: D }] }),
+  head: () => ({ meta: [{ title: "Wallet — AlgoVirt" }, { name: "description", content: D }, { property: "og:title", content: "Wallet — AlgoVirt" }, { property: "og:description", content: D }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: WalletPage,
 });
 

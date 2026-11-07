@@ -12,7 +12,7 @@ import { createStrategy } from "@/lib/strategies.api";
 
 const D = "Build, validate, version and clone rule-based trading strategies.";
 export const Route = createFileRoute("/_authenticated/strategies/")({
-  head: () => ({ meta: [{ title: "Strategies — AlgoVirt" }, { name: "description", content: D }, { property: "og:title", content: "Strategies — AlgoVirt" }, { property: "og:description", content: D }] }),
+  head: () => ({ meta: [{ title: "Strategies — AlgoVirt" }, { name: "description", content: D }, { property: "og:title", content: "Strategies — AlgoVirt" }, { property: "og:description", content: D }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Strategies,
 });
 

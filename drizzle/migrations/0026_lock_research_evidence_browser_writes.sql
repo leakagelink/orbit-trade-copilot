@@ -1,0 +1,4 @@
+REVOKE INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER ON public.ai_research_allowances,public.ai_research_paper,public.ai_research_paper_observations,public.trading_safety_events FROM anon,authenticated;
+REVOKE SELECT ON public.ai_research_allowances,public.ai_research_paper,public.ai_research_paper_observations,public.trading_safety_events FROM anon;
+GRANT SELECT ON public.ai_research_allowances,public.ai_research_paper,public.ai_research_paper_observations,public.trading_safety_events TO authenticated;
+GRANT ALL ON public.ai_research_allowances,public.ai_research_paper,public.ai_research_paper_observations,public.trading_safety_events TO service_role;

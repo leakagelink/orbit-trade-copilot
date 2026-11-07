@@ -10,7 +10,7 @@ import { fmtMoney } from "@/lib/metrics";
 
 const D = "Results of your strategy backtests on historical market data.";
 export const Route = createFileRoute("/_authenticated/backtests")({
-  head: () => ({ meta: [{ title: "Backtests — AlgoVirt" }, { name: "description", content: D }, { property: "og:title", content: "Backtests — AlgoVirt" }, { property: "og:description", content: D }] }),
+  head: () => ({ meta: [{ title: "Backtests — AlgoVirt" }, { name: "description", content: D }, { property: "og:title", content: "Backtests — AlgoVirt" }, { property: "og:description", content: D }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   validateSearch: (s: Record<string, unknown>): { id?: string } => (typeof s["id"] === "string" ? { id: s["id"] } : {}),
   component: Backtests,
 });
