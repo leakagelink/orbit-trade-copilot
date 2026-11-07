@@ -104,6 +104,7 @@ export const emergencyStop = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     const { emergencyCloseAll } = await import("./engine.server");
     const r = await emergencyCloseAll(context.userId);
-    await context.supabase.from("audit_logs").insert({ user_id: context.userId, action: "risk.emergency_stop", entity_type: "account", details: r });
-    return r;
+    const {supabaseAdmin:db}=await import("@/integrations/supabase/client.server");
+    const audit=await db.from("trading_safety_events").insert({user_id:context.userId,action:"risk.emergency_stop",details:r});
+    return {...r,auditRecorded:!audit.error};
   });

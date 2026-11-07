@@ -13,10 +13,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fmtMoney } from "@/lib/metrics";
+import { RecoveryInventory } from "@/components/recovery-inventory";
 
 const D = "Account-wide limits that every bot must respect before opening a trade.";
 export const Route = createFileRoute("/_authenticated/risk")({
-  head: () => ({ meta: [{ title: "Risk Management — AlgoVirt" }, { name: "description", content: D }, { property: "og:title", content: "Risk Management — AlgoVirt" }, { property: "og:description", content: D }] }),
+  head: () => ({ meta: [{ title: "Risk Management — AlgoVirt" }, { name: "description", content: D }, { property: "og:title", content: "Risk Management — AlgoVirt" }, { property: "og:description", content: D }, {property:"og:type",content:"website"}, {name:"twitter:card",content:"summary"}] }),
   component: Risk,
 });
 
@@ -28,7 +29,8 @@ function Risk() {
     setBusy(true);
     try {
       const r = await stopAll();
-      if (r.failed.length) toast.error(`Closed ${r.closed}; could not close: ${r.failed.join("; ")}`); else toast.success(`All bots stopped; ${r.closed} position(s) closed`);
+      if (r.failed.length) toast.error(`Account halted; closed ${r.closed}; review: ${r.failed.join("; ")}`); else toast.success(`Account halted; all bots stopped; ${r.closed} position(s) closed`);
+      if (!r.auditRecorded) toast.error("Emergency result could not be saved to safety history. Review positions and orders before resuming.");
     } catch (e) { toast.error(e instanceof Error ? e.message : "Emergency stop failed"); }
     setBusy(false);
     qc.invalidateQueries();
@@ -107,6 +109,7 @@ function Risk() {
           </div>
           <Button disabled={busy}>Save limits</Button>
         </form>
+        <RecoveryInventory />
       </div>
     </div>
   );

@@ -1,0 +1,11 @@
+import {expect,it,vi} from "vitest";
+import {performEmergencyRecovery,type EmergencyOperations} from "../lib/emergency-recovery";
+const fail=async()=>{throw new Error("offline");};
+const operations=():EmergencyOperations=>({halt:async()=>{},stopBots:async()=>{},listOpen:async()=>[{id:"one",pair:"BTC/USD"}],close:async()=>{},isOpen:async()=>false,unresolved:async()=>0});
+it("does not proceed when halt persistence fails",async()=>{const stopBots=vi.fn();await expect(performEmergencyRecovery({...operations(),halt:fail,stopBots})).rejects.toThrow();expect(stopBots).not.toHaveBeenCalled();});
+it("reports bot stop failures as partial",async()=>{expect((await performEmergencyRecovery({...operations(),stopBots:fail})).status).toBe("partial");});
+it("does not treat failed position inventory as empty success",async()=>{expect((await performEmergencyRecovery({...operations(),listOpen:fail})).status).toBe("partial");});
+it("only counts closures verified by read back",async()=>{const r=await performEmergencyRecovery({...operations(),isOpen:async()=>true});expect(r.closed).toBe(0);expect(r.failed.length).toBe(1);});
+it("does not count a failed read back as a closed position",async()=>{expect((await performEmergencyRecovery({...operations(),isOpen:fail})).closed).toBe(0);});
+it("continues remaining exits after a single failure",async()=>{const r=await performEmergencyRecovery({...operations(),listOpen:async()=>[{id:"one",pair:"BTC"},{id:"two",pair:"ETH"}],close:async id=>{if(id==="one")throw new Error("unknown");}});expect(r.closed).toBe(1);expect(r.status).toBe("partial");});
+it("keeps unresolved intents visible despite closed positions",async()=>{const r=await performEmergencyRecovery({...operations(),unresolved:async()=>2});expect(r.status).toBe("partial");expect(r.remainingOrders).toBe(2);});

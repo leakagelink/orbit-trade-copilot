@@ -1,5 +1,13 @@
 # Roadmap
 
+## Remaining upgrade requested 7 November 2026
+- [ ] Connect advisory research to isolated, user-confirmed paper simulation history; never create orders or change wallet balances
+- [ ] Enforce atomic research-run allowances and display usage
+- [ ] Harden emergency-stop result reporting and expose unresolved recovery items without resubmitting orders
+- [ ] Complete historical cost/integrity checks and preserve fail-closed promotion
+- [ ] Verify new signed-in flows and safety regression tests
+- [ ] Social data, email sender, legal identity and live/provider/operator/MFA testing — require authorized providers, owner details or appropriate accounts; no fabricated setup
+
 ## Approved safety and trading intelligence upgrade
 - [x] Server-only bot mutations and connection verification; owner-bound engine reads; signed-in draft create/reload/delete verified
 - [x] Fail-closed risk reads, open-loss limits, ambiguous-order locks and paused-bot exit management; 136 tests pass

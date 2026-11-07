@@ -1,0 +1,14 @@
+import { expect, it } from "vitest";
+import { paperResearchInput, observePaperResearch } from "../lib/research-paper";
+const proposal={advisoryOnly:true,executionAllowed:false,status:"scenario",direction:"long",referenceClose:100,asOf:new Date(0).toISOString(),hypotheticalEntry:100,stopLoss:90,takeProfit:120,rewardRisk:2,positionSize:null,confidence:null,reasons:[],limitations:[]};
+const input={proposal,confirmedAt:1000,quantity:2,feePct:0.1,slippagePct:0.05};
+const day=86400000;
+it("requires explicit paper confirmation",()=>{expect(paperResearchInput.safeParse({proposalId:"a513f9ed-1fe3-49c0-9f69-7815e7bc2a37",confirm:"LIVE",quantity:1,feePct:0.1,slippagePct:0.05}).success).toBe(false);});
+it("rejects any live account or execution parameters",()=>{expect(paperResearchInput.safeParse({proposalId:"a513f9ed-1fe3-49c0-9f69-7815e7bc2a37",confirm:"PAPER",quantity:1,feePct:0.1,slippagePct:0.05,connectionId:"live",mode:"live"}).success).toBe(false);});
+it("never fills historical or incomplete bars",()=>{expect(observePaperResearch(input,[{t:0,o:100,h:130,l:80,c:110,v:1},{t:day,o:100,h:110,l:95,c:105,v:1}],day+1).status).toBe("waiting");});
+it("requires an available advisory scenario",()=>{expect(()=>observePaperResearch({...input,proposal:{...proposal,status:"withheld"}},[],day*3)).toThrow();});
+it("uses next completed open and subtracts both fees without double-counting slippage",()=>{const r=observePaperResearch(input,[{t:day,o:100,h:110,l:95,c:105,v:1}],day*3);expect(r.entry).toBeCloseTo(100.05);expect(r.netPnl).toBeCloseTo((104.9475-100.05)*2-(104.9475+100.05)*2*0.001);expect(r.status).toBe("open");});
+it("fills a gapped stop at worse opening price",()=>{const r=observePaperResearch(input,[{t:day,o:100,h:105,l:95,c:100,v:1},{t:day*2,o:80,h:85,l:70,c:75,v:1}],day*4);expect(r.exit).toBeCloseTo(79.96);expect(r.reason).toBe("stop_loss");});
+it("uses stop before target when intrabar order is unknown",()=>{expect(observePaperResearch(input,[{t:day,o:100,h:130,l:80,c:100,v:1}],day*3).reason).toBe("stop_loss");});
+it("rejects invalid provider candles",()=>{expect(()=>observePaperResearch(input,[{t:day,o:100,h:80,l:90,c:100,v:1}],day*3)).toThrow();});
+it("handles user-sized short simulations without enabling execution",()=>{const r=observePaperResearch({...input,proposal:{...proposal,direction:"short",stopLoss:110,takeProfit:80}},[{t:day,o:100,h:105,l:90,c:95,v:1}],day*3);expect(r.netPnl).toBeGreaterThan(0);expect(r.entry).toBeCloseTo(99.95);});

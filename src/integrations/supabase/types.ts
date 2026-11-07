@@ -52,6 +52,27 @@ export type Database = {
           },
         ]
       }
+      ai_research_allowances: {
+        Row: {
+          period: string
+          run_limit: number
+          used: number
+          user_id: string
+        }
+        Insert: {
+          period: string
+          run_limit?: number
+          used?: number
+          user_id: string
+        }
+        Update: {
+          period?: string
+          run_limit?: number
+          used?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       ai_research_decisions: {
         Row: {
           agent: string
@@ -87,6 +108,98 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "ai_research_runs"
             referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
+      ai_research_paper: {
+        Row: {
+          confirmed_at: string
+          fee_pct: number
+          id: string
+          mode: string
+          proposal: Json
+          proposal_id: string
+          quantity: number
+          run_id: string
+          slippage_pct: number
+          symbol: string
+          user_id: string
+        }
+        Insert: {
+          confirmed_at?: string
+          fee_pct: number
+          id?: string
+          mode?: string
+          proposal: Json
+          proposal_id: string
+          quantity: number
+          run_id: string
+          slippage_pct: number
+          symbol: string
+          user_id: string
+        }
+        Update: {
+          confirmed_at?: string
+          fee_pct?: number
+          id?: string
+          mode?: string
+          proposal?: Json
+          proposal_id?: string
+          quantity?: number
+          run_id?: string
+          slippage_pct?: number
+          symbol?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_research_paper_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: true
+            referencedRelation: "ai_trade_proposals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_research_paper_run_id_user_id_fkey"
+            columns: ["run_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "ai_research_runs"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
+      ai_research_paper_observations: {
+        Row: {
+          evidence: Json
+          id: string
+          observed_at: string
+          paper_id: string
+          result: Json
+          user_id: string
+        }
+        Insert: {
+          evidence: Json
+          id?: string
+          observed_at?: string
+          paper_id: string
+          result: Json
+          user_id: string
+        }
+        Update: {
+          evidence?: Json
+          id?: string
+          observed_at?: string
+          paper_id?: string
+          result?: Json
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_research_paper_observations_paper_id_fkey"
+            columns: ["paper_id"]
+            isOneToOne: false
+            referencedRelation: "ai_research_paper"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1740,6 +1853,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      trading_safety_events: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json
+          id: string
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details: Json
+          id?: string
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {

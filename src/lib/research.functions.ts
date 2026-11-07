@@ -16,7 +16,7 @@ export const startResearchRun = createServerFn({ method: "POST" }).middleware([r
     await requirePro(context.supabase, context.userId);
     const { supabaseAdmin: db } = await import("@/integrations/supabase/client.server");
     const claim = await db.rpc("claim_ai_research", { _id: data.requestId, _user_id: context.userId, _symbol: data.symbol });
-    if (claim.error) throw new Error("Another research run may be in progress; check history before starting again");
+    if (claim.error) throw new Error(claim.error.message.includes("allowance") ? "Monthly research allowance reached. Check usage; new capacity is available next UTC month." : "Research could not start. A prior run may be unresolved; check history before trying again.");
     if (!claim.data) return { runId: data.requestId };
     const { loadResearchData, runAnalyst } = await import("./research.server");
     try {

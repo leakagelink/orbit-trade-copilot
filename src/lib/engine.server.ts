@@ -2,6 +2,7 @@
 import { computeAll, evalRules } from "./indicators";
 import { fetchCandles, floorToStep, getStepSize, placeMarketOrder, timeframeMs, type Creds } from "./exchange-adapters.server";
 import { validateStrategy, type StrategyConfig } from "./strategy";
+import { performEmergencyRecovery } from "./emergency-recovery";
 
 const FEE = 0.001; // 0.1% simulated taker fee (paper)
 const SLIP = 0.0005; // 0.05% simulated slippage (paper)
@@ -206,31 +207,16 @@ async function closePosition(db: Admin, bot: Row, venue: Venue, p: Row, price: n
 /** Emergency stop: halt the account, stop every bot and close every open position now. */
 export async function emergencyCloseAll(userId: string) {
   const { supabaseAdmin: db } = await import("@/integrations/supabase/client.server");
-  await db.from("risk_settings").upsert({ user_id: userId, trading_halted: true, updated_at: new Date().toISOString() });
-  await db.from("trading_bots").update({ status: "stopped", status_reason: "Emergency stop" }).eq("user_id", userId).in("status", ["paper_trading", "running", "paused", "error"]);
-  const { data: open } = await db.from("positions").select("*, trading_bots(*)").eq("user_id", userId).eq("is_open", true);
-  let closed = 0; const failed: string[] = [];
-  for (const p of open ?? []) {
-    const bot = p.trading_bots;
-    if (!bot) {
-      try { const { closeManual } = await import("./manual.server"); await closeManual(db, p, "emergency_stop"); closed++; }
-      catch (e) { failed.push(`${p.trading_pair}: ${e instanceof Error ? e.message : e}`); }
-      continue;
-    }
-    try {
-      const venue = await venueFor(db, bot);
-      if (typeof venue === "string") throw new Error(venue);
-      const cs = await fetchCandles(bot.exchange, bot.trading_pair, "1m", venue.testnet, 2);
-      const latest = cs.at(-1);
-      if (!latest) throw new Error("Market price unavailable");
-      await closePosition(db, bot, venue, p, latest.c, "emergency_stop");
-      const { data: still } = await db.from("positions").select("is_open").eq("id", p.id).single();
-      if (still?.is_open) failed.push(bot.trading_pair); else closed++;
-    } catch (e) {
-      failed.push(`${bot.trading_pair}: ${e instanceof Error ? e.message : e}`);
-    }
-  }
-  return { closed, failed };
+  let open: NonNullable<Awaited<ReturnType<typeof loadOpen>>> = [];
+  async function loadOpen(){const r=await db.from("positions").select("*, trading_bots(*)").eq("user_id",userId).eq("is_open",true);if(r.error||!r.data)throw new Error("Position inventory unavailable");return r.data;}
+  return performEmergencyRecovery({
+    halt:async()=>{const r=await db.from("risk_settings").upsert({user_id:userId,trading_halted:true,updated_at:new Date().toISOString()});if(r.error)throw new Error("Emergency halt could not be saved; no closure was started");},
+    stopBots:async()=>{const r=await db.from("trading_bots").update({status:"stopped",status_reason:"Emergency stop"}).eq("user_id",userId).in("status",["paper_trading","running","paused","error"]);if(r.error)throw new Error("Bot stop unavailable");},
+    listOpen:async()=>{open=await loadOpen();return open.map(p=>({id:p.id,pair:p.trading_pair}));},
+    close:async(id)=>{const p=open.find(p=>p.id===id);if(!p)throw new Error("Position missing");const bot=p.trading_bots;if(!bot){const {closeManual}=await import("./manual.server");await closeManual(db,p,"emergency_stop");return;}const venue=await venueFor(db,bot);if(typeof venue==="string")throw new Error(venue);const cs=await fetchCandles(bot.exchange,bot.trading_pair,"1m",venue.testnet,2);const latest=cs.at(-1);if(!latest||!Number.isFinite(latest.c)||latest.c<=0)throw new Error("Market price unavailable");await closePosition(db,bot,venue,p,latest.c,"emergency_stop");},
+    isOpen:async(id)=>{const r=await db.from("positions").select("is_open").eq("id",id).eq("user_id",userId).single();if(r.error||!r.data)throw new Error("Closure read-back unavailable");return r.data.is_open;},
+    unresolved:async()=>{const r=await db.from("orders").select("id",{count:"exact",head:true}).eq("user_id",userId).in("status",["pending","open","partially_filled"]);if(r.error||r.count===null)throw new Error("Order inventory unavailable");return r.count;},
+  });
 }
 
 /** Account-wide limits from risk_settings. Returns a reason when a new entry must be blocked. */
