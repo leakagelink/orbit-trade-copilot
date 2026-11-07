@@ -71,26 +71,13 @@ export const startPaperBot = createServerFn({ method: "POST" })
 export const enableLiveTrading = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid(), confirm: z.literal("LIVE") }).parse(input))
-  .handler(async ({ data, context }) => {
+  .handler(async ({ data, context }): Promise<{ok:true;testnet:boolean}> => {
     const { requirePro } = await import("./plan.server");
     await requirePro(context.supabase, context.userId);
     const { data: bot } = await context.supabase.from("trading_bots").select("id,exchange,exchange_connection_id,strategies(config)").eq("id", data.id).maybeSingle();
     if (!bot) throw new Error("Bot not found");
-    if (!["binance", "bybit", "okx", "kucoin"].includes(bot.exchange)) throw new Error("Live trading is not supported on this exchange yet");
-    if (!bot.exchange_connection_id) throw new Error("Attach a trading account to this bot first");
-    const { data: conn } = await context.supabase.from("exchange_connections").select("status,exchange,is_testnet").eq("id", bot.exchange_connection_id).eq("user_id",context.userId).maybeSingle();
-    if (!conn || conn.status !== "connected" || conn.exchange !== bot.exchange) throw new Error("Verify a matching owned trading account on the Exchanges page first");
-    const cfg = (bot.strategies as { config: unknown } | null)?.config as StrategyConfig | undefined;
-    if (!cfg || validateStrategy(cfg).length) throw new Error("Fix the strategy's validation issues first");
-    const { data: risk, error: riskError } = await context.supabase.from("risk_settings").select("trading_halted").eq("user_id", context.userId).maybeSingle();
-    if (riskError || !risk) throw new Error("Save account risk settings before enabling live trading");
-    if (risk.trading_halted) throw new Error("Trading is halted — resume it on the Risk page first");
-    const { supabaseAdmin: db } = await import("@/integrations/supabase/client.server");
-    const { error } = await db.from("trading_bots").update({ mode: "live", status: "running", status_reason: null }).eq("id", data.id).eq("user_id",context.userId);
-    if (error) throw new Error(error.message);
-    await context.supabase.from("bot_logs").insert({ bot_id: data.id, user_id: context.userId, level: "warn", message: `LIVE trading enabled${conn.is_testnet ? " (testnet)" : ""} — real orders will be placed` });
-    await context.supabase.from("audit_logs").insert({ user_id: context.userId, action: "bot.live_enabled", entity_type: "trading_bot", entity_id: data.id, details: { testnet: conn.is_testnet } });
-    return { ok: true, testnet: conn.is_testnet };
+    // Promotion is fail-closed until the independently evaluated policy is configured.
+    throw new Error("New live activation is paused until independent holdout, paper-trading and risk-review promotion requirements are configured. Existing position recovery remains available.");
   });
 
 // Moves a bot back to paper mode (stopped). Open live positions keep being managed until closed.

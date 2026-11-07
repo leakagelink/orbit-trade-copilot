@@ -12,8 +12,8 @@ export const evaluateBacktest=createServerFn({method:"POST"}).middleware([requir
   const {requirePro}=await import("./plan.server");await requirePro(context.supabase,context.userId);
   const bt=await context.supabase.from("backtests").select("id,strategy_id,backtest_results(trade_log)").eq("id",data.id).eq("user_id",context.userId).eq("status","completed").maybeSingle();
   if(bt.error||!bt.data)throw new Error("Completed owned backtest required");
-  const evidence=bt.data.backtest_results[0]?.trade_log;const parsed=evaluationEvidence.safeParse(evidence);let hashMatches=false;
-  if(parsed.success)hashMatches=await evidenceHash(parsed.data.manifest)===parsed.data.evidenceHash;
+  const evidence=bt.data.backtest_results?.trade_log;const parsed=evaluationEvidence.safeParse(evidence);let hashMatches=false;
+  if(parsed.success)hashMatches=await evidenceHash({manifest:parsed.data.manifest,trades:parsed.data.trades,equity:parsed.data.equity})===parsed.data.evidenceHash;
   const report=evaluateHistoricalEvidence(evidence,hashMatches);
   const {supabaseAdmin:db}=await import("@/integrations/supabase/client.server");
   const saved=await db.from("strategy_evaluations").insert({user_id:context.userId,strategy_id:bt.data.strategy_id,backtest_id:data.id,mode:"backtest",status:report.status,model_version:report.modelVersion,evidence_hash:parsed.success?parsed.data.evidenceHash:null,report});

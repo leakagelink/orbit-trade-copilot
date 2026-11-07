@@ -44,12 +44,12 @@ export const runBacktestFn = createServerFn({ method: "POST" })
       const first = cs[0];
       if (!first) throw new Error("No historical candles available");
       const manifest = { simulatorVersion:"next-bar-v2",config:cfg,exchange:data.exchange,feePct:data.feePct,slippagePct:data.slippagePct,tfMs,start,end,candles:cs };
-      const evidenceHash = await hashEvidence(manifest);
+      const evidenceHash = await hashEvidence({manifest,trades:r.trades,equity:r.equity});
       const { sharpe, ...st } = r.stats;
       const resultWrite = await supabaseAdmin.from("backtest_results").insert({
         backtest_id: bt.id, user_id: context.userId, ...st,
         equity_curve: r.equity as never,
-        trade_log: { sharpe, candles: cs.length, exchange: data.exchange, first: first.t, trades: r.trades, manifest, evidenceHash, costAssumptions:data.feePct===0||data.slippagePct===0?"Zero-cost assumptions: not promotion evidence":"User-supplied simulation costs; not verified venue costs" } as never,
+        trade_log: { sharpe, candles: cs.length, exchange: data.exchange, first: first.t, trades: r.trades, equity:r.equity, manifest, evidenceHash, costAssumptions:data.feePct===0||data.slippagePct===0?"Zero-cost assumptions: not promotion evidence":"User-supplied simulation costs; not verified venue costs" } as never,
       });
       if (resultWrite.error) throw new Error("Complete backtest evidence could not be stored");
       await supabaseAdmin.from("backtests").update({ status: "completed", completed_at: new Date().toISOString(), start_date: new Date(first.t).toISOString() }).eq("id", bt.id);

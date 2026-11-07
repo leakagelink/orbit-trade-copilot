@@ -4,6 +4,7 @@ export const evaluationEvidence = z.object({
   trades:z.array(z.object({entryT:z.number(),exitT:z.number(),entry:z.number().positive(),exit:z.number().positive(),qty:z.number().positive(),pnl:z.number(),fees:z.number().nonnegative(),reason:z.string()})),
   manifest:z.object({simulatorVersion:z.literal("next-bar-v2"),feePct:z.number(),slippagePct:z.number(),candles:z.array(z.object({t:z.number(),o:z.number(),h:z.number(),l:z.number(),c:z.number(),v:z.number()}))}).passthrough(),
   evidenceHash:z.string().regex(/^[a-f0-9]{64}$/),
+  equity:z.array(z.object({t:z.number(),v:z.number()})),
 }).passthrough();
 
 /** Independent observed facts only. No inferred predictive accuracy or unapproved utility anchors. */
