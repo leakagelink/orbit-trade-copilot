@@ -1,8 +1,8 @@
 # Roadmap
 
 ## Remaining work requested 7 November 2026, Claude selected
-- [ ] Switch assistant, trade ideas, research and arbitrage review to the owner's Claude account; requires secure provider connection and successful real report/stream verification
-- [ ] Improve historical scoring input safety and evidence sufficiency reporting without inventing certification or enabling live bots
+- [ ] Switch assistant, trade ideas, research and arbitrage review to the owner's Claude account — secure connection card was declined; no credential supplied, no provider switched; requires approved connection and real report/stream verification
+- [x] Improve historical scoring input safety and evidence sufficiency reporting without inventing certification or enabling live bots; retain policy snapshot in new reports, observe drawdown without utility policy, withhold overflow/nonfinite scores; 210 tests pass and signed-in evaluation save/reload plus mobile verified
 - [ ] Complete operator/provider/payment/independent-validation tasks listed below when required accounts, evidence and owner details are available
 
 ## Native master-prompt completion requested 7 November 2026

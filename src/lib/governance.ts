@@ -17,7 +17,7 @@ export function observedDrawdown(equity:{t:number;v:number}[],capital:number){
   let peak=capital,drawdown=0,previous=-Infinity;
   for(const point of equity){
     if(!Number.isFinite(point.t)||point.t<=previous||!Number.isFinite(point.v)||point.v<0)return null;
-    previous=point.t;peak=Math.max(peak,point.v);drawdown=Math.max(drawdown,100*(1-point.v/peak));
+    previous=point.t;peak=Math.max(peak,point.v);drawdown=Math.max(drawdown,((peak-point.v)/peak)*100);
   }
   return drawdown;
 }
