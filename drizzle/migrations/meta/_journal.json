@@ -225,6 +225,13 @@
       "when": 1794050189294,
       "tag": "0031_research_stage_monitoring",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1794051745498,
+      "tag": "0032_ai_sessions_kind",
+      "breakpoints": true
     }
   ]
 }
