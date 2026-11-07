@@ -11,16 +11,29 @@ export const scoringPolicy = z.object({
 export type ScoringPolicy = z.infer<typeof scoringPolicy>;
 const clamp=(v:number)=>Math.max(0,Math.min(100,v));
 
+/** Observed history only; independent of any scoring policy or sample floor. */
+export function observedDrawdown(equity:{t:number;v:number}[],capital:number){
+  if(!Number.isFinite(capital)||capital<=0||equity.length<2)return null;
+  let peak=capital,drawdown=0,previous=-Infinity;
+  for(const point of equity){
+    if(!Number.isFinite(point.t)||point.t<=previous||!Number.isFinite(point.v)||point.v<0)return null;
+    previous=point.t;peak=Math.max(peak,point.v);drawdown=Math.max(drawdown,100*(1-point.v/peak));
+  }
+  return drawdown;
+}
+
 /** Experimental historical utilities, not live qualification. Normal interval assumes independent trades. */
 export function historicalUtilities(net:number[],equity:{t:number;v:number}[],capital:number,days:number,policy:ScoringPolicy){
-  const insufficient=net.length<policy.minimumTrades||days<policy.minimumDays||equity.length<2||!Number.isFinite(capital)||capital<=0||net.some(x=>!Number.isFinite(x));
+  const validPolicy=scoringPolicy.safeParse(policy).success;
+  const drawdown=observedDrawdown(equity,capital);
+  const insufficient=!validPolicy||!Number.isFinite(days)||net.length<policy.minimumTrades||days<policy.minimumDays||drawdown===null||net.some(x=>!Number.isFinite(x));
   if(insufficient)return {performance:null,risk:null,expectancyInterval:null,drawdownPct:null};
   const mean=net.reduce((a,b)=>a+b,0)/net.length;
   const variance=net.reduce((a,b)=>a+(b-mean)**2,0)/(net.length-1);
   const margin=1.96*Math.sqrt(variance/net.length);
-  let peak=capital,drawdown=0;
-  for(const p of equity){if(!Number.isFinite(p.v)||p.v<0)return {performance:null,risk:null,expectancyInterval:null,drawdownPct:null};peak=Math.max(peak,p.v);drawdown=Math.max(drawdown,100*(peak-p.v)/peak);}
-  const utility=(x:number)=>clamp(100*x/capital*100/policy.expectancyTargetPct);
+  if(![mean,variance,margin,mean-margin,mean+margin].every(Number.isFinite))return {performance:null,risk:null,expectancyInterval:null,drawdownPct:null};
+  const utility=(x:number)=>clamp((x/capital)/policy.expectancyTargetPct*10000);
+  if(![mean,mean-margin,mean+margin].every(x=>Number.isFinite((x/capital)/policy.expectancyTargetPct*10000)))return {performance:null,risk:null,expectancyInterval:null,drawdownPct:null};
   return {performance:utility(mean),risk:clamp(100*(1-drawdown/policy.maximumDrawdownPct)),expectancyInterval:[utility(mean-margin),utility(mean+margin)],drawdownPct:drawdown};
 }
 

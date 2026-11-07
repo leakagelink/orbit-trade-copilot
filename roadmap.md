@@ -1,5 +1,10 @@
 # Roadmap
 
+## Remaining work requested 7 November 2026, Claude selected
+- [ ] Switch assistant, trade ideas, research and arbitrage review to the owner's Claude account; requires secure provider connection and successful real report/stream verification
+- [ ] Improve historical scoring input safety and evidence sufficiency reporting without inventing certification or enabling live bots
+- [ ] Complete operator/provider/payment/independent-validation tasks listed below when required accounts, evidence and owner details are available
+
 ## Native master-prompt completion requested 7 November 2026
 - [x] Versioned admin-authored historical performance/risk utilities and approximate confidence intervals; no configured policy means no scores, and incomplete evidence never produces composite/live approval
 - [x] Owner-private integrity cases, immutable appeal/review history and atomic entry quarantine; exits remain available; administrator case/policy workflows need independent operator session for end-to-end verification

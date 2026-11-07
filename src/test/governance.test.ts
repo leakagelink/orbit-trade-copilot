@@ -1,5 +1,5 @@
 import {expect,it} from "vitest";
-import {allocationGuard,historicalUtilities,promotionChecklist,scoringPolicy,initialWeights} from "../lib/governance";
+import {allocationGuard,historicalUtilities,observedDrawdown,promotionChecklist,scoringPolicy,initialWeights} from "../lib/governance";
 const policy=scoringPolicy.parse({version:"test-v1",minimumTrades:30,minimumDays:30,expectancyTargetPct:1,maximumDrawdownPct:20,weights:initialWeights});
 it("keeps the master prompt's seven weights at 100",()=>{expect(policy.weights).toEqual({performance:20,risk:20,robustness:15,execution:15,prediction:10,regime:10,integrity:10});});
 it("rejects weights that do not total 100",()=>{expect(scoringPolicy.safeParse({...policy,weights:{...initialWeights,risk:21}}).success).toBe(false);});
@@ -12,3 +12,8 @@ it.each(["scored","holdout","paper","costs","independentReview"])("missing %s ev
 it("does not invent allocations for unqualified strategies",()=>{expect(allocationGuard(1000,100,2000,0)).toEqual({status:"insufficient_evidence",deployable:0,reserve:1000});});
 it("bounds proposed deployment by actual account exposure headroom",()=>{expect(allocationGuard(1000,900,1200,1)).toEqual({status:"review_required",deployable:300,reserve:700});expect(allocationGuard(1000,1300,1200,1).deployable).toBe(0);});
 it("missing account limits prevent recommendations",()=>{expect(allocationGuard(1000,0,null,1).status).toBe("unavailable");});
+it.each([NaN,Infinity,-Infinity])("nonfinite duration %s cannot yield a historical score",days=>{expect(historicalUtilities(Array(30).fill(5),[{t:1,v:1000},{t:2,v:900}],1000,days,policy).performance).toBeNull();});
+it("arithmetic overflow cannot become a perfect score",()=>{expect(historicalUtilities(Array(30).fill(Number.MAX_VALUE),[{t:1,v:1000},{t:2,v:900}],1000,30,policy).performance).toBeNull();});
+it("invalid policy cannot authorize utilities",()=>{expect(historicalUtilities(Array(30).fill(5),[{t:1,v:1000},{t:2,v:900}],1000,30,{...policy,expectancyTargetPct:0}).performance).toBeNull();});
+it("observes 10 percent drawdown without a scoring policy",()=>{expect(observedDrawdown([{t:1,v:1000},{t:2,v:900}],1000)).toBeCloseTo(10);});
+it("nonchronological equity is unavailable",()=>{expect(observedDrawdown([{t:2,v:1000},{t:1,v:900}],1000)).toBeNull();});
