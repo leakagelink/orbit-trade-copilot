@@ -1,19 +1,25 @@
 # Roadmap
 
+## AI research — Phase 3
+- [x] Add owner-private trader, three risk assessments and portfolio synthesis with upstream failure guards
+- [x] Persist advisory historical scenarios with deterministic levels; no sizing or order submission
+- [x] 120 tests pass; signed-in BTC research saved five decision reports and one proposal, persisted on reload/download; desktop/mobile checked with no overflow or page errors
+- [ ] Paper-trading integration and AI quotas — subsequent phase, not connected to proposals yet
+
 ## AI research — Phase 2
 - [x] Verified Yahoo headline metadata, ticker/date filtering and provenance; missing sources are not fabricated
 - [x] News analyst, Bull–Bear debate and research-manager synthesis with dependency failure guards
 - [x] Private report storage, source links and structured JSON report download
 - [x] 109 safety/regression tests pass; build OK
 - [ ] Social sentiment inference — needs authorized social-data access; public feeds returned 403, so reports explicitly say unavailable
-- [ ] Signed-in inference, report reload/download and desktop/mobile verification — requesting user has no matching app account; sign in in the preview
+- [x] Signed-in inference, report reload/download and desktop/mobile verification completed with a real BTC research run
 
 ## AI research — Phase 1
 - [x] Owner-private research runs, analyst reports and usage records
 - [x] Advisory Market and Fundamentals pipeline with real server-fetched data; missing financial statements remain unavailable
 - [x] Minimal research screen, history and failure recovery
 - [x] 100 tests passed, build OK, signed-out research redirects to sign-in without runtime errors
-- [ ] Signed-in report persistence and desktop/mobile research rendering — requesting user has no matching app account; sign in in the preview to verify
+- [x] Signed-in report persistence and desktop/mobile research rendering verified
 
 ## Promotions
 - [x] All plans free for every signed-in user until 4 Nov 2026 (end of day, India time)

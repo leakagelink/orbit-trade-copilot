@@ -27,7 +27,14 @@ export async function loadResearchData(symbol: string) {
   return { snapshot: researchSnapshot(candles), fundamentals, news, sentiment };
 }
 export async function runAnalyst(agent: ResearchAgent, symbol: string, evidence: unknown) {
-  const role = agent === "bull" ? "Present the strongest evidence-backed bullish case and acknowledge the bearish counterarguments. Do not force a bullish outlook when evidence is weak." : agent === "bear" ? "Present the strongest evidence-backed bearish case and acknowledge the bullish counterarguments. Do not force a bearish outlook when evidence is weak." : agent === "manager" ? "Weigh both debate reports, highlight agreements and disagreements, and synthesize a balanced research outlook. Carry forward all missing-data limitations." : agent === "news" ? "Analyze only supplied headline metadata and publication times. Do not claim full articles were read or that headlines measure crowd sentiment." : "Analyze only the evidence for your specialty.";
+  const decisionRoles: Partial<Record<ResearchAgent, string>> = {
+    trader: "Evaluate the manager's thesis and directional outlook against original historical evidence. Explain invalidation conditions, not executable trades. Missing live prices or account holdings prohibit execution, not historical discussion.",
+    risk_aggressive: "Assess opportunity and downside from a growth-oriented perspective without relaxing safety rules. Distinguish plausible upside from guaranteed returns.",
+    risk_conservative: "Challenge the trader's thesis, missing evidence, volatility and downside. Use neutral or insufficient_data when the directional thesis is not supported. Never approve account-specific risk without holdings.",
+    risk_neutral: "Balance opportunity and downside independently; assess conflicting evidence, source age and missing data.",
+    portfolio: "Synthesize trader and all three risk assessments. Your outlook is research consensus only, never trade authorization. Account holdings, live quotes, suitability and calibrated confidence are unavailable; acknowledge these limitations.",
+  };
+  const role = decisionRoles[agent] ?? (agent === "bull" ? "Present the strongest evidence-backed bullish case and acknowledge the bearish counterarguments. Do not force a bullish outlook when evidence is weak." : agent === "bear" ? "Present the strongest evidence-backed bearish case and acknowledge the bullish counterarguments. Do not force a bearish outlook when evidence is weak." : agent === "manager" ? "Weigh both debate reports, highlight agreements and disagreements, and synthesize a balanced research outlook. Carry forward all missing-data limitations." : agent === "news" ? "Analyze only supplied headline metadata and publication times. Do not claim full articles were read or that headlines measure crowd sentiment." : "Analyze only the evidence for your specialty.");
   const response = await generateResponse({
     model: "openai/gpt-6-astra",
     reasoning: { effort: "low" },

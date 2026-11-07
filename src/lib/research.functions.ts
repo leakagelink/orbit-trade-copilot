@@ -1,10 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { researchInput } from "./research";
-import { runResearchStages } from "./research-pipeline";
+import { runResearchStages, runDecisionStages, type ResearchAgent, type AgentResult } from "./research-pipeline";
+import { buildResearchProposal } from "./research-proposal";
 
 export const listResearch = createServerFn({ method: "GET" }).middleware([requireSupabaseAuth]).handler(async ({ context }) => {
-  const { data, error } = await context.supabase.from("ai_research_runs").select("*,ai_agent_outputs(*),ai_research_reports(*)").eq("user_id",context.userId).order("created_at", { ascending: false }).limit(30);
+  const { data, error } = await context.supabase.from("ai_research_runs").select("*,ai_agent_outputs(*),ai_research_reports(*),ai_research_decisions(*),ai_trade_proposals(*)").eq("user_id",context.userId).order("created_at", { ascending: false }).limit(30);
   if (error) throw new Error("Research history is unavailable");
   return data;
 });
@@ -20,23 +21,30 @@ export const startResearchRun = createServerFn({ method: "POST" }).middleware([r
     const { loadResearchData, runAnalyst } = await import("./research.server");
     try {
       const evidence = await loadResearchData(data.symbol);
-      const snapshotWrite = await db.from("ai_research_runs").update({ snapshot: evidence.snapshot, research_evidence: { version: 2, news: evidence.news, sentiment: evidence.sentiment } }).eq("id",data.requestId).eq("user_id",context.userId);
+      const snapshotWrite = await db.from("ai_research_runs").update({ snapshot: evidence.snapshot, research_evidence: { version: 3, news: evidence.news, sentiment: evidence.sentiment } }).eq("id",data.requestId).eq("user_id",context.userId);
       if (snapshotWrite.error) throw snapshotWrite.error;
-      const { status } = await runResearchStages({
-        market: { evidence: evidence.snapshot },
-        fundamentals: { evidence: evidence.fundamentals, missing: evidence.fundamentals.facts.length ? undefined : evidence.fundamentals.limitation },
-        news: { evidence: evidence.news, missing: evidence.news.articles.length ? undefined : evidence.news.limitation },
-        sentiment: { evidence: evidence.sentiment, missing: evidence.sentiment.limitation },
-      }, async (agent,input) => {
+      const analyze = async (agent: ResearchAgent,input: unknown) => {
         const result = await runAnalyst(agent,data.symbol,input);
         const usage = await db.from("ai_research_usage").insert({ run_id: data.requestId, user_id: context.userId, agent, model: "openai/gpt-6-astra", input_tokens: result.inputTokens, output_tokens: result.outputTokens });
         if (usage.error) throw usage.error;
         return result.report;
-      }, async ({ agent,status,report }) => {
+      };
+      const save = async ({ agent,status,report }: AgentResult) => {
         const row = { run_id: data.requestId,user_id: context.userId,agent,status,report };
-        const saved = agent === "market" || agent === "fundamentals" ? await db.from("ai_agent_outputs").insert(row) : await db.from("ai_research_reports").insert(row);
+        const saved = agent === "market" || agent === "fundamentals" ? await db.from("ai_agent_outputs").insert(row) : ["trader","risk_aggressive","risk_conservative","risk_neutral","portfolio"].includes(agent) ? await db.from("ai_research_decisions").insert(row) : await db.from("ai_research_reports").insert(row);
         if (saved.error) throw saved.error;
-      });
+      };
+      const first = await runResearchStages({
+        market: { evidence: evidence.snapshot },
+        fundamentals: { evidence: evidence.fundamentals, missing: evidence.fundamentals.facts.length ? undefined : evidence.fundamentals.limitation },
+        news: { evidence: evidence.news, missing: evidence.news.articles.length ? undefined : evidence.news.limitation },
+        sentiment: { evidence: evidence.sentiment, missing: evidence.sentiment.limitation },
+      }, analyze, save);
+      const results = await runDecisionStages(first.results, evidence.snapshot, analyze, save);
+      const proposal = buildResearchProposal(evidence.snapshot, results);
+      const proposalWrite = await db.from("ai_trade_proposals").insert({ run_id: data.requestId, user_id: context.userId, proposal });
+      if (proposalWrite.error) throw proposalWrite.error;
+      const status = results.every(r => r.status === "completed") ? "completed" : results.some(r => r.status === "completed") ? "partial" : "failed";
       const saved = await db.from("ai_research_runs").update({ status, completed_at: new Date().toISOString() }).eq("id",data.requestId).eq("user_id",context.userId);
       if (saved.error) throw saved.error;
     } catch (error) {

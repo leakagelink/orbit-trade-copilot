@@ -148,6 +148,13 @@
       "when": 1794043409026,
       "tag": "0020_research_news_debate",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1794043685785,
+      "tag": "0021_research_advisory_proposals",
+      "breakpoints": true
     }
   ]
 }

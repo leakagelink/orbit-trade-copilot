@@ -10,7 +10,7 @@
 <!-- LOVABLE:END -->
 
 ## Architecture rules
-- AI research is owner-private, Pro-gated and advisory; durable claims precede analysts and debate, missing sources stay unavailable, and research never submits orders — keeps inference deduplicated and trading authority unchanged.
+- AI research is owner-private, Pro-gated and advisory; durable claims precede analysts, debate and decision stages, missing sources stay unavailable, and pure historical-volatility proposals never size or submit orders — keeps inference deduplicated and trading authority unchanged.
 - Subdirectories have their own `AGENTS.md`; read it before changing files there.
 - Toolkit extras use owner-scoped tables and Pro guards; alerts run on a separate authenticated cron and atomically claim a one-time notification, while trading-event triggers create durable inbox records — notifications cannot submit orders or delay risk exits.
 - Optional MFA is enforced by a restrictive public-table policy and shared server-function security middleware; AppShell challenges before mounting protected content, and workspace session records are activity observations rather than an authoritative Auth device inventory — prevents UI-only security claims.

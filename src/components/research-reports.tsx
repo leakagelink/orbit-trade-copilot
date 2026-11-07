@@ -6,11 +6,11 @@ import { AGENT_LABELS, RESEARCH_AGENTS } from "@/lib/research-pipeline";
 import { newsItem } from "@/lib/research-news";
 
 type Output = { id: string; agent: string; status: string; report: unknown };
-const newsEvidence = z.object({ version: z.literal(2), news: z.object({ provider: z.string(), fetchedAt: z.string(), limitation: z.string(), articles: z.array(newsItem) }), sentiment: z.object({ limitation: z.string() }) });
+const newsEvidence = z.object({ version: z.union([z.literal(2),z.literal(3)]), news: z.object({ provider: z.string(), fetchedAt: z.string(), limitation: z.string(), articles: z.array(newsItem) }), sentiment: z.object({ limitation: z.string() }) });
 export function ResearchReports({ outputs, evidence, exportData }: { outputs: Output[]; evidence: unknown; exportData: unknown }) {
   const parsedEvidence = newsEvidence.safeParse(evidence);
   function download() {
-    const url = URL.createObjectURL(new Blob([JSON.stringify({ schemaVersion: 2, advisoryOnly: true, research: exportData },null,2)], { type: "application/json" }));
+    const url = URL.createObjectURL(new Blob([JSON.stringify({ schemaVersion: 3, advisoryOnly: true, executionAllowed: false, research: exportData },null,2)], { type: "application/json" }));
     const link = document.createElement("a"); link.href = url; link.download = "algovirt-research.json"; link.click(); URL.revokeObjectURL(url);
   }
   return <>

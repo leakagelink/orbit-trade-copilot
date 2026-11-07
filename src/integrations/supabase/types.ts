@@ -52,6 +52,44 @@ export type Database = {
           },
         ]
       }
+      ai_research_decisions: {
+        Row: {
+          agent: string
+          created_at: string
+          id: string
+          report: Json
+          run_id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          agent: string
+          created_at?: string
+          id?: string
+          report: Json
+          run_id: string
+          status: string
+          user_id: string
+        }
+        Update: {
+          agent?: string
+          created_at?: string
+          id?: string
+          report?: Json
+          run_id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_research_decisions_run_id_user_id_fkey"
+            columns: ["run_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "ai_research_runs"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
       ai_research_reports: {
         Row: {
           agent: string
@@ -239,6 +277,38 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "strategies"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_trade_proposals: {
+        Row: {
+          created_at: string
+          id: string
+          proposal: Json
+          run_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          proposal: Json
+          run_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          proposal?: Json
+          run_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_trade_proposals_run_id_user_id_fkey"
+            columns: ["run_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "ai_research_runs"
+            referencedColumns: ["id", "user_id"]
           },
         ]
       }
