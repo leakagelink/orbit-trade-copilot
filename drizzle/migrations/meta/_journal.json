@@ -169,6 +169,13 @@
       "when": 1794044605395,
       "tag": "0023_atomic_order_risk_gate",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1794044774544,
+      "tag": "0024_independent_strategy_evaluations",
+      "breakpoints": true
     }
   ]
 }

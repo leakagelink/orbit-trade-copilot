@@ -1,0 +1,11 @@
+import {expect,it} from "vitest";
+import {evaluateHistoricalEvidence,SCORING_WEIGHTS} from "../lib/evaluation";
+const t={entryT:1,exitT:2,entry:100,exit:110,qty:1,pnl:10,fees:1,reason:"exit"};
+const evidence={trades:[t],manifest:{simulatorVersion:"next-bar-v2",feePct:0.1,slippagePct:0.05,candles:[]},evidenceHash:"a".repeat(64)};
+it("preserves the specified 100-point initial weights",()=>{expect(SCORING_WEIGHTS).toEqual({performance:20,risk:20,robustness:15,execution:15,prediction:10,regime:10,integrity:10});expect(Object.values(SCORING_WEIGHTS).reduce((a,b)=>a+b,0)).toBe(100);});
+it("never turns missing evidence into a perfect score",()=>{const r=evaluateHistoricalEvidence(null,false);expect(r.status).toBe("INSUFFICIENT_DATA");expect(r.composite).toBeNull();expect(r.components.every(c=>c.score===null)).toBe(true);});
+it("rejects manipulated manifest evidence regardless of profit",()=>{expect(evaluateHistoricalEvidence(evidence,false).status).toBe("REJECTED");});
+it("rejects duplicated trades",()=>{expect(evaluateHistoricalEvidence({...evidence,trades:[t,t]},true).status).toBe("REJECTED");});
+it("rejects fabricated profit",()=>{expect(evaluateHistoricalEvidence({...evidence,trades:[{...t,pnl:10000}]},true).status).toBe("REJECTED");});
+it("rejects impossible chronology",()=>{expect(evaluateHistoricalEvidence({...evidence,trades:[{...t,exitT:0}]},true).status).toBe("REJECTED");});
+it("subtracts fees and withholds scores without holdout evidence",()=>{const r=evaluateHistoricalEvidence(evidence,true);expect(r.metrics?.netProfit).toBe(9);expect(r.status).toBe("INSUFFICIENT_DATA");expect(r.composite).toBeNull();});

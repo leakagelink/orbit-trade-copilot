@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { validateStrategy, type StrategyConfig } from "./strategy";
 import { runBacktest } from "./backtest";
+import { evidenceHash as hashEvidence } from "./evidence-hash";
 
 const input = z.object({
   strategyId: z.string().uuid(),
@@ -43,8 +44,7 @@ export const runBacktestFn = createServerFn({ method: "POST" })
       const first = cs[0];
       if (!first) throw new Error("No historical candles available");
       const manifest = { simulatorVersion:"next-bar-v2",config:cfg,exchange:data.exchange,feePct:data.feePct,slippagePct:data.slippagePct,tfMs,start,end,candles:cs };
-      const digest = await crypto.subtle.digest("SHA-256",new TextEncoder().encode(JSON.stringify(manifest)));
-      const evidenceHash = Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,"0")).join("");
+      const evidenceHash = await hashEvidence(manifest);
       const { sharpe, ...st } = r.stats;
       const resultWrite = await supabaseAdmin.from("backtest_results").insert({
         backtest_id: bt.id, user_id: context.userId, ...st,

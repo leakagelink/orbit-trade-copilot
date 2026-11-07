@@ -1336,6 +1336,60 @@ export type Database = {
         }
         Relationships: []
       }
+      strategy_evaluations: {
+        Row: {
+          backtest_id: string
+          created_at: string
+          evidence_hash: string | null
+          id: string
+          mode: string
+          model_version: string
+          report: Json
+          status: string
+          strategy_id: string
+          user_id: string
+        }
+        Insert: {
+          backtest_id: string
+          created_at?: string
+          evidence_hash?: string | null
+          id?: string
+          mode: string
+          model_version: string
+          report: Json
+          status: string
+          strategy_id: string
+          user_id: string
+        }
+        Update: {
+          backtest_id?: string
+          created_at?: string
+          evidence_hash?: string | null
+          id?: string
+          mode?: string
+          model_version?: string
+          report?: Json
+          status?: string
+          strategy_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "strategy_evaluations_backtest_id_fkey"
+            columns: ["backtest_id"]
+            isOneToOne: false
+            referencedRelation: "backtests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "strategy_evaluations_strategy_id_fkey"
+            columns: ["strategy_id"]
+            isOneToOne: false
+            referencedRelation: "strategies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       strategy_versions: {
         Row: {
           config: Json

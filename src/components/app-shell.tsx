@@ -24,6 +24,7 @@ const NAV = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/assistant", label: "AI Assistant", icon: MessageSquareText },
   { to: "/research", label: "AI Research", icon: FlaskConical },
+  { to: "/intelligence", label: "Strategy Intelligence", icon: ShieldCheck },
   { to: "/strategies", label: "Strategies", icon: Blocks },
   { to: "/bots", label: "Trading Bots", icon: Bot },
   { to: "/scalping", label: "Scalping", icon: Zap },
