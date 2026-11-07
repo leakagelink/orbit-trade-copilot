@@ -1,5 +1,13 @@
 # Roadmap
 
+## AI research — Phase 2
+- [x] Verified Yahoo headline metadata, ticker/date filtering and provenance; missing sources are not fabricated
+- [x] News analyst, Bull–Bear debate and research-manager synthesis with dependency failure guards
+- [x] Private report storage, source links and structured JSON report download
+- [x] 109 safety/regression tests pass; build OK
+- [ ] Social sentiment inference — needs authorized social-data access; public feeds returned 403, so reports explicitly say unavailable
+- [ ] Signed-in inference, report reload/download and desktop/mobile verification — requesting user has no matching app account; sign in in the preview
+
 ## AI research — Phase 1
 - [x] Owner-private research runs, analyst reports and usage records
 - [x] Advisory Market and Fundamentals pipeline with real server-fetched data; missing financial statements remain unavailable

@@ -1,10 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { analystReport, researchInput, unavailableReport } from "./research";
-import type { z } from "zod";
+import { researchInput } from "./research";
+import { runResearchStages } from "./research-pipeline";
 
 export const listResearch = createServerFn({ method: "GET" }).middleware([requireSupabaseAuth]).handler(async ({ context }) => {
-  const { data, error } = await context.supabase.from("ai_research_runs").select("*,ai_agent_outputs(*)").eq("user_id",context.userId).order("created_at", { ascending: false }).limit(30);
+  const { data, error } = await context.supabase.from("ai_research_runs").select("*,ai_agent_outputs(*),ai_research_reports(*)").eq("user_id",context.userId).order("created_at", { ascending: false }).limit(30);
   if (error) throw new Error("Research history is unavailable");
   return data;
 });
@@ -20,28 +20,23 @@ export const startResearchRun = createServerFn({ method: "POST" }).middleware([r
     const { loadResearchData, runAnalyst } = await import("./research.server");
     try {
       const evidence = await loadResearchData(data.symbol);
-      const snapshotWrite = await db.from("ai_research_runs").update({ snapshot: evidence.snapshot }).eq("id",data.requestId).eq("user_id",context.userId);
+      const snapshotWrite = await db.from("ai_research_runs").update({ snapshot: evidence.snapshot, research_evidence: { version: 2, news: evidence.news, sentiment: evidence.sentiment } }).eq("id",data.requestId).eq("user_id",context.userId);
       if (snapshotWrite.error) throw snapshotWrite.error;
-      const results = await Promise.all((["market","fundamentals"] as const).map(async agent => {
-        let status: "completed" | "unavailable" | "failed" = "completed";
-        let report: z.infer<typeof analystReport> = unavailableReport(evidence.fundamentals.limitation);
-        if (agent === "fundamentals" && !evidence.fundamentals.facts.length) status = "unavailable";
-        else {
-          try {
-            const result = await runAnalyst(agent,data.symbol,agent === "market" ? evidence.snapshot : evidence.fundamentals);
-            report = result.report;
-            const usage = await db.from("ai_research_usage").insert({ run_id: data.requestId, user_id: context.userId, agent, model: "openai/gpt-6-astra", input_tokens: result.inputTokens, output_tokens: result.outputTokens });
-            if (usage.error) throw usage.error;
-          } catch (error) {
-            console.error("Research analyst failed",agent,error);
-            status = "failed"; report = unavailableReport("This analyst could not finish. No automatic retry was made; the request may have consumed AI credits.");
-          }
-        }
-        const saved = await db.from("ai_agent_outputs").insert({ run_id: data.requestId,user_id: context.userId,agent,status,report });
+      const { status } = await runResearchStages({
+        market: { evidence: evidence.snapshot },
+        fundamentals: { evidence: evidence.fundamentals, missing: evidence.fundamentals.facts.length ? undefined : evidence.fundamentals.limitation },
+        news: { evidence: evidence.news, missing: evidence.news.articles.length ? undefined : evidence.news.limitation },
+        sentiment: { evidence: evidence.sentiment, missing: evidence.sentiment.limitation },
+      }, async (agent,input) => {
+        const result = await runAnalyst(agent,data.symbol,input);
+        const usage = await db.from("ai_research_usage").insert({ run_id: data.requestId, user_id: context.userId, agent, model: "openai/gpt-6-astra", input_tokens: result.inputTokens, output_tokens: result.outputTokens });
+        if (usage.error) throw usage.error;
+        return result.report;
+      }, async ({ agent,status,report }) => {
+        const row = { run_id: data.requestId,user_id: context.userId,agent,status,report };
+        const saved = agent === "market" || agent === "fundamentals" ? await db.from("ai_agent_outputs").insert(row) : await db.from("ai_research_reports").insert(row);
         if (saved.error) throw saved.error;
-        return status;
-      }));
-      const status = results.every(s => s === "completed") ? "completed" : results.some(s => s === "completed") ? "partial" : "failed";
+      });
       const saved = await db.from("ai_research_runs").update({ status, completed_at: new Date().toISOString() }).eq("id",data.requestId).eq("user_id",context.userId);
       if (saved.error) throw saved.error;
     } catch (error) {
