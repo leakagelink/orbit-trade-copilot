@@ -1,0 +1,6 @@
+CREATE TABLE public.ai_research_stage_metrics(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),user_id uuid NOT NULL,run_id uuid NOT NULL REFERENCES public.ai_research_runs(id),agent text NOT NULL,duration_ms integer NOT NULL CHECK(duration_ms>=0),status text NOT NULL CHECK(status IN('completed','failed')),input_tokens integer,output_tokens integer,provider_cost_usd numeric CHECK(provider_cost_usd>=0),created_at timestamptz NOT NULL DEFAULT now(),UNIQUE(run_id,agent));
+GRANT SELECT ON public.ai_research_stage_metrics TO authenticated; GRANT ALL ON public.ai_research_stage_metrics TO service_role;
+ALTER TABLE public.ai_research_stage_metrics ENABLE ROW LEVEL SECURITY;
+CREATE POLICY research_metrics_owner_read ON public.ai_research_stage_metrics FOR SELECT TO authenticated USING(user_id=auth.uid() AND public.account_mfa_allowed());
+CREATE TRIGGER research_metrics_immutable BEFORE UPDATE OR DELETE ON public.ai_research_stage_metrics FOR EACH ROW EXECUTE FUNCTION public.prevent_evaluation_mutation();
+COMMENT ON COLUMN public.ai_research_stage_metrics.provider_cost_usd IS 'Null until authoritative provider billing is available; token counts are not fabricated USD costs';

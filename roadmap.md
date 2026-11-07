@@ -1,10 +1,15 @@
 # Roadmap
 
 ## Native master-prompt completion requested 7 November 2026
-- [ ] Deterministic historical component scores and confidence intervals, explicitly experimental; missing evidence never produces a composite or live approval
-- [ ] Owner-private integrity cases, immutable appeal/review history and automatic entry quarantine; recovery remains available
-- [ ] Evidence coverage, ranking eligibility and advisory allocation guardrails in Strategy Intelligence
-- [ ] Regression tests and signed-in desktop/mobile verification
+- [x] Versioned admin-authored historical performance/risk utilities and approximate confidence intervals; no configured policy means no scores, and incomplete evidence never produces composite/live approval
+- [x] Owner-private integrity cases, immutable appeal/review history and atomic entry quarantine; exits remain available; administrator case/policy workflows need independent operator session for end-to-end verification
+- [x] Promotion checklists, evidence sufficiency and allocation-withholding guardrails; no fabricated qualified rankings or capital recommendations
+- [x] Frozen backtest replay detects removed trades/equity manipulation; browser backtest writes revoked; new position entry fees persist and round-trip cost tests reconcile cash flow
+- [x] Read-only Binance/OKX original-order verification persists observations; locks never clear from lookup alone; actual venue recovery needs original verified accounts and atomic ledger reconciliation
+- [x] Measured research-agent duration/status/token monitoring; authoritative USD provider cost remains unavailable rather than estimated
+- [x] 202 tests pass; signed-in real OKX historical backtest/evaluation saved and reloaded, paper-only draft eligibility persisted, mobile has no overflow and regular-user admin denial verified; build OK; no live orders or inference run for testing
+- [ ] Complete validated seven-component scoring, ranked allocations and live promotion — requires independent holdout/paper/prediction/regime evidence and validated administrator policy; current partial historical utilities are not certification
+- [ ] Appeals/admin-policy end-to-end — requires independent administrator/operator session; no roles changed for tests
 - [ ] Social data and email/legal setup require authorized sources and owner identity; live recovery certification requires isolated provider accounts
 - [x] Owner chose native app upgrades, not separate paid hosting/original Python engines
 
@@ -33,10 +38,10 @@
 - [x] Atomic account risk gate serializes pending entry intents and includes reserved exposure
 - [x] Prior-bar/next-open gap-aware simulations; complete canonical-hashed config/candle/trade/equity evidence
 - [x] Append-only independent evaluation history, duplicate/fabricated-profit/hash checks and explainable sufficiency screen; signed-in save/reload and mobile checked
-- [ ] Numerical scoring and promotion policies — needs approved utility anchors, minimum precision/duration and holdout/paper evidence; new live bot activation remains blocked
+- [ ] Full validated numerical scoring/live promotion — experimental policy controls and historical utilities now exist; independent holdout/paper/prediction/regime evidence and policy validation remain required; live activation stays blocked
 - [ ] Durable exchange reconciliation and full kill-switch recovery — needs isolated provider failure-testing setup; uncertain fills stay locked, never auto-resubmitted
-- [ ] Net-cost completion, authoritative audit retention, quarantine/appeals and allocation recommendations — dependent on verified evidence/recovery and approved scoring policy
-- [ ] External engines and Indian live trading — separate infrastructure/broker/compliance approvals required
+- [ ] Legacy/venue cost reconciliation and qualified portfolio allocation — new fees, immutable integrity appeals and allocation guardrails exist; actual historical fees, consolidated FX/correlation evidence and independent operator verification remain required
+- [ ] Indian live trading — broker/static-IP/compliance approval required; original external Python engines excluded by owner's native-upgrades choice
 
 ## AI research — Phase 3
 - [x] Add owner-private trader, three risk assessments and portfolio synthesis with upstream failure guards

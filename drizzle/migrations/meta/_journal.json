@@ -218,6 +218,13 @@
       "when": 1794049983058,
       "tag": "0030_protect_reproducible_backtest_evidence",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1794050189294,
+      "tag": "0031_research_stage_monitoring",
+      "breakpoints": true
     }
   ]
 }

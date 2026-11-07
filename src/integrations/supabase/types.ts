@@ -277,6 +277,53 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_research_stage_metrics: {
+        Row: {
+          agent: string
+          created_at: string
+          duration_ms: number
+          id: string
+          input_tokens: number | null
+          output_tokens: number | null
+          provider_cost_usd: number | null
+          run_id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          agent: string
+          created_at?: string
+          duration_ms: number
+          id?: string
+          input_tokens?: number | null
+          output_tokens?: number | null
+          provider_cost_usd?: number | null
+          run_id: string
+          status: string
+          user_id: string
+        }
+        Update: {
+          agent?: string
+          created_at?: string
+          duration_ms?: number
+          id?: string
+          input_tokens?: number | null
+          output_tokens?: number | null
+          provider_cost_usd?: number | null
+          run_id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_research_stage_metrics_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "ai_research_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_research_usage: {
         Row: {
           agent: string

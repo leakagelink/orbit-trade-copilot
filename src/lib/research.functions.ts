@@ -5,7 +5,7 @@ import { runResearchStages, runDecisionStages, type ResearchAgent, type AgentRes
 import { buildResearchProposal } from "./research-proposal";
 
 export const listResearch = createServerFn({ method: "GET" }).middleware([requireSupabaseAuth]).handler(async ({ context }) => {
-  const { data, error } = await context.supabase.from("ai_research_runs").select("*,ai_agent_outputs(*),ai_research_reports(*),ai_research_decisions(*),ai_trade_proposals(*)").eq("user_id",context.userId).order("created_at", { ascending: false }).limit(30);
+  const { data, error } = await context.supabase.from("ai_research_runs").select("*,ai_agent_outputs(*),ai_research_reports(*),ai_research_decisions(*),ai_trade_proposals(*),ai_research_stage_metrics(*)").eq("user_id",context.userId).order("created_at", { ascending: false }).limit(30);
   if (error) throw new Error("Research history is unavailable");
   return data;
 });
@@ -24,7 +24,9 @@ export const startResearchRun = createServerFn({ method: "POST" }).middleware([r
       const snapshotWrite = await db.from("ai_research_runs").update({ snapshot: evidence.snapshot, research_evidence: { version: 3, news: evidence.news, sentiment: evidence.sentiment } }).eq("id",data.requestId).eq("user_id",context.userId);
       if (snapshotWrite.error) throw snapshotWrite.error;
       const analyze = async (agent: ResearchAgent,input: unknown) => {
-        const result = await runAnalyst(agent,data.symbol,input);
+        const started=Date.now();let result:Awaited<ReturnType<typeof runAnalyst>>;
+        try{result=await runAnalyst(agent,data.symbol,input);}catch(error){const metric=await db.from("ai_research_stage_metrics").insert({user_id:context.userId,run_id:data.requestId,agent,duration_ms:Date.now()-started,status:"failed"});if(metric.error)throw new Error("Research monitoring unavailable");throw error;}
+        const metric=await db.from("ai_research_stage_metrics").insert({user_id:context.userId,run_id:data.requestId,agent,duration_ms:Date.now()-started,status:"completed",input_tokens:result.inputTokens,output_tokens:result.outputTokens});if(metric.error)throw new Error("Research monitoring unavailable");
         const usage = await db.from("ai_research_usage").insert({ run_id: data.requestId, user_id: context.userId, agent, model: "openai/gpt-6-astra", input_tokens: result.inputTokens, output_tokens: result.outputTokens });
         if (usage.error) throw usage.error;
         return result.report;
