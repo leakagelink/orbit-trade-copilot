@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { EXCHANGES } from "./exchanges";
 import { derivAppId, DERIV_DISCONNECT_FIRST } from "./deriv";
+import { accountTypeSchema, supportsBothAccounts, validateAccountSelection } from "./exchange-account-types";
 
 const credsSchema = z.object({
   apiKey: z.string().trim().min(8).max(256),
@@ -13,7 +14,7 @@ const credsSchema = z.object({
 const connectSchema = credsSchema.extend({
   exchange: z.string(),
   label: z.string().trim().min(1).max(60),
-  accountType: z.enum(["spot", "futures"]),
+  accountType: accountTypeSchema,
   isTestnet: z.boolean(),
 });
 
@@ -26,6 +27,7 @@ export const connectExchange = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const meta = EXCHANGES.find((e) => e.id === data.exchange);
     if (!meta || !meta.available) throw new Error("This exchange is not supported yet");
+    validateAccountSelection(meta.id, data.accountType);
     if (meta.id === "deriv") derivAppId.parse(data.apiSecret);
     else if (data.apiSecret.length < 8) throw new Error("API secret must have at least 8 characters");
     if (meta.needsPassphrase && !data.passphrase) throw new Error(`${meta.name} requires an API passphrase`);
@@ -78,6 +80,19 @@ export const updateExchangeCredentials = createServerFn({ method: "POST" })
       status: "pending", api_key_hint: own.exchange === "deriv" ? null : `••••${data.apiKey.slice(-4)}`, last_error: PENDING_NOTE,
     }).eq("id", data.id);
     await context.supabase.from("audit_logs").insert({ user_id: context.userId, action: "exchange.reconnect", entity_type: "exchange_connection", entity_id: data.id });
+    return { ok: true };
+  });
+
+export const updateExchangeAccountType = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid(), accountType: accountTypeSchema }).parse(input))
+  .handler(async ({ data, context }) => {
+    const own = await context.supabase.from("exchange_connections").select("id,exchange,status").eq("id", data.id).eq("user_id", context.userId).maybeSingle();
+    if (own.error || !own.data) throw new Error("Connection not found");
+    if (!supportsBothAccounts(own.data.exchange) || own.data.status === "disconnected") throw new Error("Account selection cannot be changed for this connection");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const result = await supabaseAdmin.from("exchange_connections").update({ account_type: validateAccountSelection(own.data.exchange, data.accountType) }).eq("id", data.id).eq("user_id", context.userId).neq("status", "disconnected").select("id").maybeSingle();
+    if (result.error || !result.data) throw new Error("Account selection could not be saved");
     return { ok: true };
   });
 

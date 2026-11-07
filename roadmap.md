@@ -1,5 +1,10 @@
 # Roadmap
 
+## Exchange account selections
+- [x] Add Spot / Futures / Both for Binance, Bybit and OKX with owner-authorized later edits, preserving trading authority and other venues' selections
+- [x] 16 tests pass; signed-in Binance Both form verified; build OK
+- [ ] Existing connection edit save/reload — current account has no Binance/Bybit/OKX connection; requires user's connection, no test keys saved
+
 ## Deriv connection
 - [x] Enforce one non-disconnected Deriv per owner with deployed unique index; reject token replacement until disconnect; verified connections display Active; 12 tests pass and signed-in existing pending connection blocks Add without changing the account
 - [x] Add owner-private Deriv PAT/App ID storage, read-only Options-account verification and exchange controls; Deriv orders remain unavailable and excluded from Trade/Bots

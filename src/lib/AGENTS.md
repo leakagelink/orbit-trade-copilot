@@ -1,4 +1,5 @@
 ## src/lib rules
+- Exchange account-type preferences use spot/futures/both metadata; owner-authenticated edits never enable futures execution or alter keys — selection is not trading authority.
 - Exchange I/O goes through `src/lib/exchange-adapters.server.ts` (Web Crypto HMAC, fetch only) and indicator math lives in pure `src/lib/indicators.ts` — Workers-safe and testable.
 - Backtests use prior-bar signals and next-open/gap-aware fills in `backtest.ts`; persist full config/candle manifests and ledgers — historical results remain reproducible, not live qualification.
 - Bot mutations and connection verification are server-authorized; engine reads bind owners, uncertain fills retain original intents, and inactive bots still manage exits — prevents browser promotion and blind order retries.

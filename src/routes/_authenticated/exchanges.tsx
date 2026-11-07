@@ -17,7 +17,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EXCHANGES, exchangeName, type ExchangeMeta } from "@/lib/exchanges";
 import { derivConnectionReserved } from "@/lib/deriv";
-import { connectExchange, disconnectExchange, updateExchangeCredentials, verifyExchange } from "@/lib/exchanges.functions";
+import { accountTypeSchema, accountTypeLabel, supportsBothAccounts, type AccountType } from "@/lib/exchange-account-types";
+import { connectExchange, disconnectExchange, updateExchangeCredentials, updateExchangeAccountType, verifyExchange } from "@/lib/exchanges.functions";
 
 const D = "Connect your exchange and broker accounts. API credentials are encrypted on the server.";
 export const Route = createFileRoute("/_authenticated/exchanges")({
@@ -42,6 +43,9 @@ function Exchanges() {
   const derivStatus = q.data?.find((c) => c.exchange === "deriv" && c.status !== "disconnected")?.status;
   const [reconnect, setReconnect] = useState<{ id: string; exchange: string } | null>(null);
   const [toDisconnect, setToDisconnect] = useState<string | null>(null);
+  const [editingType, setEditingType] = useState<{ id: string; exchange: string; selection: AccountType } | null>(null);
+  const [savingType, setSavingType] = useState(false);
+  const updateType = useServerFn(updateExchangeAccountType);
   const disconnect = useServerFn(disconnectExchange);
   const verify = useServerFn(verifyExchange);
   const [verifying, setVerifying] = useState<string | null>(null);
@@ -74,12 +78,13 @@ function Exchanges() {
                 <div key={c.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <div className="flex min-w-0 flex-wrap items-center gap-2"><span className="min-w-0 break-words font-medium">{c.label}</span><Badge variant={STATUS_VARIANT[c.status]}>{c.status === "connected" ? "Active" : c.status}</Badge>{c.is_testnet && <Badge variant="outline">{c.exchange === "deriv" ? "demo" : "testnet"}</Badge>}</div>
-                    <div className="mt-1 font-mono text-xs text-muted-foreground">{exchangeName(c.exchange)} · {c.account_type}{c.exchange !== "deriv" && ` · key ${c.api_key_hint ?? "—"}`}</div>
+                    <div className="mt-1 font-mono text-xs text-muted-foreground">{exchangeName(c.exchange)} · {accountTypeLabel(c.account_type)}{c.exchange !== "deriv" && ` · key ${c.api_key_hint ?? "—"}`}</div>
                     {c.exchange === "deriv" && <Badge variant="outline">Connection only · orders unavailable</Badge>}
                     {(() => { const bal = (c.permissions as { balances?: { asset: string; free: number; locked: number }[] } | null)?.balances; return c.status === "connected" && bal ? <p className="mt-1 font-mono text-xs">{bal.length ? bal.slice(0, 6).map((b) => `${b.asset} ${+(b.free + b.locked).toPrecision(6)}`).join(" · ") : "No balances"}{c.last_synced_at && <span className="text-muted-foreground"> · synced {new Date(c.last_synced_at).toLocaleString()}</span>}</p> : null; })()}
                     {c.last_error && <p className="mt-1 max-w-xl text-xs text-muted-foreground">{c.last_error}</p>}
                   </div>
                   <div className="flex flex-wrap gap-2">
+                    {supportsBothAccounts(c.exchange) && c.status !== "disconnected" && <Button size="sm" variant="outline" onClick={() => setEditingType({ id: c.id, exchange: c.exchange, selection: accountTypeSchema.safeParse(c.account_type).success ? accountTypeSchema.parse(c.account_type) : "spot" })}>Account types</Button>}
                     {c.status !== "disconnected" && <Button size="sm" variant="outline" disabled={verifying === c.id} onClick={() => runVerify(c.id)}><RefreshCw className={`mr-1 h-3.5 w-3.5 ${verifying === c.id ? "animate-spin" : ""}`} />Verify</Button>}
                     {c.exchange !== "deriv" && <Button size="sm" variant="outline" onClick={() => setReconnect({ id: c.id, exchange: c.exchange })}><KeyRound className="mr-1 h-3.5 w-3.5" />{c.status === "disconnected" ? "Reconnect" : "Update keys"}</Button>}
                     {c.status !== "disconnected" && <Button size="sm" variant="ghost" onClick={() => setToDisconnect(c.id)}><Unplug className="mr-1 h-3.5 w-3.5" />Disconnect</Button>}
@@ -104,7 +109,14 @@ function Exchanges() {
         </section>
       </div>
 
-      <CredentialsDialog meta={picked} onClose={() => setPicked(null)} onDone={refresh} />
+      <CredentialsDialog key={picked?.id ?? "closed"} meta={picked} onClose={() => setPicked(null)} onDone={refresh} />
+      <Dialog open={!!editingType} onOpenChange={(open) => !open && !savingType && setEditingType(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>{exchangeName(editingType?.exchange ?? "")} account types</DialogTitle><DialogDescription>Saved selection does not enable futures order execution or change API permissions.</DialogDescription></DialogHeader>
+          <Select value={editingType?.selection ?? "spot"} onValueChange={(value) => { const parsed = accountTypeSchema.safeParse(value); if (parsed.success && editingType) setEditingType({ ...editingType, selection: parsed.data }); }}><SelectTrigger aria-label="Account types"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="spot">Spot only</SelectItem><SelectItem value="futures">Futures only</SelectItem><SelectItem value="both">Spot + Futures</SelectItem></SelectContent></Select>
+          <DialogFooter><Button variant="ghost" disabled={savingType} onClick={() => setEditingType(null)}>Cancel</Button><Button disabled={savingType} onClick={async () => { if (!editingType) return; setSavingType(true); try { await updateType({ data: { id: editingType.id, accountType: editingType.selection } }); await refresh(); toast.success("Account types updated"); setEditingType(null); } catch (error) { toast.error(error instanceof Error ? error.message : "Could not save"); } finally { setSavingType(false); } }}>{savingType ? "Saving…" : "Save"}</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
       <CredentialsDialog meta={reconnect ? EXCHANGES.find((e) => e.id === reconnect.exchange) ?? null : null} connectionId={reconnect?.id} onClose={() => setReconnect(null)} onDone={refresh} />
 
       <AlertDialog open={!!toDisconnect} onOpenChange={(o) => !o && setToDisconnect(null)}>
@@ -124,7 +136,7 @@ function CredentialsDialog({ meta, connectionId, onClose, onDone }: { meta: Exch
   const update = useServerFn(updateExchangeCredentials);
   const [busy, setBusy] = useState(false);
   const [testnet, setTestnet] = useState(false);
-  const [accountType, setAccountType] = useState<"spot" | "futures">("spot");
+  const [accountType, setAccountType] = useState<AccountType>("spot");
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -158,7 +170,7 @@ function CredentialsDialog({ meta, connectionId, onClose, onDone }: { meta: Exch
               <div className="space-y-1.5"><Label htmlFor="label">Label</Label><Input id="label" name="label" required maxLength={60} defaultValue={meta ? `${meta.name} main` : ""} /></div>
               <div className="grid gap-4 sm:flex">
                 {meta?.id === "deriv" ? <div className="flex-1 space-y-1.5"><Label>Account type</Label><p className="text-sm">Deriv Options</p></div> : <div className="flex-1 space-y-1.5"><Label>Account type</Label>
-                  <Select value={accountType} onValueChange={(v) => setAccountType(v as "spot" | "futures")}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="spot">Spot</SelectItem><SelectItem value="futures">Futures</SelectItem></SelectContent></Select>
+                  <Select value={accountType} onValueChange={(v) => { const parsed = accountTypeSchema.safeParse(v); if (parsed.success) setAccountType(parsed.data); }}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="spot">Spot</SelectItem><SelectItem value="futures">Futures</SelectItem>{meta && supportsBothAccounts(meta.id) && <SelectItem value="both">Spot + Futures</SelectItem>}</SelectContent></Select>
                 </div>}
                 {meta?.supportsTestnet && <div className="flex items-end gap-2 pb-2"><Switch id="tn" checked={testnet} onCheckedChange={setTestnet} /><Label htmlFor="tn">{meta?.id === "deriv" ? "Demo account" : meta?.id === "oanda" ? "Practice account" : "Testnet"}</Label></div>}
               </div>
