@@ -1,5 +1,12 @@
 # Roadmap
 
+## AI research — Phase 1
+- [x] Owner-private research runs, analyst reports and usage records
+- [x] Advisory Market and Fundamentals pipeline with real server-fetched data; missing financial statements remain unavailable
+- [x] Minimal research screen, history and failure recovery
+- [x] 100 tests passed, build OK, signed-out research redirects to sign-in without runtime errors
+- [ ] Signed-in report persistence and desktop/mobile research rendering — requesting user has no matching app account; sign in in the preview to verify
+
 ## Promotions
 - [x] All plans free for every signed-in user until 4 Nov 2026 (end of day, India time)
 - [x] NOWPayments reconnected in new workspace as a workspace-shared connector

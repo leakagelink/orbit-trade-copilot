@@ -134,6 +134,13 @@
       "when": 1793850828599,
       "tag": "0018_free_access_until_nov_8",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1794043152535,
+      "tag": "0019_ai_research_phase_one",
+      "breakpoints": true
     }
   ]
 }

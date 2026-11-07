@@ -35,6 +35,7 @@ import { Route as AuthenticatedMarketplaceRouteImport } from './routes/_authenti
 import { Route as AuthenticatedNotificationsRouteImport } from './routes/_authenticated/notifications'
 import { Route as AuthenticatedPlansRouteImport } from './routes/_authenticated/plans'
 import { Route as AuthenticatedReferralsRouteImport } from './routes/_authenticated/referrals'
+import { Route as AuthenticatedResearchRouteImport } from './routes/_authenticated/research'
 import { Route as AuthenticatedRiskRouteImport } from './routes/_authenticated/risk'
 import { Route as AuthenticatedScalpingRouteImport } from './routes/_authenticated/scalping'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
@@ -182,6 +183,11 @@ const AuthenticatedReferralsRoute = AuthenticatedReferralsRouteImport.update({
   path: '/referrals',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedResearchRoute = AuthenticatedResearchRouteImport.update({
+  id: '/research',
+  path: '/research',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedRiskRoute = AuthenticatedRiskRouteImport.update({
   id: '/risk',
   path: '/risk',
@@ -281,6 +287,7 @@ export interface FileRoutesByFullPath {
   '/notifications': typeof AuthenticatedNotificationsRoute
   '/plans': typeof AuthenticatedPlansRoute
   '/referrals': typeof AuthenticatedReferralsRoute
+  '/research': typeof AuthenticatedResearchRoute
   '/risk': typeof AuthenticatedRiskRoute
   '/scalping': typeof AuthenticatedScalpingRoute
   '/settings': typeof AuthenticatedSettingsRoute
@@ -322,6 +329,7 @@ export interface FileRoutesByTo {
   '/notifications': typeof AuthenticatedNotificationsRoute
   '/plans': typeof AuthenticatedPlansRoute
   '/referrals': typeof AuthenticatedReferralsRoute
+  '/research': typeof AuthenticatedResearchRoute
   '/risk': typeof AuthenticatedRiskRoute
   '/scalping': typeof AuthenticatedScalpingRoute
   '/settings': typeof AuthenticatedSettingsRoute
@@ -365,6 +373,7 @@ export interface FileRoutesById {
   '/_authenticated/notifications': typeof AuthenticatedNotificationsRoute
   '/_authenticated/plans': typeof AuthenticatedPlansRoute
   '/_authenticated/referrals': typeof AuthenticatedReferralsRoute
+  '/_authenticated/research': typeof AuthenticatedResearchRoute
   '/_authenticated/risk': typeof AuthenticatedRiskRoute
   '/_authenticated/scalping': typeof AuthenticatedScalpingRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
@@ -408,6 +417,7 @@ export interface FileRouteTypes {
     | '/notifications'
     | '/plans'
     | '/referrals'
+    | '/research'
     | '/risk'
     | '/scalping'
     | '/settings'
@@ -449,6 +459,7 @@ export interface FileRouteTypes {
     | '/notifications'
     | '/plans'
     | '/referrals'
+    | '/research'
     | '/risk'
     | '/scalping'
     | '/settings'
@@ -491,6 +502,7 @@ export interface FileRouteTypes {
     | '/_authenticated/notifications'
     | '/_authenticated/plans'
     | '/_authenticated/referrals'
+    | '/_authenticated/research'
     | '/_authenticated/risk'
     | '/_authenticated/scalping'
     | '/_authenticated/settings'
@@ -707,6 +719,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedReferralsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/research': {
+      id: '/_authenticated/research'
+      path: '/research'
+      fullPath: '/research'
+      preLoaderRoute: typeof AuthenticatedResearchRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/risk': {
       id: '/_authenticated/risk'
       path: '/risk'
@@ -826,6 +845,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedNotificationsRoute: typeof AuthenticatedNotificationsRoute
   AuthenticatedPlansRoute: typeof AuthenticatedPlansRoute
   AuthenticatedReferralsRoute: typeof AuthenticatedReferralsRoute
+  AuthenticatedResearchRoute: typeof AuthenticatedResearchRoute
   AuthenticatedRiskRoute: typeof AuthenticatedRiskRoute
   AuthenticatedScalpingRoute: typeof AuthenticatedScalpingRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
@@ -856,6 +876,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedNotificationsRoute: AuthenticatedNotificationsRoute,
   AuthenticatedPlansRoute: AuthenticatedPlansRoute,
   AuthenticatedReferralsRoute: AuthenticatedReferralsRoute,
+  AuthenticatedResearchRoute: AuthenticatedResearchRoute,
   AuthenticatedRiskRoute: AuthenticatedRiskRoute,
   AuthenticatedScalpingRoute: AuthenticatedScalpingRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,

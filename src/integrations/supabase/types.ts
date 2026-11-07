@@ -14,6 +14,118 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_agent_outputs: {
+        Row: {
+          agent: string
+          created_at: string
+          id: string
+          report: Json
+          run_id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          agent: string
+          created_at?: string
+          id?: string
+          report: Json
+          run_id: string
+          status: string
+          user_id: string
+        }
+        Update: {
+          agent?: string
+          created_at?: string
+          id?: string
+          report?: Json
+          run_id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_agent_outputs_run_id_user_id_fkey"
+            columns: ["run_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "ai_research_runs"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
+      ai_research_runs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          error: string | null
+          id: string
+          snapshot: Json | null
+          status: string
+          symbol: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          error?: string | null
+          id: string
+          snapshot?: Json | null
+          status?: string
+          symbol: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          snapshot?: Json | null
+          status?: string
+          symbol?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ai_research_usage: {
+        Row: {
+          agent: string
+          created_at: string
+          id: string
+          input_tokens: number
+          model: string
+          output_tokens: number
+          run_id: string
+          user_id: string
+        }
+        Insert: {
+          agent: string
+          created_at?: string
+          id?: string
+          input_tokens?: number
+          model: string
+          output_tokens?: number
+          run_id: string
+          user_id: string
+        }
+        Update: {
+          agent?: string
+          created_at?: string
+          id?: string
+          input_tokens?: number
+          model?: string
+          output_tokens?: number
+          run_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_research_usage_run_id_user_id_fkey"
+            columns: ["run_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "ai_research_runs"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
       ai_sessions: {
         Row: {
           created_at: string
@@ -1622,6 +1734,10 @@ export type Database = {
         Returns: Json
       }
       bump_strategy_clone: { Args: { _id: string }; Returns: undefined }
+      claim_ai_research: {
+        Args: { _id: string; _symbol: string; _user_id: string }
+        Returns: boolean
+      }
       claim_referral: { Args: { _code: string }; Returns: string }
       demo_leaderboard: {
         Args: never
