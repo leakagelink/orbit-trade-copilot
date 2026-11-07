@@ -1,5 +1,10 @@
 # Roadmap
 
+## Deriv connection
+- [x] Add owner-private Deriv PAT/App ID storage, read-only Options-account verification and exchange controls; Deriv orders remain unavailable and excluded from Trade/Bots
+- [x] 11 connection/safety tests pass; signed-in desktop/mobile PAT form and demo toggle checked with no overflow; build OK
+- [ ] Real Deriv save/verification — requires the owner's PAT and matching PAT App ID; no credentials or orders submitted during testing
+
 ## Remaining upgrade requested 7 November 2026
 - [x] Connect advisory research to isolated, user-confirmed forward paper history; signed-in BTC confirmation, reload and waiting observation verified; no orders or wallet changes
 - [x] Enforce atomic UTC-month research-run allowances (operational defaults Pro 10 / Elite 30, claimed attempts counted); usage display and deployed schema verified; token billing caps are not implemented

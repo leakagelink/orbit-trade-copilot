@@ -10,6 +10,7 @@
 <!-- LOVABLE:END -->
 
 ## Architecture rules
+- Deriv connections store owner PAT/App ID in encrypted credentials and verify Options accounts via REST; they are connection-only and excluded from trading/bot selectors — prevents treating Options as crypto spot orders.
 - AI research is owner-private, Pro-gated and advisory; durable claims precede analysts, debate and decision stages, missing sources stay unavailable, and pure historical-volatility proposals never size or submit orders — keeps inference deduplicated and trading authority unchanged.
 - Subdirectories have their own `AGENTS.md`; read it before changing files there.
 - Toolkit extras use owner-scoped tables and Pro guards; alerts run on a separate authenticated cron and atomically claim a one-time notification, while trading-event triggers create durable inbox records — notifications cannot submit orders or delay risk exits.

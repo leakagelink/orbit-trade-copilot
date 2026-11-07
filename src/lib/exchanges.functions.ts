@@ -2,10 +2,11 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { EXCHANGES } from "./exchanges";
+import { derivAppId } from "./deriv";
 
 const credsSchema = z.object({
   apiKey: z.string().trim().min(8).max(256),
-  apiSecret: z.string().trim().min(8).max(512),
+  apiSecret: z.string().trim().min(1).max(512),
   passphrase: z.string().trim().max(256).optional(),
 });
 
@@ -24,7 +25,9 @@ export const connectExchange = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => connectSchema.parse(input))
   .handler(async ({ data, context }) => {
     const meta = EXCHANGES.find((e) => e.id === data.exchange);
-    if (!meta || !meta.available || (meta.kind !== "crypto" && meta.id !== "oanda")) throw new Error("This exchange is not supported yet");
+    if (!meta || !meta.available) throw new Error("This exchange is not supported yet");
+    if (meta.id === "deriv") derivAppId.parse(data.apiSecret);
+    else if (data.apiSecret.length < 8) throw new Error("API secret must have at least 8 characters");
     if (meta.needsPassphrase && !data.passphrase) throw new Error(`${meta.name} requires an API passphrase`);
     const { encryptJson } = await import("./crypto.server");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -34,10 +37,10 @@ export const connectExchange = createServerFn({ method: "POST" })
         user_id: context.userId,
         exchange: meta.id,
         label: data.label,
-        account_type: data.accountType,
+        account_type: meta.id === "deriv" ? "options" : data.accountType,
         is_testnet: data.isTestnet,
         status: "pending",
-        api_key_hint: `••••${data.apiKey.slice(-4)}`,
+        api_key_hint: meta.id === "deriv" ? null : `••••${data.apiKey.slice(-4)}`,
         last_error: PENDING_NOTE,
       })
       .select("id")
@@ -63,14 +66,16 @@ export const updateExchangeCredentials = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => credsSchema.extend({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     // RLS-scoped read proves ownership before privileged write.
-    const { data: own } = await context.supabase.from("exchange_connections").select("id").eq("id", data.id).maybeSingle();
+    const { data: own } = await context.supabase.from("exchange_connections").select("id,exchange").eq("id", data.id).maybeSingle();
     if (!own) throw new Error("Connection not found");
+    if (own.exchange === "deriv") derivAppId.parse(data.apiSecret);
+    else if (data.apiSecret.length < 8) throw new Error("API secret must have at least 8 characters");
     const { encryptJson } = await import("./crypto.server");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const sealed = await encryptJson({ apiKey: data.apiKey, apiSecret: data.apiSecret, passphrase: data.passphrase });
     await supabaseAdmin.from("connection_credentials").upsert({ connection_id: data.id, user_id: context.userId, ...sealed });
     await supabaseAdmin.from("exchange_connections").update({
-      status: "pending", api_key_hint: `••••${data.apiKey.slice(-4)}`, last_error: PENDING_NOTE,
+      status: "pending", api_key_hint: own.exchange === "deriv" ? null : `••••${data.apiKey.slice(-4)}`, last_error: PENDING_NOTE,
     }).eq("id", data.id);
     await context.supabase.from("audit_logs").insert({ user_id: context.userId, action: "exchange.reconnect", entity_type: "exchange_connection", entity_id: data.id });
     return { ok: true };

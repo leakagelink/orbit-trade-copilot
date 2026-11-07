@@ -38,7 +38,7 @@ async function load() {
     supabase.from("exchange_connections").select("id,label,exchange,status").neq("status", "disconnected"),
   ]);
   if (b.error) throw new Error(b.error.message);
-  return { bots: b.data, strategies: s.data ?? [], conns: c.data ?? [] };
+  return { bots: b.data, strategies: s.data ?? [], conns: (c.data ?? []).filter((c) => EXCHANGES.some((e) => e.id === c.exchange && e.kind === "crypto")) };
 }
 
 function Bots() {
@@ -169,7 +169,7 @@ function NewBotDialog({ open, onOpenChange, data, onDone, preset }: { preset?: s
               <Select value={connId} onValueChange={setConnId}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">None (paper only)</SelectItem>{data.conns.map((c) => <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>)}</SelectContent></Select>
             </div>
             {connId === "none" && <div className="space-y-1.5"><Label>Exchange (market data)</Label>
-              <Select value={exchange} onValueChange={setExchange}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{EXCHANGES.filter((e) => e.available).map((e) => <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>)}</SelectContent></Select>
+              <Select value={exchange} onValueChange={setExchange}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{EXCHANGES.filter((e) => e.available && e.kind === "crypto").map((e) => <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>)}</SelectContent></Select>
             </div>}
             <div className="space-y-1.5"><Label>Pair</Label><Input name="pair" required pattern="[A-Za-z0-9]{2,12}/[A-Za-z0-9]{2,12}" className="font-mono" defaultValue={risk?.pairs?.[0] ?? "BTC/USDT"} /></div>
             <div className="space-y-1.5"><Label>Timeframe</Label>

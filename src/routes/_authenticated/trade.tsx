@@ -71,7 +71,7 @@ function TradePage() {
     },
   });
   const usable = useMemo(
-    () => (accounts.data ?? []).filter((c) => (nonCrypto ? c.exchange === "oanda" && market?.oanda : c.exchange !== "oanda")),
+    () => (accounts.data ?? []).filter((c) => (nonCrypto ? c.exchange === "oanda" && market?.oanda : EXCHANGES.some((e) => e.id === c.exchange && e.kind === "crypto"))),
     [accounts.data, nonCrypto, market?.oanda],
   );
   const chosen = usable.find((c) => c.id === connId);

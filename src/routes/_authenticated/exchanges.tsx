@@ -18,7 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { EXCHANGES, exchangeName, type ExchangeMeta } from "@/lib/exchanges";
 import { connectExchange, disconnectExchange, updateExchangeCredentials, verifyExchange } from "@/lib/exchanges.functions";
 
-const D = "Connect your crypto exchange accounts. API secrets are encrypted on the server.";
+const D = "Connect your exchange and broker accounts. API credentials are encrypted on the server.";
 export const Route = createFileRoute("/_authenticated/exchanges")({
   head: () => ({ meta: [{ title: "Exchanges — AlgoVirt" }, { name: "description", content: D }, { property: "og:title", content: "Exchanges — AlgoVirt" }, { property: "og:description", content: D }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Exchanges,
@@ -71,7 +71,8 @@ function Exchanges() {
                 <div key={c.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <div className="flex min-w-0 flex-wrap items-center gap-2"><span className="min-w-0 break-words font-medium">{c.label}</span><Badge variant={STATUS_VARIANT[c.status]}>{c.status}</Badge>{c.is_testnet && <Badge variant="outline">testnet</Badge>}</div>
-                    <div className="mt-1 font-mono text-xs text-muted-foreground">{exchangeName(c.exchange)} · {c.account_type} · key {c.api_key_hint ?? "—"}</div>
+                    <div className="mt-1 font-mono text-xs text-muted-foreground">{exchangeName(c.exchange)} · {c.account_type}{c.exchange !== "deriv" && ` · key ${c.api_key_hint ?? "—"}`}</div>
+                    {c.exchange === "deriv" && <Badge variant="outline">Connection only · orders unavailable</Badge>}
                     {(() => { const bal = (c.permissions as { balances?: { asset: string; free: number; locked: number }[] } | null)?.balances; return c.status === "connected" && bal ? <p className="mt-1 font-mono text-xs">{bal.length ? bal.slice(0, 6).map((b) => `${b.asset} ${+(b.free + b.locked).toPrecision(6)}`).join(" · ") : "No balances"}{c.last_synced_at && <span className="text-muted-foreground"> · synced {new Date(c.last_synced_at).toLocaleString()}</span>}</p> : null; })()}
                     {c.last_error && <p className="mt-1 max-w-xl text-xs text-muted-foreground">{c.last_error}</p>}
                   </div>
@@ -90,11 +91,11 @@ function Exchanges() {
           <h2 className="mb-3 text-sm font-medium">Add a connection</h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {EXCHANGES.map((e) => (
-              <button key={e.id} disabled={!e.available} onClick={() => setPicked(e)} className="group rounded-lg border bg-card p-4 text-left transition-colors hover:border-primary disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border">
+              <Button variant="outline" key={e.id} disabled={!e.available} onClick={() => setPicked(e)} className="group block h-auto whitespace-normal rounded-lg border bg-card p-4 text-left transition-colors hover:border-primary disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border">
                 <div className="flex items-center justify-between"><span className="font-medium">{e.name}</span>{e.available ? <Plus className="h-4 w-4 text-muted-foreground group-hover:text-primary" /> : <Badge variant="outline">Soon</Badge>}</div>
                 <div className="mt-1 text-xs text-muted-foreground">{e.market}</div>
-                <div className="mt-3 font-mono text-[10px] text-muted-foreground">{e.orderTypes.join(" · ")}</div>
-              </button>
+                <div className="mt-3 font-mono text-[10px] text-muted-foreground">{e.connectionOnly ? "PAT / App ID · demo or real" : e.orderTypes.join(" · ")}</div>
+              </Button>
             ))}
           </div>
         </section>
@@ -107,7 +108,7 @@ function Exchanges() {
         <AlertDialogContent>
           <AlertDialogHeader><AlertDialogTitle>Disconnect this account?</AlertDialogTitle><AlertDialogDescription>Stored API keys are permanently deleted. Bots using this account will be unable to trade.</AlertDialogDescription></AlertDialogHeader>
           <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={async () => { try { await disconnect({ data: { id: toDisconnect! } }); toast.success("Disconnected"); refresh(); } catch (e) { toast.error((e as Error).message); } }}>Disconnect</AlertDialogAction>
+            <AlertDialogAction onClick={async () => { if (!toDisconnect) return; try { await disconnect({ data: { id: toDisconnect } }); toast.success("Disconnected"); refresh(); } catch (e) { toast.error((e as Error).message); } }}>Disconnect</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -153,15 +154,16 @@ function CredentialsDialog({ meta, connectionId, onClose, onDone }: { meta: Exch
             <>
               <div className="space-y-1.5"><Label htmlFor="label">Label</Label><Input id="label" name="label" required maxLength={60} defaultValue={meta ? `${meta.name} main` : ""} /></div>
               <div className="grid gap-4 sm:flex">
-                <div className="flex-1 space-y-1.5"><Label>Account type</Label>
+                {meta?.id === "deriv" ? <div className="flex-1 space-y-1.5"><Label>Account type</Label><p className="text-sm">Deriv Options</p></div> : <div className="flex-1 space-y-1.5"><Label>Account type</Label>
                   <Select value={accountType} onValueChange={(v) => setAccountType(v as "spot" | "futures")}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="spot">Spot</SelectItem><SelectItem value="futures">Futures</SelectItem></SelectContent></Select>
-                </div>
-                {meta?.supportsTestnet && <div className="flex items-end gap-2 pb-2"><Switch id="tn" checked={testnet} onCheckedChange={setTestnet} /><Label htmlFor="tn">{meta?.id === "oanda" ? "Practice account" : "Testnet"}</Label></div>}
+                </div>}
+                {meta?.supportsTestnet && <div className="flex items-end gap-2 pb-2"><Switch id="tn" checked={testnet} onCheckedChange={setTestnet} /><Label htmlFor="tn">{meta?.id === "deriv" ? "Demo account" : meta?.id === "oanda" ? "Practice account" : "Testnet"}</Label></div>}
               </div>
             </>
           )}
-          <div className="space-y-1.5"><Label htmlFor="apiKey">{meta?.id === "oanda" ? "API token" : "API key"}</Label><Input id="apiKey" name="apiKey" required minLength={8} className="font-mono" /></div>
-          <div className="space-y-1.5"><Label htmlFor="apiSecret">{meta?.id === "oanda" ? "Account ID (e.g. 101-004-1234567-001)" : "API secret"}</Label><Input id="apiSecret" name="apiSecret" type={meta?.id === "oanda" ? "text" : "password"} required minLength={8} className="font-mono" /></div>
+          {meta?.id === "deriv" && <div className="space-y-2 text-sm text-muted-foreground"><p>Use a Deriv Personal Access Token (PAT) with trade scope and its PAT App ID. Legacy API tokens and MT5 passwords are not supported. Orders are not available in AlgoVirt for this connection.</p><a href="https://developers.deriv.com/docs/intro/authentication/" target="_blank" rel="noopener noreferrer" className="text-primary underline">Deriv token and App ID setup</a></div>}
+          <div className="space-y-1.5"><Label htmlFor="apiKey">{meta?.id === "deriv" ? "Personal Access Token (PAT)" : meta?.id === "oanda" ? "API token" : "API key"}</Label><Input id="apiKey" name="apiKey" type="password" required minLength={8} className="font-mono" /></div>
+          <div className="space-y-1.5"><Label htmlFor="apiSecret">{meta?.id === "deriv" ? "PAT App ID" : meta?.id === "oanda" ? "Account ID (e.g. 101-004-1234567-001)" : "API secret"}</Label><Input id="apiSecret" name="apiSecret" type={meta?.id === "oanda" || meta?.id === "deriv" ? "text" : "password"} required minLength={meta?.id === "deriv" ? 1 : 8} className="font-mono" /></div>
           {meta?.needsPassphrase && <div className="space-y-1.5"><Label htmlFor="passphrase">API passphrase</Label><Input id="passphrase" name="passphrase" type="password" required className="font-mono" /></div>}
           <DialogFooter><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button disabled={busy}>{busy ? "Saving…" : "Save"}</Button></DialogFooter>
         </form>

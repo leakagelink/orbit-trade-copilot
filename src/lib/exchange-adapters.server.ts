@@ -1,5 +1,6 @@
 // Exchange adapters: public market data + signed balance reads. Web Crypto only (Workers-safe).
 import type { Candle } from "./indicators";
+import { derivAppId, parseDerivBalances } from "./deriv";
 
 export interface Creds { apiKey: string; apiSecret: string; passphrase?: string }
 export interface Balance { asset: string; free: number; locked: number }
@@ -163,6 +164,16 @@ export async function fetchCandles(exchange: string, pair: string, tf: string, t
 export async function fetchBalances(exchange: string, c: Creds, testnet: boolean): Promise<Balance[]> {
   const nz = (xs: Balance[]) => xs.filter((x) => x.free + x.locked > 0);
   switch (exchange) {
+    case "deriv": {
+      const appId = derivAppId.parse(c.apiSecret);
+      const response = await fetch("https://api.derivws.com/trading/v1/options/accounts", {
+        headers: { Authorization: `Bearer ${c.apiKey}`, "Deriv-App-ID": appId, Accept: "application/json" },
+        signal: AbortSignal.timeout(15000),
+      });
+      // Never persist provider bodies: they may echo credentials or account PII.
+      if (!response.ok) throw new Error(`Deriv verification failed (${response.status}). Check the PAT, App ID, trade scope and account access.`);
+      return parseDerivBalances(await response.json(), testnet);
+    }
     case "binance": {
       const host = testnet ? "https://testnet.binance.vision" : "https://api.binance.com";
       const qs = `timestamp=${Date.now()}&recvWindow=10000`;

@@ -8,6 +8,7 @@ export interface ExchangeMeta {
   supportsTestnet: boolean;
   needsPassphrase: boolean;
   available: boolean;
+  connectionOnly?: boolean;
 }
 
 export const EXCHANGES: ExchangeMeta[] = [
@@ -17,6 +18,7 @@ export const EXCHANGES: ExchangeMeta[] = [
   { id: "kucoin", name: "KuCoin", kind: "crypto", market: "Spot", orderTypes: ["market", "limit", "stop"], supportsTestnet: false, needsPassphrase: true, available: true },
   { id: "coinbase", name: "Coinbase Advanced", kind: "crypto", market: "Spot", orderTypes: ["market", "limit", "stop_limit"], supportsTestnet: false, needsPassphrase: false, available: true },
   { id: "oanda", name: "OANDA", kind: "broker", market: "Forex / Commodities", orderTypes: ["MARKET", "LIMIT", "STOP"], supportsTestnet: true, needsPassphrase: false, available: true },
+  { id: "deriv", name: "Deriv", kind: "broker", market: "Options accounts · connection only", orderTypes: [], supportsTestnet: true, needsPassphrase: false, available: true, connectionOnly: true },
   { id: "zerodha", name: "Zerodha Kite", kind: "broker", market: "NSE / BSE", orderTypes: ["MARKET", "LIMIT", "SL", "SL-M"], supportsTestnet: false, needsPassphrase: false, available: false },
   { id: "upstox", name: "Upstox", kind: "broker", market: "NSE / BSE", orderTypes: ["MARKET", "LIMIT", "SL"], supportsTestnet: false, needsPassphrase: false, available: false },
 ];
