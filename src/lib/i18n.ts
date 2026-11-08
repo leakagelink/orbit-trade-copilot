@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 export type Lang = "en" | "hi";
 
 const HI: Record<string, string> = {
-  "/trade": "ट्रेड", "/wallet": "वॉलेट", "/dashboard": "डैशबोर्ड", "/assistant": "AI सहायक",
+  "/trade": "ट्रेड", "/wallet": "वॉलेट", "/dashboard": "डैशबोर्ड", "/autopilot": "AI ऑटोपायलट", "/assistant": "AI सहायक",
   "/strategies": "रणनीतियाँ", "/bots": "ट्रेडिंग बॉट", "/scalping": "स्कैल्पिंग", "/arbitrage": "आर्बिट्राज",
   "/backtests": "बैकटेस्ट", "/analytics": "विश्लेषण", "/risk": "जोखिम", "/exchanges": "एक्सचेंज",
   "/settings": "सेटिंग्स", "/plans": "प्लान", "/marketplace": "रणनीति बाज़ार", "/leaderboard": "डेमो लीडरबोर्ड",

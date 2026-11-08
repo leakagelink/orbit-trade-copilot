@@ -34,7 +34,7 @@ function Assistant() {
   const sessions = useQuery({
     queryKey: ["ai_sessions"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("ai_sessions").select("id,title,updated_at").order("updated_at", { ascending: false }).limit(50);
+      const { data, error } = await supabase.from("ai_sessions").select("id,title,updated_at").eq("kind", "assistant").order("updated_at", { ascending: false }).limit(50);
       if (error) throw new Error(error.message);
       return data;
     },

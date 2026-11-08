@@ -22,6 +22,7 @@ const NAV = [
   { to: "/trade", label: "Trade", icon: CandlestickChart },
   { to: "/wallet", label: "Wallet", icon: Wallet },
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/autopilot", label: "AI Autopilot", icon: Bot },
   { to: "/assistant", label: "AI Assistant", icon: MessageSquareText },
   { to: "/research", label: "AI Research", icon: FlaskConical },
   { to: "/intelligence", label: "Strategy Intelligence", icon: ShieldCheck },
@@ -94,7 +95,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
         const label = navLabel(to, en, lang);
         const active = path === to || path.startsWith(to + "/");
         const locked = !plan.isLoading && !canOpen(to, tier);
-        const group = to === "/trade" ? "WORKSPACE" : to === "/assistant" ? "INTELLIGENCE" : to === "/backtests" ? "MANAGEMENT" : null;
+        const group = to === "/trade" ? "WORKSPACE" : to === "/autopilot" ? "INTELLIGENCE" : to === "/backtests" ? "MANAGEMENT" : null;
         return (
           <div key={to}>
           {group && <div className="nav-label px-3 pb-2 pt-4 text-[10px] font-semibold text-muted-foreground">{group}</div>}

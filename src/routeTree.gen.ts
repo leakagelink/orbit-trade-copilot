@@ -22,6 +22,7 @@ import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedAnalyticsRouteImport } from './routes/_authenticated/analytics'
 import { Route as AuthenticatedArbitrageRouteImport } from './routes/_authenticated/arbitrage'
 import { Route as AuthenticatedAssistantRouteImport } from './routes/_authenticated/assistant'
+import { Route as AuthenticatedAutopilotRouteImport } from './routes/_authenticated/autopilot'
 import { Route as AuthenticatedBacktestsRouteImport } from './routes/_authenticated/backtests'
 import { Route as AuthenticatedBotsRouteImport } from './routes/_authenticated/bots'
 import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticated/calendar'
@@ -45,6 +46,7 @@ import { Route as AuthenticatedSupportRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedTradeRouteImport } from './routes/_authenticated/trade'
 import { Route as AuthenticatedWalletRouteImport } from './routes/_authenticated/wallet'
 import { Route as AuthenticatedWatchlistRouteImport } from './routes/_authenticated/watchlist'
+import { Route as ApiAutopilotRouteImport } from './routes/api/autopilot'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as AuthenticatedStrategiesIndexRouteImport } from './routes/_authenticated/strategies.index'
 import { Route as AuthenticatedStrategiesIdRouteImport } from './routes/_authenticated/strategies.$id'
@@ -114,6 +116,11 @@ const AuthenticatedArbitrageRoute = AuthenticatedArbitrageRouteImport.update({
 const AuthenticatedAssistantRoute = AuthenticatedAssistantRouteImport.update({
   id: '/assistant',
   path: '/assistant',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAutopilotRoute = AuthenticatedAutopilotRouteImport.update({
+  id: '/autopilot',
+  path: '/autopilot',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedBacktestsRoute = AuthenticatedBacktestsRouteImport.update({
@@ -235,6 +242,11 @@ const AuthenticatedWatchlistRoute = AuthenticatedWatchlistRouteImport.update({
   path: '/watchlist',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ApiAutopilotRoute = ApiAutopilotRouteImport.update({
+  id: '/api/autopilot',
+  path: '/api/autopilot',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiChatRoute = ApiChatRouteImport.update({
   id: '/api/chat',
   path: '/api/chat',
@@ -281,6 +293,7 @@ export interface FileRoutesByFullPath {
   '/analytics': typeof AuthenticatedAnalyticsRoute
   '/arbitrage': typeof AuthenticatedArbitrageRoute
   '/assistant': typeof AuthenticatedAssistantRoute
+  '/autopilot': typeof AuthenticatedAutopilotRoute
   '/backtests': typeof AuthenticatedBacktestsRoute
   '/bots': typeof AuthenticatedBotsRoute
   '/calendar': typeof AuthenticatedCalendarRoute
@@ -304,6 +317,7 @@ export interface FileRoutesByFullPath {
   '/trade': typeof AuthenticatedTradeRoute
   '/wallet': typeof AuthenticatedWalletRoute
   '/watchlist': typeof AuthenticatedWatchlistRoute
+  '/api/autopilot': typeof ApiAutopilotRoute
   '/api/chat': typeof ApiChatRoute
   '/strategies/$id': typeof AuthenticatedStrategiesIdRoute
   '/strategies/': typeof AuthenticatedStrategiesIndexRoute
@@ -324,6 +338,7 @@ export interface FileRoutesByTo {
   '/analytics': typeof AuthenticatedAnalyticsRoute
   '/arbitrage': typeof AuthenticatedArbitrageRoute
   '/assistant': typeof AuthenticatedAssistantRoute
+  '/autopilot': typeof AuthenticatedAutopilotRoute
   '/backtests': typeof AuthenticatedBacktestsRoute
   '/bots': typeof AuthenticatedBotsRoute
   '/calendar': typeof AuthenticatedCalendarRoute
@@ -347,6 +362,7 @@ export interface FileRoutesByTo {
   '/trade': typeof AuthenticatedTradeRoute
   '/wallet': typeof AuthenticatedWalletRoute
   '/watchlist': typeof AuthenticatedWatchlistRoute
+  '/api/autopilot': typeof ApiAutopilotRoute
   '/api/chat': typeof ApiChatRoute
   '/strategies/$id': typeof AuthenticatedStrategiesIdRoute
   '/strategies': typeof AuthenticatedStrategiesIndexRoute
@@ -369,6 +385,7 @@ export interface FileRoutesById {
   '/_authenticated/analytics': typeof AuthenticatedAnalyticsRoute
   '/_authenticated/arbitrage': typeof AuthenticatedArbitrageRoute
   '/_authenticated/assistant': typeof AuthenticatedAssistantRoute
+  '/_authenticated/autopilot': typeof AuthenticatedAutopilotRoute
   '/_authenticated/backtests': typeof AuthenticatedBacktestsRoute
   '/_authenticated/bots': typeof AuthenticatedBotsRoute
   '/_authenticated/calendar': typeof AuthenticatedCalendarRoute
@@ -392,6 +409,7 @@ export interface FileRoutesById {
   '/_authenticated/trade': typeof AuthenticatedTradeRoute
   '/_authenticated/wallet': typeof AuthenticatedWalletRoute
   '/_authenticated/watchlist': typeof AuthenticatedWatchlistRoute
+  '/api/autopilot': typeof ApiAutopilotRoute
   '/api/chat': typeof ApiChatRoute
   '/_authenticated/strategies/$id': typeof AuthenticatedStrategiesIdRoute
   '/_authenticated/strategies/': typeof AuthenticatedStrategiesIndexRoute
@@ -414,6 +432,7 @@ export interface FileRouteTypes {
     | '/analytics'
     | '/arbitrage'
     | '/assistant'
+    | '/autopilot'
     | '/backtests'
     | '/bots'
     | '/calendar'
@@ -437,6 +456,7 @@ export interface FileRouteTypes {
     | '/trade'
     | '/wallet'
     | '/watchlist'
+    | '/api/autopilot'
     | '/api/chat'
     | '/strategies/$id'
     | '/strategies/'
@@ -457,6 +477,7 @@ export interface FileRouteTypes {
     | '/analytics'
     | '/arbitrage'
     | '/assistant'
+    | '/autopilot'
     | '/backtests'
     | '/bots'
     | '/calendar'
@@ -480,6 +501,7 @@ export interface FileRouteTypes {
     | '/trade'
     | '/wallet'
     | '/watchlist'
+    | '/api/autopilot'
     | '/api/chat'
     | '/strategies/$id'
     | '/strategies'
@@ -501,6 +523,7 @@ export interface FileRouteTypes {
     | '/_authenticated/analytics'
     | '/_authenticated/arbitrage'
     | '/_authenticated/assistant'
+    | '/_authenticated/autopilot'
     | '/_authenticated/backtests'
     | '/_authenticated/bots'
     | '/_authenticated/calendar'
@@ -524,6 +547,7 @@ export interface FileRouteTypes {
     | '/_authenticated/trade'
     | '/_authenticated/wallet'
     | '/_authenticated/watchlist'
+    | '/api/autopilot'
     | '/api/chat'
     | '/_authenticated/strategies/$id'
     | '/_authenticated/strategies/'
@@ -542,6 +566,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   RiskDisclosureRoute: typeof RiskDisclosureRoute
   TermsRoute: typeof TermsRoute
+  ApiAutopilotRoute: typeof ApiAutopilotRoute
   ApiChatRoute: typeof ApiChatRoute
   ApiPublicAlertsTickRoute: typeof ApiPublicAlertsTickRoute
   ApiPublicEngineTickRoute: typeof ApiPublicEngineTickRoute
@@ -639,6 +664,13 @@ declare module '@tanstack/react-router' {
       path: '/assistant'
       fullPath: '/assistant'
       preLoaderRoute: typeof AuthenticatedAssistantRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/autopilot': {
+      id: '/_authenticated/autopilot'
+      path: '/autopilot'
+      fullPath: '/autopilot'
+      preLoaderRoute: typeof AuthenticatedAutopilotRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/backtests': {
@@ -802,6 +834,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedWatchlistRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/autopilot': {
+      id: '/api/autopilot'
+      path: '/api/autopilot'
+      fullPath: '/api/autopilot'
+      preLoaderRoute: typeof ApiAutopilotRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/chat': {
       id: '/api/chat'
       path: '/api/chat'
@@ -852,6 +891,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAnalyticsRoute: typeof AuthenticatedAnalyticsRoute
   AuthenticatedArbitrageRoute: typeof AuthenticatedArbitrageRoute
   AuthenticatedAssistantRoute: typeof AuthenticatedAssistantRoute
+  AuthenticatedAutopilotRoute: typeof AuthenticatedAutopilotRoute
   AuthenticatedBacktestsRoute: typeof AuthenticatedBacktestsRoute
   AuthenticatedBotsRoute: typeof AuthenticatedBotsRoute
   AuthenticatedCalendarRoute: typeof AuthenticatedCalendarRoute
@@ -884,6 +924,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAnalyticsRoute: AuthenticatedAnalyticsRoute,
   AuthenticatedArbitrageRoute: AuthenticatedArbitrageRoute,
   AuthenticatedAssistantRoute: AuthenticatedAssistantRoute,
+  AuthenticatedAutopilotRoute: AuthenticatedAutopilotRoute,
   AuthenticatedBacktestsRoute: AuthenticatedBacktestsRoute,
   AuthenticatedBotsRoute: AuthenticatedBotsRoute,
   AuthenticatedCalendarRoute: AuthenticatedCalendarRoute,
@@ -924,6 +965,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   RiskDisclosureRoute: RiskDisclosureRoute,
   TermsRoute: TermsRoute,
+  ApiAutopilotRoute: ApiAutopilotRoute,
   ApiChatRoute: ApiChatRoute,
   ApiPublicAlertsTickRoute: ApiPublicAlertsTickRoute,
   ApiPublicEngineTickRoute: ApiPublicEngineTickRoute,

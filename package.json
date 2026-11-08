@@ -17,7 +17,7 @@
     "rolldown": "1.2.1"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "^4.0.97",
+    "@ai-sdk/anthropic": "4.0.89",
     "@ai-sdk/openai": "^4.0.104",
     "@ai-sdk/react": "^4.0.158",
     "@hookform/resolvers": "^5.2.2",

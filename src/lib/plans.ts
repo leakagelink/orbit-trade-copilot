@@ -36,6 +36,7 @@ export const PLAN_FEATURES: Record<PlanId, { name: string; summary: string; feat
     summary: "AI-assisted & automated trading",
     features: [
       "Everything in Free",
+      "AI Autopilot: AI runs strategies, paper bots & demo trades",
       "AI assistant & AI trade ideas",
       "AI one-click trades on the Trade page",
       "Strategy builder",
