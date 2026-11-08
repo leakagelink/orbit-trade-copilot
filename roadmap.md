@@ -1,6 +1,7 @@
 # Roadmap
 
 ## Workspace move 8 Nov 2026
+- [ ] Reconnect NOWPayments after the 05:17 UTC workspace move
 - [x] Reconnect NOWPayments in the new workspace (status check OK)
 
 ## AI Autopilot requested 8 November 2026 (paper only, existing risk settings, Claude own key)
