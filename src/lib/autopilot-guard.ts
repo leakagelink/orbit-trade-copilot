@@ -64,7 +64,7 @@ export const toolInputs = {
   }),
 };
 
-export const AUTOPILOT_SYSTEM = `You are AlgoVirt Autopilot, an AI trading operator for the signed-in user. You act ONLY in demo/paper mode: demo-wallet trades, paper bots and paper arbitrage. You cannot trade real money, withdraw, change API keys, security or admin settings — say so if asked.
+export const AUTOPILOT_SYSTEM = `You are AlgoVirt Autopilot, an AI trading operator for the signed-in user. Paper tools act on the demo wallet / paper engine. Real money is possible ONLY through the live_* tools, which exist only when the user enabled real-money Autopilot. You can never withdraw, transfer funds, change API keys, security or admin settings — say so if asked.
 How to work:
 - Use tools for every fact. Call get_account_overview first in a new task. Never invent prices, balances or results; use get_market_snapshot for prices/indicators.
 - Algo workflow: design a StrategyConfig -> create_strategy -> run_backtest (realistic costs: feePct >= 0.1, slippagePct >= 0.05, 90+ days) -> only start_paper_bot when the backtest has >= 10 trades, positive net profit and max drawdown under 25%. Otherwise explain and iterate at most twice.
@@ -75,3 +75,57 @@ How to work:
 - Finish with a short summary: actions taken (with ids), results, and what the user should watch. Reply in the user's language (Hindi/Hinglish if they write that way). Be concise.
 StrategyConfig example: {"pairs":["BTC/USDT"],"timeframe":"1h","indicators":[{"id":"rsi_1","type":"RSI","params":{"period":14}}],"entry":{"logic":"all","conditions":[{"left":"rsi_1","operator":"<","right":"30"}]},"exit":{"logic":"any","conditions":[{"left":"rsi_1","operator":">","right":"70"}]},"risk":{"stop_loss_pct":2,"take_profit_pct":4,"trailing_stop_pct":null,"position_size_pct":10,"capital_allocation":1000,"max_open_positions":1,"daily_loss_limit_pct":5}}
 Indicator types: RSI, MACD, EMA, SMA, BBANDS, ATR, STOCH_RSI, VOLUME. Operators: <, >, <=, >=, crosses_above, crosses_below. Condition sides: indicator id, "price" or a number string. Timeframes: 1m, 5m, 15m, 30m, 1h, 4h, 1d. Strategy bots trade crypto pairs only.`;
+
+
+// ---- Real-money Autopilot (only when the owner enabled it with typed confirmation) ----
+const derivSymbol = z.string().regex(/^[A-Za-z0-9_]{2,24}$/, "Use a Deriv symbol from live_deriv_symbols");
+export const DERIV_MARKETS = ["synthetic_index", "forex", "indices", "commodities", "cryptocurrency"] as const;
+
+export const liveToolInputs = {
+  openBinance: z.strictObject({
+    symbol: pair, amountUsd: z.number().min(5).max(1e6).describe("USDT spent on this spot buy"),
+    stopLoss: z.number().positive().describe("Absolute stop price below the current price"), takeProfit: z.number().positive().nullable(),
+  }),
+  closePosition: z.strictObject({ positionId: z.string().uuid() }),
+  derivSymbols: z.strictObject({ market: z.enum(DERIV_MARKETS) }),
+  derivSnapshot: z.strictObject({ symbol: derivSymbol, timeframe: z.enum(["1m", "5m", "15m", "1h", "4h", "1d"]) }),
+  openDeriv: z.strictObject({
+    symbol: derivSymbol, direction: z.enum(["up", "down"]),
+    stake: z.number().min(1).max(100000).describe("Money put into the contract (the most it can lose)"),
+    multiplier: z.number().int().min(1).max(2000),
+    stopLossAmount: z.number().positive().describe("Close when the loss reaches this money amount (<= stake)"),
+    takeProfitAmount: z.number().positive().nullable().describe("Close when the profit reaches this money amount"),
+  }).refine((v) => v.stopLossAmount <= v.stake, { message: "stopLossAmount cannot exceed stake", path: ["stopLossAmount"] }),
+};
+
+export interface LiveAccounts { binance: { id: string; label: string; testnet: boolean } | null; deriv: { id: string; label: string; testnet: boolean } | null }
+export interface RiskRow { max_daily_loss: number | null; max_open_exposure: number | null; trading_halted: boolean }
+
+/** Reasons real-money Autopilot cannot be switched on. Empty = allowed. */
+export function liveEnableProblems(input: { confirm: string; risk: RiskRow | null; binanceId: string | null; derivId: string | null }) {
+  const out: string[] = [];
+  if (input.confirm !== "LIVE") out.push("Type LIVE to confirm real-money trading");
+  if (!input.binanceId && !input.derivId) out.push("Choose at least one connected account (Binance or Deriv)");
+  if (!input.risk) out.push("Save your risk settings first (Risk page)");
+  else {
+    if (input.risk.trading_halted) out.push("Trading is halted by emergency stop — resume it on the Risk page first");
+    if (input.risk.max_daily_loss == null || !(Number(input.risk.max_daily_loss) > 0)) out.push("Set a maximum daily loss on the Risk page");
+    if (input.risk.max_open_exposure == null || !(Number(input.risk.max_open_exposure) > 0)) out.push("Set a maximum open exposure on the Risk page");
+  }
+  return out;
+}
+
+export function liveRules(acc: LiveAccounts) {
+  const list = [acc.binance && `Binance spot "${acc.binance.label}"${acc.binance.testnet ? " (testnet)" : " (REAL MONEY)"}`, acc.deriv && `Deriv Multipliers "${acc.deriv.label}"${acc.deriv.testnet ? " (demo account)" : " (REAL MONEY)"}`].filter(Boolean).join(" and ");
+  return `
+REAL-MONEY TRADING IS ENABLED on: ${list}. live_* tools place real orders that can lose real money.
+- You decide trade size yourself, but the server enforces the user's risk settings (max daily loss, max open exposure, max positions) and rejects anything above them. Risk at most ~2% of the account balance per trade and keep total open risk modest.
+- Only enter with a clear, explained edge from live_deriv_snapshot / get_market_snapshot. Doing nothing is a valid, often best, decision. Never average down, never revenge-trade after a loss.
+- Binance live is spot BUY only; always give a stop price below the current price. Deriv: use live_deriv_symbols then live_deriv_snapshot; every contract needs stopLossAmount (<= stake). Multipliers amplify moves; prefer low multipliers.
+- If any tool says Blocked, halted or pending reconciliation, stop new entries and report it.`;
+}
+
+export function automaticRunPrompt(goal: string, live: boolean) {
+  return `Automatic scheduled run (no human is watching in real time). ${goal.trim() ? `The user's standing goal: """${goal.trim()}"""` : "No specific goal set: look for careful, high-quality opportunities."}
+1) get_account_overview. 2) Review and manage open ${live ? "live and paper" : "paper"} positions first (close ones whose thesis broke). 3) Only then consider at most a few new entries. 4) End with a 3-5 line summary of what you did and why.`;
+}

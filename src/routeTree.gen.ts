@@ -51,6 +51,7 @@ import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as AuthenticatedStrategiesIndexRouteImport } from './routes/_authenticated/strategies.index'
 import { Route as AuthenticatedStrategiesIdRouteImport } from './routes/_authenticated/strategies.$id'
 import { Route as ApiPublicAlertsTickRouteImport } from './routes/api/public/alerts/tick'
+import { Route as ApiPublicAutopilotTickRouteImport } from './routes/api/public/autopilot/tick'
 import { Route as ApiPublicEngineTickRouteImport } from './routes/api/public/engine/tick'
 import { Route as ApiPublicNowpaymentsIpnRouteImport } from './routes/api/public/nowpayments/ipn'
 
@@ -269,6 +270,11 @@ const ApiPublicAlertsTickRoute = ApiPublicAlertsTickRouteImport.update({
   path: '/api/public/alerts/tick',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicAutopilotTickRoute = ApiPublicAutopilotTickRouteImport.update({
+  id: '/api/public/autopilot/tick',
+  path: '/api/public/autopilot/tick',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicEngineTickRoute = ApiPublicEngineTickRouteImport.update({
   id: '/api/public/engine/tick',
   path: '/api/public/engine/tick',
@@ -322,6 +328,7 @@ export interface FileRoutesByFullPath {
   '/strategies/$id': typeof AuthenticatedStrategiesIdRoute
   '/strategies/': typeof AuthenticatedStrategiesIndexRoute
   '/api/public/alerts/tick': typeof ApiPublicAlertsTickRoute
+  '/api/public/autopilot/tick': typeof ApiPublicAutopilotTickRoute
   '/api/public/engine/tick': typeof ApiPublicEngineTickRoute
   '/api/public/nowpayments/ipn': typeof ApiPublicNowpaymentsIpnRoute
 }
@@ -367,6 +374,7 @@ export interface FileRoutesByTo {
   '/strategies/$id': typeof AuthenticatedStrategiesIdRoute
   '/strategies': typeof AuthenticatedStrategiesIndexRoute
   '/api/public/alerts/tick': typeof ApiPublicAlertsTickRoute
+  '/api/public/autopilot/tick': typeof ApiPublicAutopilotTickRoute
   '/api/public/engine/tick': typeof ApiPublicEngineTickRoute
   '/api/public/nowpayments/ipn': typeof ApiPublicNowpaymentsIpnRoute
 }
@@ -414,6 +422,7 @@ export interface FileRoutesById {
   '/_authenticated/strategies/$id': typeof AuthenticatedStrategiesIdRoute
   '/_authenticated/strategies/': typeof AuthenticatedStrategiesIndexRoute
   '/api/public/alerts/tick': typeof ApiPublicAlertsTickRoute
+  '/api/public/autopilot/tick': typeof ApiPublicAutopilotTickRoute
   '/api/public/engine/tick': typeof ApiPublicEngineTickRoute
   '/api/public/nowpayments/ipn': typeof ApiPublicNowpaymentsIpnRoute
 }
@@ -461,6 +470,7 @@ export interface FileRouteTypes {
     | '/strategies/$id'
     | '/strategies/'
     | '/api/public/alerts/tick'
+    | '/api/public/autopilot/tick'
     | '/api/public/engine/tick'
     | '/api/public/nowpayments/ipn'
   fileRoutesByTo: FileRoutesByTo
@@ -506,6 +516,7 @@ export interface FileRouteTypes {
     | '/strategies/$id'
     | '/strategies'
     | '/api/public/alerts/tick'
+    | '/api/public/autopilot/tick'
     | '/api/public/engine/tick'
     | '/api/public/nowpayments/ipn'
   id:
@@ -552,6 +563,7 @@ export interface FileRouteTypes {
     | '/_authenticated/strategies/$id'
     | '/_authenticated/strategies/'
     | '/api/public/alerts/tick'
+    | '/api/public/autopilot/tick'
     | '/api/public/engine/tick'
     | '/api/public/nowpayments/ipn'
   fileRoutesById: FileRoutesById
@@ -569,6 +581,7 @@ export interface RootRouteChildren {
   ApiAutopilotRoute: typeof ApiAutopilotRoute
   ApiChatRoute: typeof ApiChatRoute
   ApiPublicAlertsTickRoute: typeof ApiPublicAlertsTickRoute
+  ApiPublicAutopilotTickRoute: typeof ApiPublicAutopilotTickRoute
   ApiPublicEngineTickRoute: typeof ApiPublicEngineTickRoute
   ApiPublicNowpaymentsIpnRoute: typeof ApiPublicNowpaymentsIpnRoute
 }
@@ -869,6 +882,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicAlertsTickRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/autopilot/tick': {
+      id: '/api/public/autopilot/tick'
+      path: '/api/public/autopilot/tick'
+      fullPath: '/api/public/autopilot/tick'
+      preLoaderRoute: typeof ApiPublicAutopilotTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/engine/tick': {
       id: '/api/public/engine/tick'
       path: '/api/public/engine/tick'
@@ -968,6 +988,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAutopilotRoute: ApiAutopilotRoute,
   ApiChatRoute: ApiChatRoute,
   ApiPublicAlertsTickRoute: ApiPublicAlertsTickRoute,
+  ApiPublicAutopilotTickRoute: ApiPublicAutopilotTickRoute,
   ApiPublicEngineTickRoute: ApiPublicEngineTickRoute,
   ApiPublicNowpaymentsIpnRoute: ApiPublicNowpaymentsIpnRoute,
 }

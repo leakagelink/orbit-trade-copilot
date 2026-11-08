@@ -6,7 +6,7 @@ import { DefaultChatTransport, type UIMessage } from "ai";
 import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Bot, CheckCircle2, CircleAlert, KeyRound, Loader2, Plus, ShieldCheck, Trash2 } from "lucide-react";
+import { Bot, CheckCircle2, CircleAlert, KeyRound, Loader2, Plus, Settings2, ShieldCheck, Trash2, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,10 +16,12 @@ import { Message, MessageContent, MessageResponse } from "@/components/ai-elemen
 import { PromptInput, PromptInputBody, PromptInputFooter, PromptInputSubmit, PromptInputTextarea, PromptInputTools } from "@/components/ai-elements/prompt-input";
 import { Shimmer } from "@/components/ai-elements/shimmer";
 import { autopilotStatus } from "@/lib/autopilot.functions";
+import { AutopilotSettings, useAutopilotSettings } from "@/components/autopilot-settings";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
 const T = "AI Autopilot — AlgoVirt";
-const D = "Let the AI build strategies, backtest them, run paper bots and place demo trades, scalps and arbitrage for you.";
+const D = "Let the AI build strategies, run bots and trade for you — demo by default, real money on Binance and Deriv when you switch it on.";
 export const Route = createFileRoute("/_authenticated/autopilot")({
   validateSearch: z.object({ session: z.string().uuid().optional() }),
   head: () => ({ meta: [{ title: T }, { name: "description", content: D }, { property: "og:title", content: T }, { property: "og:description", content: D }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -38,6 +40,8 @@ const TOOL_LABELS: Record<string, string> = {
   create_strategy: "Created strategy", run_backtest: "Ran backtest", start_paper_bot: "Started paper bot", stop_bot: "Stopped bot",
   open_paper_trade: "Opened demo trade", open_paper_scalp: "Opened demo scalp", close_paper_position: "Closed demo position",
   scan_arbitrage: "Scanned arbitrage", run_paper_arbitrage: "Ran paper arbitrage",
+  live_account_balances: "Checked real balances", live_close_position: "Closed REAL position", live_open_binance_trade: "Opened REAL Binance trade",
+  live_deriv_symbols: "Listed Deriv markets", live_deriv_snapshot: "Read Deriv market data", live_open_deriv_multiplier: "Opened REAL Deriv multiplier",
 };
 
 function Autopilot() {
@@ -77,6 +81,10 @@ function Autopilot() {
   }
 
   const claudeReady = ready.data?.claudeReady ?? false;
+  const settings = useAutopilotSettings();
+  const live = !!settings.data?.settings?.live_enabled;
+  const auto = !!settings.data?.settings?.enabled;
+  const [open, setOpen] = useState(false);
   return (
     <div className="assistant-workspace flex min-h-0 min-w-0">
       <aside className="hidden w-60 shrink-0 flex-col border-r lg:flex">
@@ -92,9 +100,14 @@ function Autopilot() {
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex shrink-0 flex-wrap items-center gap-2 border-b px-3 py-2 text-xs">
-          <span className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 font-medium text-primary"><ShieldCheck className="h-3.5 w-3.5" />Demo / paper only</span>
-          <span className="text-muted-foreground">Your risk settings apply. No real money, withdrawals or key changes.</span>
-          <Link to="/risk" className="ml-auto text-primary hover:underline">Risk & emergency stop</Link>
+          {live
+            ? <span className="inline-flex items-center gap-1 rounded-full border border-destructive/50 bg-destructive/10 px-2 py-0.5 font-medium text-destructive"><Zap className="h-3.5 w-3.5" />Real money ON</span>
+            : <span className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 font-medium text-primary"><ShieldCheck className="h-3.5 w-3.5" />Demo / paper only</span>}
+          <span className="text-muted-foreground">{auto ? "Automatic runs on." : "Automatic runs off."} Risk settings apply. No withdrawals or key changes.</span>
+          <span className="ml-auto flex items-center gap-3">
+            <Button size="sm" variant="outline" className="h-7" onClick={() => setOpen(true)}><Settings2 className="mr-1 h-3.5 w-3.5" />Automatic & real money</Button>
+            <Link to="/risk" className="text-primary hover:underline">Emergency stop</Link>
+          </span>
         </div>
         {!ready.isLoading && !claudeReady && (
           <div className="m-3 flex items-start gap-2 rounded-md border border-warning/40 bg-warning/10 p-3 text-sm">
@@ -109,13 +122,19 @@ function Autopilot() {
           </Select>
           <Button variant="outline" size="icon" aria-label="New run" onClick={newSession}><Plus /></Button>
         </div>
-        {session ? <RunWindow key={session} sessionId={session} disabled={!claudeReady} onSaved={() => qc.invalidateQueries({ queryKey: ["autopilot_sessions"] })} /> : <div className="p-6"><Skeleton className="h-40" /></div>}
+        {session ? <RunWindow key={session} sessionId={session} disabled={!claudeReady} live={live} onSaved={() => qc.invalidateQueries({ queryKey: ["autopilot_sessions"] })} /> : <div className="p-6"><Skeleton className="h-40" /></div>}
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-2xl">
+            <DialogHeader><DialogTitle>Automatic & real money</DialogTitle><DialogDescription>Choose when the AI runs by itself and whether it may trade real money.</DialogDescription></DialogHeader>
+            <AutopilotSettings claudeReady={claudeReady} />
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
 }
 
-function RunWindow({ sessionId, disabled, onSaved }: { sessionId: string; disabled: boolean; onSaved: () => void }) {
+function RunWindow({ sessionId, disabled, live, onSaved }: { sessionId: string; disabled: boolean; live: boolean; onSaved: () => void }) {
   const q = useQuery({
     queryKey: ["autopilot_session", sessionId],
     queryFn: async () => {
@@ -127,7 +146,7 @@ function RunWindow({ sessionId, disabled, onSaved }: { sessionId: string; disabl
   });
   if (q.isError) return <div className="p-6 text-sm text-destructive">{q.error.message}</div>;
   if (!q.data) return <div className="p-6"><Skeleton className="h-40" /></div>;
-  return <Run sessionId={sessionId} initial={q.data} disabled={disabled} onSaved={onSaved} />;
+  return <Run sessionId={sessionId} initial={q.data} disabled={disabled} live={live} onSaved={onSaved} />;
 }
 
 type ToolPart = { type: string; state?: string; input?: unknown; output?: unknown; errorText?: string };
@@ -160,7 +179,7 @@ function ToolCard({ part }: { part: ToolPart }) {
   );
 }
 
-function Run({ sessionId, initial, disabled, onSaved }: { sessionId: string; initial: UIMessage[]; disabled: boolean; onSaved: () => void }) {
+function Run({ sessionId, initial, disabled, live, onSaved }: { sessionId: string; initial: UIMessage[]; disabled: boolean; live: boolean; onSaved: () => void }) {
   const qc = useQueryClient();
   const [input, setInput] = useState("");
   const transport = useMemo(() => new DefaultChatTransport({
@@ -191,7 +210,7 @@ function Run({ sessionId, initial, disabled, onSaved }: { sessionId: string; ini
       <Conversation className="min-h-0 min-w-0 flex-1">
         <ConversationContent className="mx-auto w-full max-w-3xl">
           {messages.length === 0 ? (
-            <ConversationEmptyState icon={<Bot className="h-8 w-8 text-primary" />} title="AI Autopilot" description="Tell the AI what to do. It builds and tests strategies, runs paper bots and places demo trades, scalps and arbitrage — then reports back.">
+            <ConversationEmptyState icon={<Bot className="h-8 w-8 text-primary" />} title="AI Autopilot" description={live ? "Real money is ON for your chosen accounts. Tell the AI what to do, or switch on automatic runs." : "Tell the AI what to do. It builds and tests strategies, runs paper bots and places demo trades, scalps and arbitrage — then reports back."}>
               <div className="mt-6 grid gap-2 sm:grid-cols-2">
                 {TASKS.map((s) => <button key={s} disabled={disabled} onClick={() => send(s)} className="rounded-md border bg-card px-3 py-2 text-left text-sm hover:border-primary disabled:opacity-50">{s}</button>)}
               </div>
@@ -213,7 +232,7 @@ function Run({ sessionId, initial, disabled, onSaved }: { sessionId: string; ini
             <PromptInputTextarea value={input} disabled={disabled} onChange={(e) => setInput(e.target.value)} placeholder={disabled ? "Add your Claude API key to start" : "Tell the autopilot what to do…"} />
           </PromptInputBody>
           <PromptInputFooter>
-            <PromptInputTools className="min-w-0"><span className="min-w-0 px-2 text-[10px] text-muted-foreground sm:text-xs">Demo money only. Profit is never guaranteed.</span></PromptInputTools>
+            <PromptInputTools className="min-w-0"><span className={cn("min-w-0 px-2 text-[10px] sm:text-xs", live ? "text-destructive" : "text-muted-foreground")}>{live ? "Real money is ON — the AI can place real orders." : "Demo money only."} Profit is never guaranteed.</span></PromptInputTools>
             <PromptInputSubmit status={status} onStop={stop} disabled={disabled || (!busy && !input.trim())} />
           </PromptInputFooter>
         </PromptInput>

@@ -1,7 +1,7 @@
 # Roadmap
 
 ## Workspace move 8 Nov 2026
-- [ ] Reconnect NOWPayments in the new workspace
+- [x] Reconnect NOWPayments in the new workspace (status check OK)
 
 ## AI Autopilot requested 8 November 2026 (paper only, existing risk settings, Claude own key)
 - [x] Autopilot page and Claude tool loop: account overview, market data, create strategy, backtest, start/stop paper bots, demo trades, Elite scalps, close demo positions, Elite arbitrage scan + paper run

@@ -1,8 +1,8 @@
-// AI Autopilot chat: Claude (owner's own Anthropic key) operating paper-only tools. Bearer-verified, Pro-gated.
+// AI Autopilot chat: Claude (owner's own Anthropic key) operating paper tools, plus live tools when the owner enabled real money. Bearer-verified, Pro-gated.
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { convertToModelMessages, isStepCount, streamText, type UIMessage } from "ai";
 import type { Json } from "@/integrations/supabase/types";
-import { AUTOPILOT_MAX_STEPS, AUTOPILOT_MODEL, AUTOPILOT_SYSTEM, createRunBudget } from "./autopilot-guard";
+import { AUTOPILOT_MAX_STEPS, AUTOPILOT_MODEL, AUTOPILOT_SYSTEM, createRunBudget, liveRules } from "./autopilot-guard";
 
 export async function handleAutopilot(request: Request) {
   const { verifyAiRequest } = await import("./ai-auth.server");
@@ -20,12 +20,15 @@ export async function handleAutopilot(request: Request) {
   if (!session || session.kind !== "autopilot") return new Response("Conversation not found", { status: 404 });
 
   const { autopilotTools } = await import("./autopilot-tools.server");
+  const { loadLiveAccounts } = await import("./autopilot-settings.server");
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const live = await loadLiveAccounts(supabaseAdmin, userId);
   const anthropic = createAnthropic({ apiKey });
   const result = streamText({
     model: anthropic(AUTOPILOT_MODEL),
-    system: AUTOPILOT_SYSTEM,
+    system: AUTOPILOT_SYSTEM + (live ? liveRules(live) : ""),
     messages: await convertToModelMessages(messages),
-    tools: autopilotTools({ supabase, userId, budget: createRunBudget() }),
+    tools: autopilotTools({ supabase, userId, budget: createRunBudget(), live }),
     stopWhen: isStepCount(AUTOPILOT_MAX_STEPS),
     maxOutputTokens: 8000,
     maxRetries: 0,

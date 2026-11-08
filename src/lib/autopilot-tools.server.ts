@@ -3,11 +3,11 @@
 import { tool, type ToolSet } from "ai";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/integrations/supabase/types";
-import { toolInputs, createRunBudget } from "./autopilot-guard";
+import { toolInputs, liveToolInputs, createRunBudget, type LiveAccounts } from "./autopilot-guard";
 import { MARKETS, marketOf } from "./markets";
 import { validateStrategy, type StrategyConfig } from "./strategy";
 
-type Ctx = { supabase: SupabaseClient<Database>; userId: string; budget: ReturnType<typeof createRunBudget> };
+type Ctx = { supabase: SupabaseClient<Database>; userId: string; budget: ReturnType<typeof createRunBudget>; live?: LiveAccounts | null };
 
 const admin = async () => (await import("@/integrations/supabase/client.server")).supabaseAdmin;
 const priceSource = (sym: string, exchange = "binance") => (marketOf(sym)?.category === "crypto" ? exchange : "yahoo");
@@ -33,9 +33,14 @@ function safe<I>(fn: (input: I) => Promise<unknown>) {
 
 export function autopilotTools(ctx: Ctx): ToolSet {
   const { supabase, userId } = ctx;
+  return { ...paperTools(ctx), ...(ctx.live ? liveTools(ctx, ctx.live) : {}) };
+}
+
+function paperTools(ctx: Ctx): ToolSet {
+  const { supabase, userId } = ctx;
   return {
     get_account_overview: tool({
-      description: "Demo wallet balance, plan, risk settings, open positions, bots and recent paper results.",
+      description: "Demo wallet balance, plan, risk settings, open positions (paper and live), bots and recent results.",
       inputSchema: toolInputs.overview,
       execute: safe(async () => {
         const [wallet, risk, positions, bots, trades, pro, elite] = await Promise.all([
@@ -43,11 +48,12 @@ export function autopilotTools(ctx: Ctx): ToolSet {
           supabase.from("risk_settings").select("max_daily_loss,max_open_exposure,max_total_positions,trading_halted").eq("user_id", userId).maybeSingle(),
           supabase.from("positions").select("id,trading_pair,side,quantity,entry_price,current_price,unrealized_pnl,mode,bot_id,is_scalp,stop_loss,take_profit,opened_at").eq("user_id", userId).eq("is_open", true).limit(50),
           supabase.from("trading_bots").select("id,name,status,mode,trading_pair,timeframe,exchange,allocated_capital").eq("user_id", userId).order("created_at", { ascending: false }).limit(30),
-          supabase.from("trades").select("trading_pair,side,realized_pnl,fees,close_reason,closed_at,mode").eq("user_id", userId).eq("mode", "paper").order("closed_at", { ascending: false }).limit(20),
+          supabase.from("trades").select("trading_pair,side,realized_pnl,fees,close_reason,closed_at,mode").eq("user_id", userId).order("closed_at", { ascending: false }).limit(30),
           supabase.rpc("has_pro_access", { _uid: userId }),
           supabase.rpc("has_elite_access", { _uid: userId }),
         ]);
-        const recent = trades.data ?? [];
+        const recent = (trades.data ?? []).filter((t) => t.mode === "paper").slice(0, 20);
+        const liveRecent = (trades.data ?? []).filter((t) => t.mode === "live").slice(0, 20);
         return {
           plan: elite.data ? "elite" : pro.data ? "pro" : "free",
           wallet: wallet.data ? { balance: Number(wallet.data.balance), currency: wallet.data.currency } : { balance: 0, currency: "USD", note: "No demo wallet yet — deposit on the Wallet page" },
@@ -56,6 +62,7 @@ export function autopilotTools(ctx: Ctx): ToolSet {
           bots: bots.data ?? [],
           recentPaperTrades: recent,
           recentPaperNetPnl: recent.reduce((s, t) => s + Number(t.realized_pnl ?? 0) - Number(t.fees ?? 0), 0),
+          ...(ctx.live ? { realMoneyAccounts: ctx.live, recentLiveTrades: liveRecent, recentLiveNetPnl: liveRecent.reduce((s, t) => s + Number(t.realized_pnl ?? 0) - Number(t.fees ?? 0), 0) } : { realMoney: "disabled" }),
         };
       }),
     }),
@@ -209,4 +216,95 @@ export function autopilotTools(ctx: Ctx): ToolSet {
       }),
     }),
   };
+}
+
+/** Real-money tools — only built when the owner enabled live Autopilot and the accounts are still verified. */
+function liveTools(ctx: Ctx, live: LiveAccounts): ToolSet {
+  const { userId } = ctx;
+  const t: ToolSet = {
+    live_account_balances: tool({
+      description: "Real balances of the live-enabled accounts (Binance spot assets, Deriv Options account).",
+      inputSchema: toolInputs.overview,
+      execute: safe(async () => {
+        const db = await admin();
+        const { loadAccount } = await import("./manual.server");
+        const { fetchBalances } = await import("./exchange-adapters.server");
+        const out: Record<string, unknown> = {};
+        for (const [name, acc] of Object.entries(live)) {
+          if (!acc) continue;
+          try {
+            const a = await loadAccount(db, userId, acc.id);
+            const b = await fetchBalances(a.exchange, a.creds!, a.testnet);
+            out[name] = { label: acc.label, testnet: acc.testnet, balances: b.filter((x) => x.free + x.locked > 0).slice(0, 15) };
+          } catch (e) { out[name] = { error: e instanceof Error ? e.message : String(e) }; }
+        }
+        return out;
+      }),
+    }),
+    live_close_position: tool({
+      description: "Close one open REAL-MONEY position (Binance spot or Deriv contract) that belongs to a live-enabled account.",
+      inputSchema: liveToolInputs.closePosition,
+      execute: safe(async ({ positionId }) => {
+        const db = await admin();
+        const { data: p } = await db.from("positions").select("*").eq("id", positionId).eq("user_id", userId).eq("is_open", true).is("bot_id", null).maybeSingle();
+        const allowed = [live.binance?.id, live.deriv?.id].filter(Boolean);
+        if (!p || p.mode !== "live" || !allowed.includes(p.exchange_connection_id)) throw new Error("Open live position on a live-enabled account not found");
+        const { closeManual } = await import("./manual.server");
+        const r = await closeManual(db, p, "autopilot");
+        await audit(ctx, "live_close_position", { exchange: p.exchange, pnl: r.pnl }, { type: "position", id: positionId });
+        return { ok: true, exit: r.exit, netPnl: r.pnl };
+      }),
+    }),
+  };
+  if (live.binance) {
+    const acc = live.binance;
+    t["live_open_binance_trade"] = tool({
+      description: `REAL ${acc.testnet ? "testnet " : ""}order: market BUY on Binance spot account "${acc.label}" with a stop price (checked every minute) and optional take profit.`,
+      inputSchema: liveToolInputs.openBinance,
+      execute: safe(async ({ symbol, amountUsd, stopLoss, takeProfit }) => {
+        if (marketOf(symbol)?.category !== "crypto") throw new Error("Binance live trades are crypto pairs only");
+        ctx.budget.claim("entries");
+        const db = await admin();
+        const { loadAccount, openManual } = await import("./manual.server");
+        const a = await loadAccount(db, userId, acc.id);
+        if (a.exchange !== "binance") throw new Error("Live Binance account mismatch");
+        const r = await openManual(db, userId, a, { symbol, side: "buy", amount: amountUsd, sl: stopLoss, tp: takeProfit });
+        await audit(ctx, "live_open_binance_trade", { symbol, amountUsd, stopLoss, takeProfit, testnet: a.testnet }, { type: "position", id: r.positionId });
+        return { ok: true, ...r };
+      }),
+    });
+  }
+  if (live.deriv) {
+    const acc = live.deriv;
+    t["live_deriv_symbols"] = tool({
+      description: "Deriv instruments for a market (symbol codes for Multipliers).",
+      inputSchema: liveToolInputs.derivSymbols,
+      execute: safe(async ({ market }) => (await import("./deriv-trade.server")).derivSymbols(market)),
+    });
+    t["live_deriv_snapshot"] = tool({
+      description: "Deriv price and indicators from real Deriv candles.",
+      inputSchema: liveToolInputs.derivSnapshot,
+      execute: safe(async ({ symbol, timeframe }) => {
+        const { derivCandles } = await import("./deriv-trade.server");
+        const { marketFacts } = await import("./market-facts");
+        return marketFacts(await derivCandles(symbol, timeframe, 300), symbol, timeframe);
+      }),
+    });
+    t["live_open_deriv_multiplier"] = tool({
+      description: `REAL ${acc.testnet ? "demo-account " : "MONEY "}Deriv Multiplier on "${acc.label}": up/down, stake, multiplier, money stop loss (required) and optional take profit; Deriv closes it at those levels.`,
+      inputSchema: liveToolInputs.openDeriv,
+      execute: safe(async (input) => {
+        ctx.budget.claim("entries");
+        const db = await admin();
+        const { loadAccount } = await import("./manual.server");
+        const a = await loadAccount(db, userId, acc.id, "deriv");
+        if (a.exchange !== "deriv" || !a.connId || !a.creds) throw new Error("Live Deriv account mismatch");
+        const { openDerivMultiplier } = await import("./deriv-trade.server");
+        const r = await openDerivMultiplier(db, userId, { connId: a.connId, testnet: a.testnet, creds: a.creds }, input);
+        await audit(ctx, "live_open_deriv_multiplier", { ...input, contractId: r.contractId }, { type: "position", id: r.positionId });
+        return { ok: true, ...r };
+      }),
+    });
+  }
+  return t;
 }

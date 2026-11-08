@@ -82,9 +82,12 @@ export const switchToPaper = createServerFn({ method: "POST" })
 export const emergencyStop = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    const {supabaseAdmin:db}=await import("@/integrations/supabase/client.server");
+    // AI Autopilot is switched off first so it cannot act while positions are being closed.
+    await db.from("autopilot_settings").update({enabled:false,live_enabled:false,updated_at:new Date().toISOString()}).eq("user_id",context.userId);
+    const {stopActive}=await import("./autopilot.functions");await stopActive(db,context.userId,"Emergency stop");
     const { emergencyCloseAll } = await import("./engine.server");
     const r = await emergencyCloseAll(context.userId);
-    const {supabaseAdmin:db}=await import("@/integrations/supabase/client.server");
     const audit=await db.from("trading_safety_events").insert({user_id:context.userId,action:"risk.emergency_stop",details:r});
     return {...r,auditRecorded:!audit.error};
   });
