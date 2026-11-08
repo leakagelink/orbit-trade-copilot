@@ -583,6 +583,102 @@ export type Database = {
         }
         Relationships: []
       }
+      autopilot_runs: {
+        Row: {
+          actions: Json
+          batch_id: string | null
+          budget: Json
+          created_at: string
+          error: string | null
+          finished_at: string | null
+          id: string
+          lease_until: string | null
+          live: boolean
+          messages: Json
+          pending_tools: Json
+          status: string
+          step: number
+          summary: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          actions?: Json
+          batch_id?: string | null
+          budget?: Json
+          created_at?: string
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          lease_until?: string | null
+          live?: boolean
+          messages?: Json
+          pending_tools?: Json
+          status?: string
+          step?: number
+          summary?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          actions?: Json
+          batch_id?: string | null
+          budget?: Json
+          created_at?: string
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          lease_until?: string | null
+          live?: boolean
+          messages?: Json
+          pending_tools?: Json
+          status?: string
+          step?: number
+          summary?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      autopilot_settings: {
+        Row: {
+          binance_connection_id: string | null
+          deriv_connection_id: string | null
+          enabled: boolean
+          goal: string
+          interval_minutes: number
+          live_confirmed_at: string | null
+          live_enabled: boolean
+          next_run_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          binance_connection_id?: string | null
+          deriv_connection_id?: string | null
+          enabled?: boolean
+          goal?: string
+          interval_minutes?: number
+          live_confirmed_at?: string | null
+          live_enabled?: boolean
+          next_run_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          binance_connection_id?: string | null
+          deriv_connection_id?: string | null
+          enabled?: boolean
+          goal?: string
+          interval_minutes?: number
+          live_confirmed_at?: string | null
+          live_enabled?: boolean
+          next_run_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       backtest_results: {
         Row: {
           avg_loss: number | null

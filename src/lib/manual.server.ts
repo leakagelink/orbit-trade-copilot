@@ -107,6 +107,7 @@ export async function openManual(db: Admin, userId: string, a: Account, input: O
 
 /** Closes a manual position at market. `reason` is stored on the trade. */
 export async function closeManual(db: Admin, p: Row, reason: string) {
+  if (p.exchange === "deriv") { const { closeDerivPosition } = await import("./deriv-trade.server"); return closeDerivPosition(db, p, reason); }
   const a = await loadAccount(db, p.user_id, p.exchange_connection_id, p.exchange);
   const entry = Number(p.entry_price), sign = p.side === "buy" ? 1 : -1;
   let qty = Number(p.quantity), exit: number, fees: number, pnl: number, credit: number | null = null;
@@ -156,6 +157,7 @@ export async function closeManual(db: Admin, p: Row, reason: string) {
 
 /** Checks one open manual position: SL/TP/time limit, broker-closed OANDA trades, unrealized PnL. Returns the close reason when it was closed. */
 export async function checkManualPosition(db: Admin, p: Row): Promise<string | null> {
+  if (p.exchange === "deriv") { const { checkDerivPosition } = await import("./deriv-trade.server"); return checkDerivPosition(db, p); }
   const a = await loadAccount(db, p.user_id, p.exchange_connection_id, p.exchange);
   const now = Date.now();
   if (a.exchange === "oanda") {
