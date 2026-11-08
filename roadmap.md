@@ -1,14 +1,15 @@
 # Roadmap
 
 ## Workspace move 8 Nov 2026
-- [ ] Reconnect NOWPayments after the 05:17 UTC workspace move
+- [ ] Reconnect NOWPayments after the 05:17 UTC workspace move — connect card was closed; waiting on owner
 - [x] Reconnect NOWPayments in the new workspace (status check OK)
 
 ## AI Autopilot requested 8 November 2026 (paper only, existing risk settings, Claude own key)
 - [x] Autopilot page and Claude tool loop: account overview, market data, create strategy, backtest, start/stop paper bots, demo trades, Elite scalps, close demo positions, Elite arbitrage scan + paper run
 - [x] Demo-only strict tool inputs, per-request limits (5 entries, 3 bots), audit log entries; tests pass
 - [ ] Live Claude run — needs the owner's Anthropic API key (secure form declined so far)
-- [ ] Live-money autopilot — owner chose paper only for now
+- [x] Real-money Autopilot: typed LIVE opt-in, Binance spot + Deriv Multipliers tools, automatic scheduled runs, emergency stop switches AI off
+- [ ] First real Deriv buy/sell and Binance live AI trade — not run (needs Claude key; real money)
 - [ ] Switch AI Assistant, trade ideas, research and arbitrage review to Claude — still on the previous AI
 
 ## Remaining work requested 7 November 2026, Claude selected

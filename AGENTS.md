@@ -11,9 +11,9 @@
 
 ## Architecture rules
 - Strategy governance keeps versioned admin-authored historical utilities separate from live authority; rejected evidence atomically quarantines strategy entries with immutable independent appeals/reviews, while exits stay available — partial scores cannot authorize capital or live bots.
-- Deriv connections store owner PAT/App ID in encrypted credentials and verify Options accounts via REST; they are connection-only and excluded from trading/bot selectors — prevents treating Options as crypto spot orders.
+- Deriv connections store owner PAT/App ID encrypted; Deriv trades only as Multipliers via `deriv-trade.server.ts` (OTP WebSocket), claimed orders, money stop loss required, and stay out of bot/crypto selectors — Options are never treated as spot.
 - AI research is owner-private, Pro-gated and advisory; durable claims precede analysts, debate and decision stages, missing sources stay unavailable, and pure historical-volatility proposals never size or submit orders — keeps inference deduplicated and trading authority unchanged.
-- AI Autopilot (`/api/autopilot`, owner's Claude key) acts only via strict paper/demo tools reusing UI server paths, with per-request entry/bot budgets — AI never reaches live orders, withdrawals, keys or admin.
+- AI Autopilot (owner's Claude key) acts only via strict tools reusing UI server paths; real-money tools exist only after typed LIVE opt-in with risk limits; scheduled runs advance one Claude batch or one tool per short cron tick, never re-running interrupted actions — no withdrawals, keys or admin.
 - Subdirectories have their own `AGENTS.md`; read it before changing files there.
 - Toolkit extras use owner-scoped tables and Pro guards; alerts run on a separate authenticated cron and atomically claim a one-time notification, while trading-event triggers create durable inbox records — notifications cannot submit orders or delay risk exits.
 - Optional MFA is enforced by a restrictive public-table policy and shared server-function security middleware; AppShell challenges before mounting protected content, and workspace session records are activity observations rather than an authoritative Auth device inventory — prevents UI-only security claims.

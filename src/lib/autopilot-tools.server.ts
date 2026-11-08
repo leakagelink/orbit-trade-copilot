@@ -247,8 +247,8 @@ function liveTools(ctx: Ctx, live: LiveAccounts): ToolSet {
       execute: safe(async ({ positionId }) => {
         const db = await admin();
         const { data: p } = await db.from("positions").select("*").eq("id", positionId).eq("user_id", userId).eq("is_open", true).is("bot_id", null).maybeSingle();
-        const allowed = [live.binance?.id, live.deriv?.id].filter(Boolean);
-        if (!p || p.mode !== "live" || !allowed.includes(p.exchange_connection_id)) throw new Error("Open live position on a live-enabled account not found");
+        const allowed = [live.binance?.id, live.deriv?.id].filter((x): x is string => !!x);
+        if (!p || p.mode !== "live" || !p.exchange_connection_id || !allowed.includes(p.exchange_connection_id)) throw new Error("Open live position on a live-enabled account not found");
         const { closeManual } = await import("./manual.server");
         const r = await closeManual(db, p, "autopilot");
         await audit(ctx, "live_close_position", { exchange: p.exchange, pnl: r.pnl }, { type: "position", id: positionId });
@@ -288,6 +288,18 @@ function liveTools(ctx: Ctx, live: LiveAccounts): ToolSet {
         const { derivCandles } = await import("./deriv-trade.server");
         const { marketFacts } = await import("./market-facts");
         return marketFacts(await derivCandles(symbol, timeframe, 300), symbol, timeframe);
+      }),
+    });
+    t["live_deriv_quote"] = tool({
+      description: "Price check for a Deriv Multiplier WITHOUT buying: confirms the symbol/multiplier are valid and shows cost, commission and the account balance.",
+      inputSchema: liveToolInputs.openDeriv,
+      execute: safe(async (input) => {
+        const db = await admin();
+        const { loadAccount } = await import("./manual.server");
+        const a = await loadAccount(db, userId, acc.id, "deriv");
+        if (a.exchange !== "deriv" || !a.creds) throw new Error("Live Deriv account mismatch");
+        const { quoteDerivMultiplier } = await import("./deriv-trade.server");
+        return { ok: true, ...(await quoteDerivMultiplier(a.creds, a.testnet, input)) };
       }),
     });
     t["live_open_deriv_multiplier"] = tool({

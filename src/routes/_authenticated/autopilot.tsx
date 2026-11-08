@@ -41,7 +41,7 @@ const TOOL_LABELS: Record<string, string> = {
   open_paper_trade: "Opened demo trade", open_paper_scalp: "Opened demo scalp", close_paper_position: "Closed demo position",
   scan_arbitrage: "Scanned arbitrage", run_paper_arbitrage: "Ran paper arbitrage",
   live_account_balances: "Checked real balances", live_close_position: "Closed REAL position", live_open_binance_trade: "Opened REAL Binance trade",
-  live_deriv_symbols: "Listed Deriv markets", live_deriv_snapshot: "Read Deriv market data", live_open_deriv_multiplier: "Opened REAL Deriv multiplier",
+  live_deriv_symbols: "Listed Deriv markets", live_deriv_snapshot: "Read Deriv market data", live_deriv_quote: "Checked Deriv price", live_open_deriv_multiplier: "Opened REAL Deriv multiplier",
 };
 
 function Autopilot() {

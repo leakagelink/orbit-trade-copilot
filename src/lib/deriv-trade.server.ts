@@ -102,6 +102,17 @@ async function openContract(s: Session, id: number): Promise<DerivOpenContract> 
   return derivOpenContract.parse(r["proposal_open_contract"]);
 }
 
+/** Price quote only (no purchase): validates symbol/multiplier/limits with Deriv and returns cost and commission. */
+export async function quoteDerivMultiplier(c: Creds, demo: boolean, input: MultiplierInput) {
+  return withSession(c, demo, async (s, acct) => {
+    const limit: Json = { stop_loss: input.stopLossAmount };
+    if (input.takeProfitAmount != null) limit["take_profit"] = input.takeProfitAmount;
+    const p = await s.call({ proposal: 1, amount: input.stake, basis: "stake", contract_type: input.direction === "up" ? "MULTUP" : "MULTDOWN", currency: acct.currency, multiplier: input.multiplier, underlying_symbol: input.symbol, limit_order: limit });
+    const prop = p["proposal"] as { ask_price: number; spot: number; commission?: number | null; longcode?: string };
+    return { askPrice: prop.ask_price, spot: prop.spot, commission: prop.commission ?? null, description: prop.longcode ?? "", currency: acct.currency, accountBalance: acct.balance };
+  });
+}
+
 export interface MultiplierInput { symbol: string; direction: "up" | "down"; stake: number; multiplier: number; stopLossAmount: number; takeProfitAmount: number | null }
 
 /** Opens a real (or demo-account) Deriv Multiplier contract for a verified connection, recorded as a live position. */
