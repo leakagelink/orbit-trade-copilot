@@ -116,7 +116,7 @@ export const verifyExchange = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    const { data: own } = await context.supabase.from("exchange_connections").select("id,exchange,is_testnet,status").eq("id", data.id).maybeSingle();
+    const { data: own } = await context.supabase.from("exchange_connections").select("id,exchange,is_testnet,status,account_type").eq("id", data.id).maybeSingle();
     if (!own) throw new Error("Connection not found");
     if (own.status === "disconnected") throw new Error("This account is disconnected");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -126,7 +126,10 @@ export const verifyExchange = createServerFn({ method: "POST" })
     if (!sealed) throw new Error("No stored keys — update keys first");
     try {
       const creds = await decryptJson<{ apiKey: string; apiSecret: string; passphrase?: string }>(sealed.ciphertext, sealed.iv);
-      const balances = await fetchBalances(own.exchange, creds, own.is_testnet);
+      // Futures-only Binance keys (e.g. Futures testnet) cannot read Spot; verify on the Futures API instead.
+      const balances = own.exchange === "binance" && own.account_type === "futures"
+        ? await (async () => { const { futuresAccountState } = await import("./binance-futures.server"); const s = await futuresAccountState({ connectionId: own.id, testnet: own.is_testnet, creds }); if (!s.canTrade) throw new Error("Futures trading permission is unavailable on this API key"); return [{ asset: "USDT", free: Number(s.availableBalance), locked: 0 }]; })()
+        : await fetchBalances(own.exchange, creds, own.is_testnet);
       const now = new Date().toISOString();
       const saved = await supabaseAdmin.from("exchange_connections").update({
         status: "connected", last_error: null, last_synced_at: now, permissions: { verified_at: now, balances: balances.slice(0, 50) } as unknown as never,

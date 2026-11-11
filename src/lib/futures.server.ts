@@ -67,14 +67,18 @@ export async function openFutures(db:Admin,userId:string,t:FuturesTicket){
  const saved=await db.from('positions').insert({id,user_id:userId,exchange:'binance',exchange_connection_id:a.connectionId,trading_pair:t.symbol,side:t.side,quantity:qty,entry_price:m.price,current_price:m.price,mode:'live',market_type:'usd_m_futures',is_scalp:true,stop_loss:bracket.sl,take_profit:bracket.tp,max_hold_until:new Date(Date.now()+t.holdMin*60000).toISOString(),entry_order_id:ord.id,futures_details:details});
  if(saved.error)throw new Error('Entry intent retained; position record unavailable, do not retry');
  try{
-  const fill=await futuresCall<BrokerOrder>(a,'POST','/fapi/v1/order',{symbol:m.symbol,side:t.side==='buy'?'BUY':'SELL',positionSide:'BOTH',type:'MARKET',quantity:qty,newClientOrderId:client,newOrderRespType:'RESULT'});
+  let fill=await futuresCall<BrokerOrder>(a,'POST','/fapi/v1/order',{symbol:m.symbol,side:t.side==='buy'?'BUY':'SELL',positionSide:'BOTH',type:'MARKET',quantity:qty,newClientOrderId:client,newOrderRespType:'RESULT'});
+  // The submit ack can precede the fill; confirm by lookup of the same client id (never resubmit).
+  for(let i=0;i<3&&(fill.status!=='FILLED'||!(Number(fill.avgPrice)>0));i++){await new Promise(r=>setTimeout(r,700));fill=await futuresOrder(a,m.symbol,client);}
   if(fill.status!=='FILLED'||Number(fill.executedQty)!==qty||!(Number(fill.avgPrice)>0))throw new Error('Entry fill incomplete; lookup required');
   const update=await db.from('orders').update({status:'filled',filled_quantity:Number(fill.executedQty),avg_fill_price:Number(fill.avgPrice),exchange_order_id:String(fill.orderId)}).eq('id',ord.id);if(update.error)throw new Error('Fill ledger unavailable');
   await write(db,id,{entry_price:Number(fill.avgPrice),quantity:Number(fill.executedQty)});
   const stops=futuresPrices(t.side,Number(fill.avgPrice),t.slPct,t.tpPct,m.tick);
   for(const [type,triggerPrice,clientAlgoId] of [['STOP_MARKET',stops.sl,slId],['TAKE_PROFIT_MARKET',stops.tp,tpId]] as const){
-   await futuresCall(a,'POST','/fapi/v1/algoOrder',{algoType:'CONDITIONAL',symbol:m.symbol,side:t.side==='buy'?'SELL':'BUY',positionSide:'BOTH',type,triggerPrice,closePosition:'true',workingType:'MARK_PRICE',clientAlgoId});
-   const ack=await futuresAlgo(a,clientAlgoId);if(!ack.algoId)throw new Error('Broker protection not confirmed');
+   const placed=await futuresCall<{algoId?:number}>(a,'POST','/fapi/v1/algoOrder',{algoType:'CONDITIONAL',symbol:m.symbol,side:t.side==='buy'?'SELL':'BUY',positionSide:'BOTH',type,triggerPrice,closePosition:'true',workingType:'MARK_PRICE',clientAlgoId});
+   let confirmed=!!placed?.algoId;
+   for(let i=0;i<3&&!confirmed;i++){await new Promise(r=>setTimeout(r,700));try{confirmed=!!(await futuresAlgo(a,clientAlgoId)).algoId;}catch{/* lookup can lag the ack */}}
+   if(!confirmed)throw new Error('Broker protection not confirmed');
   }
   await write(db,id,{stop_loss:stops.sl,take_profit:stops.tp,futures_details:{...details,protection:'confirmed'}});
   return {positionId:id,price:Number(fill.avgPrice),qty,sl:stops.sl,tp:stops.tp};
