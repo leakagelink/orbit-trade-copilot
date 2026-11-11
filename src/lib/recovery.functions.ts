@@ -21,6 +21,16 @@ export const verifyRecoveryOrder=createServerFn({method:"POST"}).middleware([req
   const conn=await context.supabase.from("exchange_connections").select("id,exchange,status,is_testnet").eq("id",o.exchange_connection_id).eq("user_id",context.userId).maybeSingle();
   if(conn.error||!conn.data||conn.data.exchange!==o.exchange||conn.data.status!=="connected")throw new Error("Original verified trading account required");
   const {supabaseAdmin:db}=await import("@/integrations/supabase/client.server");
+  if(o.market_type === "usd_m_futures") {
+    const {loadFuturesAccount}=await import("./futures.server");const {futuresOrder}=await import("./binance-futures.server");
+    const a=await loadFuturesAccount(db,context.userId,o.exchange_connection_id);
+    const exit=o.idempotency_key.includes(":exit:");const clientId=`${exit?"fx":"fv"}-${o.id.slice(0,28)}`;
+    let evidence: { status:string;qty:number;price:number;orderId:string } | null=null;
+    try { const r=await futuresOrder(a,o.trading_pair.replace("/",""),clientId);evidence={status:r.status,qty:Number(r.executedQty),price:Number(r.avgPrice),orderId:String(r.orderId)}; } catch {}
+    const status=evidence?.status==="FILLED"?"needs_review":"unavailable";
+    const saved=await db.from("order_recovery_observations").insert({user_id:context.userId,order_id:o.id,status,evidence:evidence?{...evidence,marketType:"usd_m_futures",noOrdersSent:true}:null});if(saved.error)throw new Error("Recovery observation could not be saved");
+    return {status,noOrdersSent:true,lockRetained:true};
+  }
   const sealed=await db.from("connection_credentials").select("ciphertext,iv").eq("connection_id",conn.data.id).eq("user_id",context.userId).maybeSingle();if(sealed.error||!sealed.data)throw new Error("Original account credentials unavailable");
   const {decryptJson}=await import("./crypto.server");const {lookupArbitrageOrder}=await import("./exchange-adapters.server");
   const creds=await decryptJson<import("./exchange-adapters.server").Creds>(sealed.data.ciphertext,sealed.data.iv);

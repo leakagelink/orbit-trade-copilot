@@ -18,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { EXCHANGES, exchangeName, type ExchangeMeta } from "@/lib/exchanges";
 import { derivConnectionReserved } from "@/lib/deriv";
 import { accountTypeSchema, accountTypeLabel, supportsBothAccounts, type AccountType } from "@/lib/exchange-account-types";
+import { verifyFuturesFn } from "@/lib/futures.functions";
 import { connectExchange, disconnectExchange, updateExchangeCredentials, updateExchangeAccountType, verifyExchange } from "@/lib/exchanges.functions";
 
 const D = "Connect your exchange and broker accounts. API credentials are encrypted on the server.";
@@ -48,6 +49,7 @@ function Exchanges() {
   const updateType = useServerFn(updateExchangeAccountType);
   const disconnect = useServerFn(disconnectExchange);
   const verify = useServerFn(verifyExchange);
+  const verifyFutures=useServerFn(verifyFuturesFn);
   const [verifying, setVerifying] = useState<string | null>(null);
   async function runVerify(id: string) {
     setVerifying(id);
@@ -86,6 +88,7 @@ function Exchanges() {
                   <div className="flex flex-wrap gap-2">
                     {supportsBothAccounts(c.exchange) && c.status !== "disconnected" && <Button size="sm" variant="outline" onClick={() => setEditingType({ id: c.id, exchange: c.exchange, selection: accountTypeSchema.safeParse(c.account_type).success ? accountTypeSchema.parse(c.account_type) : "spot" })}>Account types</Button>}
                     {c.status !== "disconnected" && <Button size="sm" variant="outline" disabled={verifying === c.id} onClick={() => runVerify(c.id)}><RefreshCw className={`mr-1 h-3.5 w-3.5 ${verifying === c.id ? "animate-spin" : ""}`} />Verify</Button>}
+                    {c.exchange === "binance" && c.status === "connected" && ["futures","both"].includes(c.account_type) && <Button size="sm" variant="outline" disabled={verifying===c.id} onClick={async()=>{setVerifying(c.id);try{const r=await verifyFutures({data:{connectionId:c.id}});toast.success(`Futures read verified · Trade permission ${r.canTrade?"yes":"no"} · ${r.hedgeMode?"Hedge":"One-way"} · available ${r.availableBalance} USDT · no orders tested`);}catch(e){toast.error(e instanceof Error?e.message:"Futures verification failed");}finally{setVerifying(null);}}}>Verify Futures</Button>}
                     {c.exchange !== "deriv" && <Button size="sm" variant="outline" onClick={() => setReconnect({ id: c.id, exchange: c.exchange })}><KeyRound className="mr-1 h-3.5 w-3.5" />{c.status === "disconnected" ? "Reconnect" : "Update keys"}</Button>}
                     {c.status !== "disconnected" && <Button size="sm" variant="ghost" onClick={() => setToDisconnect(c.id)}><Unplug className="mr-1 h-3.5 w-3.5" />Disconnect</Button>}
                   </div>

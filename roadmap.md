@@ -1,10 +1,11 @@
 # Roadmap
 
 ## Binance Futures scalping and scoring — 11 November 2026
-- [ ] Add separate USD-M Futures scalping execution, broker-side protection, recovery and UI/AI controls; do not treat Spot/Futures preferences as order authority
+- [x] Add separate USD-M Futures execution, broker-side algo protection, reduce-only recovery and UI/AI controls; market_type dispatch prevents Spot confusion; live entries remain certification-gated
 - [x] Run scoring/governance/strategy-rule tests — 40 passed; not independent live certification
 - [ ] Reconnect AI Prime Tech and verify AI-assisted Futures analysis — owner connection approval required
-- [ ] Verify Futures lifecycle on testnet before any real-money test; real orders require explicit bounded risk authorization and verified Futures permissions
+- [ ] Verify Futures lifecycle on testnet before any real-money test — no testnet credentials available; production account read/trading permission verified, but 0 USDT available, Hedge Mode enabled, current user Free, and owner risk caps not supplied
+- [x] 242 tests pass, including 40 scoring/governance/strategy checks and 9 Futures risk/math checks; actual account Elite denial verified, desktop/mobile Futures layout inspected with display-only plan override; no orders or account-mode changes
 
 ## AI Prime Tech migration and workspace move — 11 November 2026
 - [ ] Reconnect AI Prime Tech in the new workspace after the 15:05 UTC move — connection card declined; owner approval required

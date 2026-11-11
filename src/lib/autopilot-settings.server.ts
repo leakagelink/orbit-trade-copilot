@@ -14,5 +14,7 @@ export async function loadLiveAccounts(db: Admin, userId: string): Promise<LiveA
     return c ? { id: c.id, label: c.label, testnet: c.is_testnet } : null;
   };
   const acc = { binance: pick(s.binance_connection_id, "binance"), deriv: pick(s.deriv_connection_id, "deriv") };
-  return acc.binance || acc.deriv ? acc : null;
+  const {data:f}=await db.from("futures_settings").select("live_enabled,testnet_certified_at,connection_id").eq("user_id",userId).maybeSingle();
+  const futures=!!(acc.binance && f?.live_enabled && f.testnet_certified_at && f.connection_id===acc.binance.id);
+  return acc.binance || acc.deriv ? {...acc,futures} : null;
 }

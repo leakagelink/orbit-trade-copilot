@@ -1094,6 +1094,75 @@ export type Database = {
         }
         Relationships: []
       }
+      futures_settings: {
+        Row: {
+          connection_id: string | null
+          live_enabled: boolean
+          max_leverage: number | null
+          max_loss: number | null
+          max_margin: number | null
+          testnet_certified_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          connection_id?: string | null
+          live_enabled?: boolean
+          max_leverage?: number | null
+          max_loss?: number | null
+          max_margin?: number | null
+          testnet_certified_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          connection_id?: string | null
+          live_enabled?: boolean
+          max_leverage?: number | null
+          max_loss?: number | null
+          max_margin?: number | null
+          testnet_certified_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      futures_verifications: {
+        Row: {
+          can_trade: boolean
+          connection_id: string
+          created_at: string
+          details: Json
+          hedge_mode: boolean | null
+          id: string
+          is_testnet: boolean
+          read_access: boolean
+          user_id: string
+        }
+        Insert: {
+          can_trade?: boolean
+          connection_id: string
+          created_at?: string
+          details?: Json
+          hedge_mode?: boolean | null
+          id?: string
+          is_testnet: boolean
+          read_access: boolean
+          user_id: string
+        }
+        Update: {
+          can_trade?: boolean
+          connection_id?: string
+          created_at?: string
+          details?: Json
+          hedge_mode?: boolean | null
+          id?: string
+          is_testnet?: boolean
+          read_access?: boolean
+          user_id?: string
+        }
+        Relationships: []
+      }
       journal_entries: {
         Row: {
           created_at: string
@@ -1246,6 +1315,7 @@ export type Database = {
           filled_quantity: number
           id: string
           idempotency_key: string
+          market_type: string
           mode: Database["public"]["Enums"]["trading_mode"]
           order_type: string
           price: number | null
@@ -1267,6 +1337,7 @@ export type Database = {
           filled_quantity?: number
           id?: string
           idempotency_key: string
+          market_type?: string
           mode: Database["public"]["Enums"]["trading_mode"]
           order_type: string
           price?: number | null
@@ -1288,6 +1359,7 @@ export type Database = {
           filled_quantity?: number
           id?: string
           idempotency_key?: string
+          market_type?: string
           mode?: Database["public"]["Enums"]["trading_mode"]
           order_type?: string
           price?: number | null
@@ -1368,9 +1440,11 @@ export type Database = {
           exchange: string
           exchange_connection_id: string | null
           external_ref: string | null
+          futures_details: Json | null
           id: string
           is_open: boolean
           is_scalp: boolean
+          market_type: string
           max_hold_until: string | null
           mode: Database["public"]["Enums"]["trading_mode"]
           opened_at: string
@@ -1394,9 +1468,11 @@ export type Database = {
           exchange: string
           exchange_connection_id?: string | null
           external_ref?: string | null
+          futures_details?: Json | null
           id?: string
           is_open?: boolean
           is_scalp?: boolean
+          market_type?: string
           max_hold_until?: string | null
           mode: Database["public"]["Enums"]["trading_mode"]
           opened_at?: string
@@ -1420,9 +1496,11 @@ export type Database = {
           exchange?: string
           exchange_connection_id?: string | null
           external_ref?: string | null
+          futures_details?: Json | null
           id?: string
           is_open?: boolean
           is_scalp?: boolean
+          market_type?: string
           max_hold_until?: string | null
           mode?: Database["public"]["Enums"]["trading_mode"]
           opened_at?: string
@@ -2038,14 +2116,17 @@ export type Database = {
           bot_id: string | null
           close_reason: string | null
           closed_at: string | null
+          costs_verified: boolean
           created_at: string
           entry_price: number
           exchange: string
           exchange_connection_id: string | null
           exit_price: number | null
           fees: number
+          funding_pnl: number | null
           id: string
           is_scalp: boolean
+          market_type: string
           mode: Database["public"]["Enums"]["trading_mode"]
           opened_at: string
           order_id: string | null
@@ -2061,14 +2142,17 @@ export type Database = {
           bot_id?: string | null
           close_reason?: string | null
           closed_at?: string | null
+          costs_verified?: boolean
           created_at?: string
           entry_price: number
           exchange: string
           exchange_connection_id?: string | null
           exit_price?: number | null
           fees?: number
+          funding_pnl?: number | null
           id?: string
           is_scalp?: boolean
+          market_type?: string
           mode: Database["public"]["Enums"]["trading_mode"]
           opened_at: string
           order_id?: string | null
@@ -2084,14 +2168,17 @@ export type Database = {
           bot_id?: string | null
           close_reason?: string | null
           closed_at?: string | null
+          costs_verified?: boolean
           created_at?: string
           entry_price?: number
           exchange?: string
           exchange_connection_id?: string | null
           exit_price?: number | null
           fees?: number
+          funding_pnl?: number | null
           id?: string
           is_scalp?: boolean
+          market_type?: string
           mode?: Database["public"]["Enums"]["trading_mode"]
           opened_at?: string
           order_id?: string | null

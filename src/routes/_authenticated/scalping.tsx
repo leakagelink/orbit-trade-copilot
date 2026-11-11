@@ -19,6 +19,8 @@ import { DEFAULT_SCALP, SCALP_TIMEFRAMES, WALLET_ROUND_TRIP_PCT, scalpBracket, s
 import { createStrategy } from "@/lib/strategies.api";
 import { TvChart } from "@/components/tv-chart";
 import { fmtMoney } from "@/lib/metrics";
+import { FuturesControls } from "@/components/futures-controls";
+import { placeFuturesFn, getFuturesCandlesFn } from "@/lib/futures.functions";
 
 const D = "Fast one-click trades with an automatic tight stop, target and time limit. Elite plan.";
 export const Route = createFileRoute("/_authenticated/scalping")({
@@ -52,6 +54,11 @@ function ScalpingPage() {
   const [hold, setHold] = useState(String(DEFAULT_SCALP.holdMin));
   const [busy, setBusy] = useState<"buy" | "sell" | null>(null);
   const [closing, setClosing] = useState(false);
+  const [venueMode,setVenueMode]=useState("spot");
+  const [leverage,setLeverage]=useState("1");
+  const [confirmation,setConfirmation]=useState("");
+  const placeFutures=useServerFn(placeFuturesFn);
+  const futuresCandles=useServerFn(getFuturesCandlesFn);
 
   const getCandles = useServerFn(getMarketCandles);
   const place = useServerFn(placeScalp);
@@ -59,7 +66,8 @@ function ScalpingPage() {
   const closeAll = useServerFn(closeAllScalps);
   const closeOne = useServerFn(closeManualPosition);
 
-  const market = marketOf(symbol)!;
+  const market = marketOf(symbol) ?? MARKETS[0];
+  if (!market) throw new Error("No markets available");
   const nonCrypto = market.category !== "crypto";
   const accounts = useQuery({
     queryKey: ["trade_accounts"],
@@ -70,10 +78,11 @@ function ScalpingPage() {
     },
   });
   const usable = useMemo(
-    () => (accounts.data ?? []).filter((c) => (nonCrypto ? c.exchange === "oanda" && market.oanda : c.exchange !== "oanda")),
+    () => (accounts.data ?? []).filter((c) => (nonCrypto ? c.exchange === "oanda" && market.oanda : ["binance","bybit","okx","kucoin"].includes(c.exchange))),
     [accounts.data, nonCrypto, market.oanda],
   );
   const chosen = usable.find((c) => c.id === accountId);
+  const futures=venueMode==="futures"&&chosen?.exchange==="binance"&&!nonCrypto;
   const isWallet = !chosen;
   const liveCrypto = !!chosen && chosen.exchange !== "oanda";
 
@@ -82,8 +91,8 @@ function ScalpingPage() {
     queryFn: async () => Number((await supabase.from("wallets").select("balance").maybeSingle()).data?.balance ?? 0),
   });
   const candles = useQuery({
-    queryKey: ["scalp_candles", symbol, tf, chosen?.id ?? null, paperEx],
-    queryFn: () => getCandles({ data: { symbol, timeframe: tf, connectionId: chosen?.id ?? null, paperExchange: paperEx as never } }),
+    queryKey: ["scalp_candles", symbol, tf, chosen?.id ?? null, paperEx, futures],
+    queryFn: () => futures&&chosen ? futuresCandles({data:{connectionId:chosen.id,symbol,timeframe:tf}}) : getCandles({ data: { symbol, timeframe: tf, connectionId: chosen?.id ?? null, paperExchange: paperEx as never } }),
     refetchInterval: 10_000,
     retry: false,
   });
@@ -129,8 +138,8 @@ function ScalpingPage() {
 
   const price = candles.data?.candles.at(-1)?.c;
   const settings = { tpPct: Number(tpPct), slPct: Number(slPct), holdMin: hold === "off" ? null : Number(hold) };
-  const problem = validateScalp(settings, isWallet) ?? (Number(amount) > 0 ? null : "Enter an amount");
-  const notional = chosen?.exchange === "oanda" ? Number(amount) * (price ?? 0) : Number(amount);
+  const problem = validateScalp(settings, isWallet) ?? (Number(amount) > 0 ? null : "Enter an amount") ?? (futures && (confirmation !== (chosen?.is_testnet?"TESTNET":"LIVE") || settings.holdMin == null) ? "Confirm Futures mode and set a time limit" : null);
+  const notional = chosen?.exchange === "oanda" ? Number(amount) * (price ?? 0) : Number(amount)*(futures?Number(leverage):1);
   const costPct = isWallet ? WALLET_ROUND_TRIP_PCT : 0;
   const winUsd = (notional * (settings.tpPct - costPct)) / 100;
   const lossUsd = (notional * (settings.slPct + costPct)) / 100;
@@ -138,7 +147,7 @@ function ScalpingPage() {
 
   function pickCat(c: MarketCategory) {
     setCat(c);
-    setSymbol(MARKETS.find((m) => m.category === c)!.symbol);
+    const next=MARKETS.find((m)=>m.category===c); if(next)setSymbol(next.symbol);
     setAccountId("paper");
   }
 
@@ -146,7 +155,7 @@ function ScalpingPage() {
     if (busy || problem) return;
     setBusy(side);
     try {
-      const r = await place({ data: { symbol, side, amount: Number(amount), tpPct: settings.tpPct, slPct: settings.slPct, holdMin: settings.holdMin, connectionId: chosen?.id ?? null, paperExchange: paperEx as never } });
+      const r = futures&&chosen ? await placeFutures({data:{connectionId:chosen.id,symbol,side,margin:Number(amount),leverage:Number(leverage),slPct:settings.slPct,tpPct:settings.tpPct,holdMin:settings.holdMin??0,requestId:crypto.randomUUID(),confirmation:confirmation as "TESTNET"|"LIVE"}}) : await place({ data: { symbol, side, amount: Number(amount), tpPct: settings.tpPct, slPct: settings.slPct, holdMin: settings.holdMin, connectionId: chosen?.id ?? null, paperExchange: paperEx as never } });
       toast.success(`${side === "buy" ? "Long" : "Short"} ${symbol} @ ${fmtPx(r.price)} · SL ${r.sl != null ? fmtPx(r.sl) : "—"} · TP ${r.tp != null ? fmtPx(r.tp) : "—"}`);
       refresh();
     } catch (e) { toast.error(e instanceof Error ? e.message : "Order failed"); }
@@ -217,7 +226,7 @@ function ScalpingPage() {
           ) : (
             <div className="rounded-lg border bg-card p-2">
               <ClientOnly fallback={<Skeleton className="h-[420px]" />}>
-                <TvChart candles={candles.data!.candles} lines={chartLines} />
+                <TvChart candles={candles.data?.candles ?? []} lines={chartLines} />
               </ClientOnly>
             </div>
           )}
@@ -248,9 +257,9 @@ function ScalpingPage() {
                 <table className="w-full text-sm">
                   <thead><tr className="text-left text-xs text-muted-foreground">{["Market", "Side", "Entry", "Now", "PnL", "SL / TP", "Time left", ""].map((h) => <th key={h} className="px-4 py-2 font-normal">{h}</th>)}</tr></thead>
                   <tbody>
-                    {scalps.data!.map((p) => (
+                    {(scalps.data ?? []).map((p) => (
                       <tr key={p.id} className="border-t font-mono text-xs">
-                        <td className="px-4 py-2 font-sans text-sm">{p.trading_pair}<div className="text-xs text-muted-foreground">{p.wallet_margin != null ? "Demo wallet" : `${exchangeName(p.exchange)} · ${p.mode}`}</div></td>
+                        <td className="px-4 py-2 font-sans text-sm">{p.trading_pair}<div className="text-xs text-muted-foreground">{p.wallet_margin != null ? "Demo wallet" : `${exchangeName(p.exchange)} · ${p.market_type === "usd_m_futures" ? "Futures" : p.mode}`}</div></td>
                         <td className={`px-4 py-2 ${p.side === "buy" ? "text-gain" : "text-loss"}`}>{p.side === "buy" ? "long" : "short"}</td>
                         <td className="px-4 py-2">{fmtPx(Number(p.entry_price))}</td>
                         <td className="px-4 py-2">{p.current_price == null ? "—" : fmtPx(Number(p.current_price))}</td>
@@ -308,6 +317,8 @@ function ScalpingPage() {
                 </SelectContent>
               </Select>
             </div>
+            {chosen?.exchange==="binance"&&!nonCrypto&&<Select value={venueMode} onValueChange={setVenueMode}><SelectTrigger aria-label="Scalping market type"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="spot">Spot</SelectItem><SelectItem value="futures">USD-M Futures</SelectItem></SelectContent></Select>}
+            {futures&&chosen&&<FuturesControls connectionId={chosen.id} symbol={symbol} testnet={chosen.is_testnet} leverage={leverage} onLeverage={setLeverage} confirmation={confirmation} onConfirmation={setConfirmation}/>}
             {isWallet && (
               <div className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2 text-xs">
                 <span className="flex items-center gap-1.5 text-muted-foreground"><Wallet className="h-3.5 w-3.5" />Wallet</span>
@@ -325,7 +336,7 @@ function ScalpingPage() {
               </div>
             )}
             <div className="space-y-1.5">
-              <Label className="text-xs">{chosen?.exchange === "oanda" ? "Units" : isWallet ? "Amount (USD)" : "Amount (USDT)"}</Label>
+              <Label className="text-xs">{futures ? "Margin (USDT)" : chosen?.exchange === "oanda" ? "Units" : isWallet ? "Amount (USD)" : "Amount (USDT)"}</Label>
               <Input type="number" min={0} step="any" value={amount} onChange={(e) => setAmount(e.target.value)} className="font-mono" />
               {chosen?.exchange !== "oanda" && (
                 <div className="flex gap-1">{[50, 100, 250, 500, 1000].map((v) => <Button key={v} size="sm" variant="outline" className="h-7 flex-1 px-1 text-xs" onClick={() => setAmount(String(v))}>{v}</Button>)}</div>
@@ -354,13 +365,13 @@ function ScalpingPage() {
                 <span className="flex items-center font-semibold"><ArrowUpRight className="mr-1 h-4 w-4" />{busy === "buy" ? "Buying…" : "Buy"}</span>
                 {preview && <span className="font-mono text-[10px] opacity-80">TP {fmtPx(preview.buy.tp)}</span>}
               </Button>
-              <Button variant="sell" className="h-14 flex-col gap-0" disabled={!!busy || !!problem || liveCrypto} onClick={() => go("sell")}>
+              <Button variant="sell" className="h-14 flex-col gap-0" disabled={!!busy || !!problem || (liveCrypto&&!futures)} onClick={() => go("sell")}>
                 <span className="flex items-center font-semibold"><ArrowDownRight className="mr-1 h-4 w-4" />{busy === "sell" ? "Selling…" : "Sell"}</span>
                 {preview && <span className="font-mono text-[10px] opacity-80">TP {fmtPx(preview.sell.tp)}</span>}
               </Button>
             </div>
-            {liveCrypto && <p className="text-xs text-muted-foreground">Spot crypto accounts can only buy. Use the demo wallet or OANDA to sell short.</p>}
-            {!isWallet && <p className="text-xs text-destructive">Real order on {exchangeName(chosen!.exchange)}{chosen!.is_testnet ? " (testnet)" : ""}. Exits are market orders, so the fill can be worse than your stop.</p>}
+            {liveCrypto && !futures && <p className="text-xs text-muted-foreground">Spot crypto accounts can only buy. Use the demo wallet or OANDA to sell short.</p>}
+            {!isWallet && <p className="text-xs text-destructive">Real order on {exchangeName(chosen?.exchange ?? "binance")}{chosen?.is_testnet ? " (testnet)" : ""}. Exits are market orders, so the fill can be worse than your stop.</p>}
             <p className="text-xs text-muted-foreground">One click places the trade at market. Stop and target are set from the live price on the server.</p>
           </div>
 

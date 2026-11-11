@@ -1,6 +1,7 @@
 // AI Autopilot tools. Every action is forced to the demo wallet / paper engine and goes through the same
 // server paths as the UI (risk gate, plan checks, idempotent order claims). No tool accepts an account or mode.
 import { tool, type ToolSet } from "ai";
+import { futuresTicket } from "./futures";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/integrations/supabase/types";
 import { toolInputs, liveToolInputs, createRunBudget, type LiveAccounts } from "./autopilot-guard";
@@ -230,8 +231,8 @@ function liveTools(ctx: Ctx, live: LiveAccounts): ToolSet {
         const { loadAccount } = await import("./manual.server");
         const { fetchBalances } = await import("./exchange-adapters.server");
         const out: Record<string, unknown> = {};
-        for (const [name, acc] of Object.entries(live)) {
-          if (!acc) continue;
+        for (const [name, acc] of [["binance", live.binance], ["deriv", live.deriv]] as const) {
+          if (!acc || typeof acc !== "object") continue;
           try {
             const a = await loadAccount(db, userId, acc.id);
             const b = await fetchBalances(a.exchange, a.creds!, a.testnet);
@@ -258,6 +259,18 @@ function liveTools(ctx: Ctx, live: LiveAccounts): ToolSet {
   };
   if (live.binance) {
     const acc = live.binance;
+    t["live_futures_snapshot"] = tool({
+      description: "Read Binance USD-M Futures market and Futures settings. No orders or settings changes.",
+      inputSchema: toolInputs.marketSnapshot,
+      execute: safe(async ({symbol})=>{const db=await admin();const {loadFuturesAccount}=await import("./futures.server");const {futuresSymbol,futuresAccountState}=await import("./binance-futures.server");const a=await loadFuturesAccount(db,userId,acc.id);const limits=await db.from("futures_settings").select("*").eq("user_id",userId).maybeSingle();return {market:await futuresSymbol(a,symbol),account:await futuresAccountState(a),limits:limits.data};}),
+    });
+    // Entry executor rechecks the separate Futures opt-in, certification, plan and risk limits on every call.
+    if(live.futures) t["live_open_futures_scalp"] = tool({
+      description: "USD-M Futures scalp only after separate Futures live opt-in and independent testnet certification. Bounded by saved margin, leverage and loss limits; broker protection required.",
+      inputSchema: futuresTicket.omit({connectionId:true,confirmation:true,requestId:true}),
+      execute: safe(async(input)=>{ctx.budget.claim("entries");const db=await admin();const {data:s}=await db.from("futures_settings").select("live_enabled,testnet_certified_at,connection_id").eq("user_id",userId).maybeSingle();if(!acc.testnet&&(!s?.live_enabled||!s.testnet_certified_at||s.connection_id!==acc.id))throw new Error("Futures tools are locked; separate live authorization and testnet verification required");const {openFutures}=await import("./futures.server");return openFutures(db,userId,{...input,connectionId:acc.id,confirmation:acc.testnet?"TESTNET":"LIVE",requestId:crypto.randomUUID()});}),
+    });
+
     t["live_open_binance_trade"] = tool({
       description: `REAL ${acc.testnet ? "testnet " : ""}order: market BUY on Binance spot account "${acc.label}" with a stop price (checked every minute) and optional take profit.`,
       inputSchema: liveToolInputs.openBinance,

@@ -98,7 +98,7 @@ export const liveToolInputs = {
   }).refine((v) => v.stopLossAmount <= v.stake, { message: "stopLossAmount cannot exceed stake", path: ["stopLossAmount"] }),
 };
 
-export interface LiveAccounts { binance: { id: string; label: string; testnet: boolean } | null; deriv: { id: string; label: string; testnet: boolean } | null }
+export interface LiveAccounts { futures?: boolean; binance: { id: string; label: string; testnet: boolean } | null; deriv: { id: string; label: string; testnet: boolean } | null }
 export interface RiskRow { max_daily_loss: number | null; max_open_exposure: number | null; trading_halted: boolean }
 
 /** Reasons real-money Autopilot cannot be switched on. Empty = allowed. */
