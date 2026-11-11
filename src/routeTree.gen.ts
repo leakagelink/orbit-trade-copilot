@@ -19,6 +19,7 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as RiskDisclosureRouteImport } from './routes/risk-disclosure'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedAiTradesRouteImport } from './routes/_authenticated/ai-trades'
 import { Route as AuthenticatedAnalyticsRouteImport } from './routes/_authenticated/analytics'
 import { Route as AuthenticatedArbitrageRouteImport } from './routes/_authenticated/arbitrage'
 import { Route as AuthenticatedAssistantRouteImport } from './routes/_authenticated/assistant'
@@ -102,6 +103,11 @@ const TermsRoute = TermsRouteImport.update({
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAiTradesRoute = AuthenticatedAiTradesRouteImport.update({
+  id: '/ai-trades',
+  path: '/ai-trades',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedAnalyticsRoute = AuthenticatedAnalyticsRouteImport.update({
@@ -296,6 +302,7 @@ export interface FileRoutesByFullPath {
   '/risk-disclosure': typeof RiskDisclosureRoute
   '/terms': typeof TermsRoute
   '/admin': typeof AuthenticatedAdminRoute
+  '/ai-trades': typeof AuthenticatedAiTradesRoute
   '/analytics': typeof AuthenticatedAnalyticsRoute
   '/arbitrage': typeof AuthenticatedArbitrageRoute
   '/assistant': typeof AuthenticatedAssistantRoute
@@ -342,6 +349,7 @@ export interface FileRoutesByTo {
   '/risk-disclosure': typeof RiskDisclosureRoute
   '/terms': typeof TermsRoute
   '/admin': typeof AuthenticatedAdminRoute
+  '/ai-trades': typeof AuthenticatedAiTradesRoute
   '/analytics': typeof AuthenticatedAnalyticsRoute
   '/arbitrage': typeof AuthenticatedArbitrageRoute
   '/assistant': typeof AuthenticatedAssistantRoute
@@ -390,6 +398,7 @@ export interface FileRoutesById {
   '/risk-disclosure': typeof RiskDisclosureRoute
   '/terms': typeof TermsRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
+  '/_authenticated/ai-trades': typeof AuthenticatedAiTradesRoute
   '/_authenticated/analytics': typeof AuthenticatedAnalyticsRoute
   '/_authenticated/arbitrage': typeof AuthenticatedArbitrageRoute
   '/_authenticated/assistant': typeof AuthenticatedAssistantRoute
@@ -438,6 +447,7 @@ export interface FileRouteTypes {
     | '/risk-disclosure'
     | '/terms'
     | '/admin'
+    | '/ai-trades'
     | '/analytics'
     | '/arbitrage'
     | '/assistant'
@@ -484,6 +494,7 @@ export interface FileRouteTypes {
     | '/risk-disclosure'
     | '/terms'
     | '/admin'
+    | '/ai-trades'
     | '/analytics'
     | '/arbitrage'
     | '/assistant'
@@ -531,6 +542,7 @@ export interface FileRouteTypes {
     | '/risk-disclosure'
     | '/terms'
     | '/_authenticated/admin'
+    | '/_authenticated/ai-trades'
     | '/_authenticated/analytics'
     | '/_authenticated/arbitrage'
     | '/_authenticated/assistant'
@@ -656,6 +668,13 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/ai-trades': {
+      id: '/_authenticated/ai-trades'
+      path: '/ai-trades'
+      fullPath: '/ai-trades'
+      preLoaderRoute: typeof AuthenticatedAiTradesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/analytics': {
@@ -908,6 +927,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
+  AuthenticatedAiTradesRoute: typeof AuthenticatedAiTradesRoute
   AuthenticatedAnalyticsRoute: typeof AuthenticatedAnalyticsRoute
   AuthenticatedArbitrageRoute: typeof AuthenticatedArbitrageRoute
   AuthenticatedAssistantRoute: typeof AuthenticatedAssistantRoute
@@ -941,6 +961,7 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
+  AuthenticatedAiTradesRoute: AuthenticatedAiTradesRoute,
   AuthenticatedAnalyticsRoute: AuthenticatedAnalyticsRoute,
   AuthenticatedArbitrageRoute: AuthenticatedArbitrageRoute,
   AuthenticatedAssistantRoute: AuthenticatedAssistantRoute,

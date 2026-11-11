@@ -129,7 +129,12 @@ export const verifyExchange = createServerFn({ method: "POST" })
       // Futures-only Binance keys (e.g. Futures testnet) cannot read Spot; verify on the Futures API instead.
       const balances = own.exchange === "binance" && own.account_type === "futures"
         ? await (async () => { const { futuresAccountState } = await import("./binance-futures.server"); const s = await futuresAccountState({ connectionId: own.id, testnet: own.is_testnet, creds }); if (!s.canTrade) throw new Error("Futures trading permission is unavailable on this API key"); return [{ asset: "USDT", free: Number(s.availableBalance), locked: 0 }]; })()
-        : await fetchBalances(own.exchange, creds, own.is_testnet);
+        : await (async () => {
+          const spot = await fetchBalances(own.exchange, creds, own.is_testnet);
+          if (own.exchange !== "binance" || own.account_type !== "both") return spot;
+          // Spot + Futures: also show the Futures wallet so moved funds stay visible.
+          try { const { futuresAccountState } = await import("./binance-futures.server"); const s = await futuresAccountState({ connectionId: own.id, testnet: own.is_testnet, creds }); return [{ asset: "USDT (Futures)", free: Number(s.availableBalance), locked: 0 }, ...spot]; } catch { return spot; }
+        })();
       const now = new Date().toISOString();
       const saved = await supabaseAdmin.from("exchange_connections").update({
         status: "connected", last_error: null, last_synced_at: now, permissions: { verified_at: now, balances: balances.slice(0, 50) } as unknown as never,

@@ -7,7 +7,7 @@ export const PLAN_IDS: PlanId[] = ["free", "pro", "elite"];
 export const FREE_PATHS = ["/trade", "/wallet", "/exchanges", "/risk", "/settings", "/plans", "/support", "/status", "/mailbox", "/learn", "/referrals", "/leaderboard", "/admin"] as const;
 
 export function requiredPlan(path: string): PlanId {
-  if (["/scalping", "/arbitrage"].some(p => path === p || path.startsWith(p + "/"))) return "elite";
+  if (["/scalping", "/arbitrage", "/ai-trades"].some(p => path === p || path.startsWith(p + "/"))) return "elite";
   return FREE_PATHS.some(p => path === p || path.startsWith(p + "/")) ? "free" : "pro";
 }
 
