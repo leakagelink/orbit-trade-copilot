@@ -1,5 +1,5 @@
 import { futuresQuantity,futuresPrices,futuresLimitProblem,futuresRiskReserve,type FuturesTicket } from './futures';
-import { futuresCall,futuresAccountState,futuresSymbol,futuresPositions,futuresOrder,futuresAlgo,futuresCancelAlgo,type FuturesAccount,type BrokerOrder } from './binance-futures.server';
+import { futuresCall,futuresAccountState,futuresSymbol,futuresPositions,futuresOrder,futuresAlgo,futuresCancelAlgo,type FuturesAccount,type BrokerOrder,type BrokerPosition } from './binance-futures.server';
 import type { Database, Json } from '@/integrations/supabase/types';
 type Admin=Awaited<typeof import('@/integrations/supabase/client.server')>['supabaseAdmin'];
 export async function loadFuturesAccount(db:Admin,userId:string,id:string):Promise<FuturesAccount>{
@@ -27,8 +27,17 @@ export async function openFutures(db:Admin,userId:string,t:FuturesTicket){
  if(!s)throw new Error('Save explicit Futures risk limits first');
  const problem=futuresLimitProblem(t,s);if(problem)throw new Error(problem);
  if(!a.testnet&&(!s.live_enabled||s.connection_id!==a.connectionId||!s.testnet_certified_at))throw new Error('Live Futures requires separate opt-in and independently observed testnet verification');
- const state=await futuresAccountState(a);
- if(!state.canTrade||state.hedge||state.multiAssets)throw new Error('Futures requires trading permission, one-way mode and single-asset mode; no account modes were changed');
+ let state=await futuresAccountState(a);
+ if(!state.canTrade)throw new Error('Futures trading permission is unavailable on this API key');
+ if(state.hedge||state.multiAssets){
+  const all=await futuresCall<BrokerPosition[]>(a,'GET','/fapi/v3/positionRisk');
+  const open=await futuresCall<unknown[]>(a,'GET','/fapi/v1/openOrders');
+  if(all.some(p=>Number(p.positionAmt)!==0)||open.length)throw new Error('Close all Futures positions and orders so AlgoVirt can switch to one-way, single-asset mode');
+  if(state.hedge)await futuresCall(a,'POST','/fapi/v1/positionSide/dual',{dualSidePosition:'false'});
+  if(state.multiAssets)await futuresCall(a,'POST','/fapi/v1/multiAssetsMargin',{multiAssetsMargin:'false'});
+  state=await futuresAccountState(a);
+  if(state.hedge||state.multiAssets)throw new Error('Binance did not confirm one-way, single-asset mode');
+ }
  if(Number(state.availableBalance)<t.margin)throw new Error('Not enough available Futures margin');
  const m=await futuresSymbol(a,t.symbol);
  const existing=await futuresPositions(a,m.symbol);
@@ -37,7 +46,12 @@ export async function openFutures(db:Admin,userId:string,t:FuturesTicket){
  if(orders.length||algos.length)throw new Error('Existing broker orders on this symbol prevent a new managed scalp');
  const configs=await futuresCall<{symbol:string;marginType:string;leverage:number}[]>(a,'GET','/fapi/v1/symbolConfig',{symbol:m.symbol});
  const row=configs.find(p=>p.symbol===m.symbol);
- if(row?.marginType?.toLowerCase()!=='isolated'||Number(row?.leverage)!==t.leverage)throw new Error('Set this symbol to isolated margin and the selected leverage in Binance first; AlgoVirt does not change broker settings');
+ if(row?.marginType?.toLowerCase()!=='isolated'){
+  try{await futuresCall(a,'POST','/fapi/v1/marginType',{symbol:m.symbol,marginType:'ISOLATED'});}catch(e){if(!String(e).includes('-4046'))throw e;}
+ }
+ if(Number(row?.leverage)!==t.leverage)await futuresCall(a,'POST','/fapi/v1/leverage',{symbol:m.symbol,leverage:t.leverage});
+ const check=(await futuresCall<{symbol:string;marginType:string;leverage:number}[]>(a,'GET','/fapi/v1/symbolConfig',{symbol:m.symbol})).find(p=>p.symbol===m.symbol);
+ if(check?.marginType?.toLowerCase()!=='isolated'||Number(check?.leverage)!==t.leverage)throw new Error('Binance did not confirm isolated margin and the selected leverage');
  const {data:risk}=await db.from('risk_settings').select('max_daily_loss,max_open_exposure').eq('user_id',userId).maybeSingle();
  if(!risk?.max_daily_loss||!risk.max_open_exposure)throw new Error('Save account maximum daily loss and exposure before Futures entries');
  const qty=futuresQuantity(t.margin,t.leverage,m.price,m.step,m.minQty,m.minNotional);
