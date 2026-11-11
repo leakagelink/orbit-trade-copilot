@@ -1,5 +1,11 @@
 # Roadmap
 
+## AI Prime Tech migration and workspace move — 11 November 2026
+- [ ] Reconnect AI Prime Tech in the new workspace after the 15:05 UTC move
+- [x] Switch assistant, trade ideas, research, arbitrage review and Autopilot to the AI Prime Tech Claude connection
+- [x] Replace unsupported Claude batches with service-only asynchronous model requests; trading safety and interrupted-action rules retained
+- [ ] Verify connected AI streams, reports and scheduled replies; no live orders during integration tests
+
 ## Workspace move 8 Nov 2026
 - [ ] Reconnect NOWPayments after the 05:17 UTC workspace move — connect card was closed; waiting on owner
 - [x] Reconnect NOWPayments in the new workspace (status check OK)
