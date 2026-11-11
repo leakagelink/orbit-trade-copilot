@@ -25,13 +25,13 @@ export const arbitrageReviewFn = createServerFn({ method: "POST" }).middleware([
     const { requireElite } = await import("./plan.server"); await requireElite(context.supabase, context.userId);
     const { scanArbitrage } = await import("./arbitrage.server"); const scan = await scanArbitrage(data);
     if (!scan.opportunities.length) throw new Error("Not enough exchange data for AI review");
-    const { generateResponse } = await import("@lovable.dev/ai-gateway");
-    const response = await generateResponse({ model: "openai/gpt-6-astra",
-      instructions: "Review cryptocurrency spot arbitrage using ONLY these server-fetched depth comparisons. Give 3 short sentences on best route, estimated fees/net, and prefunding/partial-fill risk. When all nets are negative, say do not execute. Never guarantee profits, invent balances, or suggest exchange withdrawals. You cannot place orders; user confirmation is required.",
-      input: JSON.stringify({ pair: data.pair, feeBps: data.feeBps, slippageBps: data.slippageBps, opportunities: scan.opportunities.slice(0, 3), errors: scan.errors }),
-      reasoning: { effort: "low" },
+    const { aiPrimeMessage, messageText } = await import("./ai-prime.server");
+    const { AI_MODEL } = await import("./ai-provider");
+    const reply = await aiPrimeMessage({ model: AI_MODEL, max_tokens: 800,
+      system: "Review cryptocurrency spot arbitrage using ONLY these server-fetched depth comparisons. Give 3 short sentences on best route, estimated fees/net, and prefunding/partial-fill risk. When all nets are negative, say do not execute. Never guarantee profits, invent balances, or suggest exchange withdrawals. You cannot place orders; user confirmation is required.",
+      messages: [{ role: "user", content: JSON.stringify({ pair: data.pair, feeBps: data.feeBps, slippageBps: data.slippageBps, opportunities: scan.opportunities.slice(0, 3), errors: scan.errors }) }],
     });
-    const text = response.output.flatMap((item) => item.type === "message" ? item.content.flatMap((c) => c.type === "output_text" ? [c.text] : []) : []).join("\n");
+    const text = messageText(reply);
     if (!text) throw new Error("AI review unavailable; no orders were placed");
     return { text, scannedAt: scan.scannedAt };
   });

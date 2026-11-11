@@ -1,9 +1,6 @@
-import { createOpenAI } from "@ai-sdk/openai";
 import { convertToModelMessages, streamText, type UIMessage } from "ai";
 import type { Json } from "@/integrations/supabase/types";
-import { createLovableAiGatewayRunIdFetch, getLovableAiGatewayRunId, withLovableAiGatewayRunIdHeader } from "./run-id.server";
-
-const MODEL = "openai/gpt-6-astra";
+import { AI_MODEL, AI_NOT_CONNECTED, aiStreamErrorMessage } from "./ai-provider";
 const SYSTEM = `You are AlgoVirt's AI trading assistant for an algorithmic crypto trading platform.
 - Help users analyze markets, design strategies (RSI, MACD, EMA, SMA, Bollinger Bands, ATR, Stochastic RSI, volume), and set risk parameters.
 - You do NOT have live market data in this phase. Never invent current prices, volumes, or indicator readings; say so and explain how to analyze instead.
@@ -23,36 +20,20 @@ export async function handleChat(request: Request) {
   const { data: session } = await supabase.from("ai_sessions").select("id,title").eq("id", body.sessionId).maybeSingle();
   if (!session) return new Response("Conversation not found", { status: 404 });
 
-  const apiKey = process.env["LOVABLE_API_KEY"];
-  if (!apiKey) return new Response("AI is not configured", { status: 500 });
-
-  const runIdFetch = createLovableAiGatewayRunIdFetch(getLovableAiGatewayRunId(request));
-  const provider = createOpenAI({
-    baseURL: "https://ai.gateway.lovable.dev/v1",
-    apiKey,
-    headers: { "Lovable-API-Key": apiKey, "X-Lovable-AIG-SDK": "vercel-ai-sdk" },
-    fetch: runIdFetch.fetch,
-  });
+  const { aiPrimeProvider, aiPrimeReady } = await import("./ai-prime.server");
+  if (!aiPrimeReady()) return new Response(AI_NOT_CONNECTED, { status: 503 });
+  const provider = await aiPrimeProvider();
   const result = streamText({
-    model: provider.responses(MODEL),
-    instructions: SYSTEM,
+    model: provider(AI_MODEL),
+    system: SYSTEM,
     messages: await convertToModelMessages(messages),
+    maxOutputTokens: 8000,
     abortSignal: request.signal,
-    providerOptions: {
-      openai: {
-        forceReasoning: true,
-        reasoningEffort: "low",
-        reasoningSummary: "auto",
-        store: false,
-        include: ["reasoning.encrypted_content"],
-      },
-    },
   });
 
   const firstUser = messages.find((m) => m.role === "user");
   const firstText = firstUser?.parts.find((p) => p.type === "text") as { text?: string } | undefined;
-  return withLovableAiGatewayRunIdHeader(
-    result.toUIMessageStreamResponse({
+  return result.toUIMessageStreamResponse({
       originalMessages: messages,
       sendReasoning: true,
       onFinish: async ({ messages: all }) => {
@@ -63,8 +44,6 @@ export async function handleChat(request: Request) {
           .eq("id", session.id);
         if (error) console.error("Failed to save conversation", error.message);
       },
-      onError: (e) => (e instanceof Error ? e.message : "AI request failed"),
-    }),
-    runIdFetch,
-  );
+      onError: (e) => aiStreamErrorMessage(e instanceof Error ? e.message : "AI request failed"),
+    });
 }

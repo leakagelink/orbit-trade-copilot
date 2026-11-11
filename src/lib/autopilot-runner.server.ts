@@ -1,28 +1,21 @@
 // Scheduled Autopilot: each cron tick (≈ every minute, a few seconds long) starts due runs and advances active ones by
-// one short step — submit a Claude batch, read a finished batch, or execute ONE tool. A per-run lease stops overlap.
+// one short step — send an asynchronous Claude request (via the database), read its stored reply, or execute ONE tool.
+// A per-run lease stops overlap.
 import { z } from "zod";
 import type { Json } from "@/integrations/supabase/types";
 import { AUTOPILOT_MODEL, AUTOPILOT_SYSTEM, automaticRunPrompt, createRunBudget, liveRules, type BudgetKind, AUTOPILOT_LIMITS } from "./autopilot-guard";
-import { applyModelReply, clip, completeTools, INTERRUPTED_RESULT, isErrorResult, nextTool, parseBatchLine, type Msg, type PendingTool, type RunState } from "./autopilot-run";
+import { applyModelReply, clip, completeTools, INTERRUPTED_RESULT, isErrorResult, nextTool, parseModelResponse, type Msg, type PendingTool, type RunState } from "./autopilot-run";
+import { AI_PRIME_MESSAGES_URL, aiPrimeHeaders } from "./ai-prime.server";
 
 type Admin = Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"];
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Row = any;
 
-const API = "https://api.anthropic.com/v1/messages/batches";
 const TICK_BUDGET_MS = 3000;
 const LEASE_MS = 55_000;
-
-function headers(key: string) {
-  return { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" };
-}
-
-async function anthropic(key: string, url: string, init?: RequestInit) {
-  const r = await fetch(url, { ...init, headers: headers(key) });
-  const text = await r.text();
-  if (!r.ok) throw new Error(`Claude ${r.status}: ${text.slice(0, 300)}`);
-  return text;
-}
+const MODEL_TIMEOUT_MS = 180_000;
+const REPLY_GIVE_UP_MS = 10 * 60_000;
+type Headers = Record<string, string>;
 
 async function toolsFor(db: Admin, userId: string, budgetUsed: Record<string, number>) {
   const { autopilotTools } = await import("./autopilot-tools.server");
@@ -33,28 +26,25 @@ async function toolsFor(db: Admin, userId: string, budgetUsed: Record<string, nu
   return { tools: autopilotTools({ supabase: db, userId, budget, live }), budget, live };
 }
 
-async function submitStep(db: Admin, key: string, run: Row) {
+async function submitStep(db: Admin, headers: Headers, run: Row) {
   const { tools, live } = await toolsFor(db, run.user_id, run.budget ?? {});
   const specs = Object.entries(tools).map(([name, t]) => ({
     name, description: (t as { description?: string }).description ?? name,
     input_schema: z.toJSONSchema((t as { inputSchema: z.ZodType }).inputSchema, { io: "input" }),
   }));
-  const body = {
-    requests: [{
-      custom_id: `${run.id}-${run.step}`.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 64),
-      params: { model: AUTOPILOT_MODEL, max_tokens: 4000, system: AUTOPILOT_SYSTEM + (live ? liveRules(live) : ""), messages: run.messages, tools: specs },
-    }],
-  };
-  const j = JSON.parse(await anthropic(key, API, { method: "POST", body: JSON.stringify(body) })) as { id: string };
-  return { batch_id: j.id, live: !!live };
+  const body = { model: AUTOPILOT_MODEL, max_tokens: 4000, system: AUTOPILOT_SYSTEM + (live ? liveRules(live) : ""), messages: run.messages, tools: specs };
+  const { data, error } = await db.rpc("ai_async_submit", { _url: AI_PRIME_MESSAGES_URL, _headers: headers as unknown as Json, _body: body as unknown as Json, _timeout_ms: MODEL_TIMEOUT_MS });
+  if (error || data == null) throw new Error(`Could not send the Autopilot request: ${error?.message ?? "no request id"}`);
+  return { batch_id: `net:${data}`, live: !!live };
 }
 
-async function readStep(key: string, batchId: string) {
-  const b = JSON.parse(await anthropic(key, `${API}/${encodeURIComponent(batchId)}`)) as { processing_status: string; results_url?: string | null };
-  if (b.processing_status !== "ended") return null;
-  if (!b.results_url) return { ok: false as const, error: "Claude batch ended without results" };
-  const line = (await anthropic(key, b.results_url)).split("\n").find((l) => l.trim());
-  return line ? parseBatchLine(line) : { ok: false as const, error: "Claude batch had no result" };
+async function readStep(db: Admin, requestRef: string, sentAt: string) {
+  if (!requestRef.startsWith("net:")) return { ok: false as const, error: "An earlier AI request format is no longer used; nothing was done." };
+  const { data, error } = await db.rpc("ai_async_result", { _id: Number(requestRef.slice(4)) });
+  if (error) throw new Error(`Could not read the Autopilot reply: ${error.message}`);
+  const row = data?.[0];
+  if (!row) return Date.now() - new Date(sentAt).getTime() > REPLY_GIVE_UP_MS ? { ok: false as const, error: "No AI reply arrived within 10 minutes; nothing was done." } : null;
+  return parseModelResponse(row);
 }
 
 async function finish(db: Admin, run: Row, patch: Partial<RunState> & { status: RunState["status"] }) {
@@ -62,7 +52,7 @@ async function finish(db: Admin, run: Row, patch: Partial<RunState> & { status: 
 }
 
 /** Advances one run by one step. Returns false when nothing could be done now (still waiting on Claude). */
-async function advance(db: Admin, key: string, run: Row, deadline: number): Promise<boolean> {
+async function advance(db: Admin, headers: Headers, run: Row, deadline: number): Promise<boolean> {
   const save = (patch: Record<string, unknown>) => db.from("autopilot_runs").update({ ...patch, updated_at: new Date().toISOString() }).eq("id", run.id);
   const [settings, risk] = await Promise.all([
     db.from("autopilot_settings").select("enabled").eq("user_id", run.user_id).maybeSingle(),
@@ -77,8 +67,8 @@ async function advance(db: Admin, key: string, run: Row, deadline: number): Prom
   const state: RunState = { status: run.status, step: run.step, messages: run.messages as Msg[], pending_tools: run.pending_tools as PendingTool[], batch_id: run.batch_id };
 
   if (run.status === "waiting_model") {
-    if (!run.batch_id) { const s = await submitStep(db, key, run); await save({ batch_id: s.batch_id, live: run.live || s.live }); return true; }
-    const r = await readStep(key, run.batch_id);
+    if (!run.batch_id) { const s = await submitStep(db, headers, run); await save({ batch_id: s.batch_id, live: run.live || s.live }); return true; }
+    const r = await readStep(db, run.batch_id, run.updated_at);
     if (!r) return false;
     if (!r.ok) { await finish(db, run, { status: "failed", error: r.error }); return true; }
     const next = applyModelReply(state, r.message);
@@ -141,8 +131,8 @@ async function startDueRuns(db: Admin) {
 
 export async function runAutopilotTick() {
   const deadline = Date.now() + TICK_BUDGET_MS;
-  const key = process.env["ANTHROPIC_API_KEY"];
-  if (!key) return { ok: false, reason: "Claude API key not added" };
+  const headers = aiPrimeHeaders();
+  if (!headers) return { ok: false, reason: "AI Prime Tech is not connected" };
   const { supabaseAdmin: db } = await import("@/integrations/supabase/client.server");
   await startDueRuns(db);
   const { data: runs } = await db.from("autopilot_runs").select("*").in("status", ["waiting_model", "executing"]).or(`lease_until.is.null,lease_until.lt.${new Date().toISOString()}`).order("updated_at").limit(10);
@@ -158,7 +148,7 @@ export async function runAutopilotTick() {
       while (Date.now() < deadline) {
         const { data: fresh } = await db.from("autopilot_runs").select("*").eq("id", run.id).maybeSingle();
         if (!fresh || !["waiting_model", "executing"].includes(fresh.status)) break;
-        const progressed = await advance(db, key, fresh, deadline);
+        const progressed = await advance(db, headers, fresh, deadline);
         if (!progressed) break;
         steps += 1;
       }
@@ -169,10 +159,4 @@ export async function runAutopilotTick() {
     }
   }
   return { ok: true, steps };
-}
-
-export async function cancelBatch(batchId: string | null) {
-  const key = process.env["ANTHROPIC_API_KEY"];
-  if (!key || !batchId) return;
-  try { await anthropic(key, `${API}/${encodeURIComponent(batchId)}/cancel`, { method: "POST" }); } catch { /* already finished */ }
 }

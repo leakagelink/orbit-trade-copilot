@@ -75,7 +75,7 @@ export function AutopilotSettings({ claudeReady }: { claudeReady: boolean }) {
           <div><p className="font-medium">Automatic runs</p><p className="text-sm text-muted-foreground">The AI checks the market and your positions on a schedule and acts on its own.</p></div>
           <Switch aria-label="Automatic runs" checked={!!s?.enabled} disabled={!!busy || (!claudeReady && !s?.enabled)} onCheckedChange={(v) => act("schedule", () => save({ data: { enabled: v, interval: iv, goal: gl } }), v ? "Automatic runs switched on" : "Automatic runs switched off")} />
         </div>
-        {!claudeReady && <p className="text-xs text-warning">Add your Claude API key first.</p>}
+        {!claudeReady && <p className="text-xs text-warning">Connect AI Prime Tech first.</p>}
         <div className="grid gap-3 sm:grid-cols-[10rem_minmax(0,1fr)]">
           <div className="space-y-1.5"><Label>Run every</Label>
             <Select value={String(iv)} onValueChange={(v) => setIntervalMin(Number(v) as Interval)}>

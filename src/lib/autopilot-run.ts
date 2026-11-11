@@ -1,6 +1,7 @@
 // Automatic Autopilot runs advance in short, resumable steps (scheduler calls are only a few seconds long):
-// one Claude Message Batch per model step, then one tool per tick. Pure state transitions live here.
+// one asynchronous Claude request per model step (sent from the database), then one tool per tick. Pure state transitions live here.
 import { z } from "zod";
+import { aiErrorMessage } from "./ai-provider";
 
 export const RUN_MAX_STEPS = 14;
 export const TOOL_RESULT_LIMIT = 8000;
@@ -20,17 +21,17 @@ const modelMessage = z.object({
   stop_reason: z.string().nullable(),
 });
 
-/** One JSONL line from a batch's results file → Claude's message, or an error. */
-export function parseBatchLine(line: string): { ok: true; message: z.infer<typeof modelMessage> } | { ok: false; error: string } {
-  let j: { result?: { type?: string; message?: unknown; error?: { error?: { message?: string }; message?: string } } };
-  try { j = JSON.parse(line); } catch { return { ok: false, error: "Unreadable Claude result" }; }
-  const r = j.result;
-  if (r?.type !== "succeeded") {
-    const msg = r?.error?.error?.message ?? r?.error?.message ?? r?.type ?? "unknown";
-    return { ok: false, error: `Claude request ${r?.type ?? "failed"}: ${msg}` };
-  }
-  const m = modelMessage.safeParse(r.message);
-  return m.success ? { ok: true, message: m.data } : { ok: false, error: "Unexpected Claude response" };
+export interface AsyncReply { status_code: number | null; content: string | null; timed_out: boolean | null; error_msg: string | null }
+
+/** The stored reply of one asynchronous Claude request → Claude's message, or an error (never an action). */
+export function parseModelResponse(r: AsyncReply): { ok: true; message: z.infer<typeof modelMessage> } | { ok: false; error: string } {
+  if (r.timed_out) return { ok: false, error: "The AI took too long to reply; nothing was done in this run." };
+  if (r.error_msg) return { ok: false, error: `AI request failed: ${r.error_msg.slice(0, 200)}` };
+  if (!r.status_code || r.status_code >= 300) return { ok: false, error: aiErrorMessage(r.status_code ?? 0, r.content ?? "") };
+  let j: unknown;
+  try { j = JSON.parse(r.content ?? ""); } catch { return { ok: false, error: "Unreadable AI reply" }; }
+  const m = modelMessage.safeParse(j);
+  return m.success ? { ok: true, message: m.data } : { ok: false, error: "Unexpected AI reply" };
 }
 
 /** Applies Claude's reply: tool calls → executing, otherwise the run is done with its text as summary. */

@@ -239,6 +239,13 @@
       "when": 1794110982499,
       "tag": "0033_autopilot_automatic_live",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1794409256609,
+      "tag": "0034_autopilot_async_ai_requests",
+      "breakpoints": true
     }
   ]
 }

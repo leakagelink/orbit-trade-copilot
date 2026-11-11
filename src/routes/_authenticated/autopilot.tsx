@@ -112,7 +112,7 @@ function Autopilot() {
         {!ready.isLoading && !claudeReady && (
           <div className="m-3 flex items-start gap-2 rounded-md border border-warning/40 bg-warning/10 p-3 text-sm">
             <KeyRound className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
-            <div><p className="font-medium">Claude API key needed</p><p className="text-muted-foreground">Autopilot runs on your own Anthropic Claude account. Once the key is added it starts working here automatically.</p></div>
+            <div><p className="font-medium">AI connection needed</p><p className="text-muted-foreground">Autopilot runs on your AI Prime Tech Claude connection. Once it is linked, Autopilot starts working here automatically.</p></div>
           </div>
         )}
         <div className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b p-3 lg:hidden">
@@ -229,7 +229,7 @@ function Run({ sessionId, initial, disabled, live, onSaved }: { sessionId: strin
       <div className="mx-auto w-full max-w-3xl shrink-0 p-3 sm:p-4">
         <PromptInput onSubmit={(msg) => send(msg.text ?? "")}>
           <PromptInputBody>
-            <PromptInputTextarea value={input} disabled={disabled} onChange={(e) => setInput(e.target.value)} placeholder={disabled ? "Add your Claude API key to start" : "Tell the autopilot what to do…"} />
+            <PromptInputTextarea value={input} disabled={disabled} onChange={(e) => setInput(e.target.value)} placeholder={disabled ? "Connect AI Prime Tech to start" : "Tell the autopilot what to do…"} />
           </PromptInputBody>
           <PromptInputFooter>
             <PromptInputTools className="min-w-0"><span className={cn("min-w-0 px-2 text-[10px] sm:text-xs", live ? "text-destructive" : "text-muted-foreground")}>{live ? "Real money is ON — the AI can place real orders." : "Demo money only."} Profit is never guaranteed.</span></PromptInputTools>

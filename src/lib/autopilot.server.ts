@@ -1,5 +1,5 @@
-// AI Autopilot chat: Claude (owner's own Anthropic key) operating paper tools, plus live tools when the owner enabled real money. Bearer-verified, Pro-gated.
-import { createAnthropic } from "@ai-sdk/anthropic";
+// AI Autopilot chat: Claude (owner's AI Prime Tech connection) operating paper tools, plus live tools when the owner enabled real money. Bearer-verified, Pro-gated.
+import { AI_NOT_CONNECTED, aiStreamErrorMessage } from "./ai-provider";
 import { convertToModelMessages, isStepCount, streamText, type UIMessage } from "ai";
 import type { Json } from "@/integrations/supabase/types";
 import { AUTOPILOT_MAX_STEPS, AUTOPILOT_MODEL, AUTOPILOT_SYSTEM, createRunBudget, liveRules } from "./autopilot-guard";
@@ -10,8 +10,8 @@ export async function handleAutopilot(request: Request) {
   if (caller instanceof Response) return caller;
   const { supabase, userId } = caller;
 
-  const apiKey = process.env["ANTHROPIC_API_KEY"];
-  if (!apiKey) return new Response("Claude API key not added yet", { status: 503 });
+  const { aiPrimeProvider, aiPrimeReady } = await import("./ai-prime.server");
+  if (!aiPrimeReady()) return new Response(AI_NOT_CONNECTED, { status: 503 });
 
   const body = (await request.json()) as { messages?: UIMessage[]; sessionId?: string };
   const messages = Array.isArray(body.messages) ? body.messages.slice(-30) : [];
@@ -23,7 +23,7 @@ export async function handleAutopilot(request: Request) {
   const { loadLiveAccounts } = await import("./autopilot-settings.server");
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const live = await loadLiveAccounts(supabaseAdmin, userId);
-  const anthropic = createAnthropic({ apiKey });
+  const anthropic = await aiPrimeProvider();
   const result = streamText({
     model: anthropic(AUTOPILOT_MODEL),
     system: AUTOPILOT_SYSTEM + (live ? liveRules(live) : ""),
@@ -44,12 +44,6 @@ export async function handleAutopilot(request: Request) {
       const { error } = await supabase.from("ai_sessions").update({ messages: all as unknown as Json, title }).eq("id", session.id);
       if (error) console.error("Failed to save autopilot conversation", error.message);
     },
-    onError: (e) => {
-      const msg = e instanceof Error ? e.message : "Autopilot request failed";
-      if (/401|invalid x-api-key|authentication/i.test(msg)) return "Claude rejected the API key — add a valid Anthropic key.";
-      if (/credit|billing|402/i.test(msg)) return "Your Anthropic account has no credit — add billing in your Anthropic console.";
-      if (/429|rate/i.test(msg)) return "Claude is rate-limiting requests — try again in a minute.";
-      return msg;
-    },
+    onError: (e) => aiStreamErrorMessage(e instanceof Error ? e.message : "Autopilot request failed"),
   });
 }

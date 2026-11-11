@@ -2372,6 +2372,24 @@ export type Database = {
           trades: number
         }[]
       }
+      ai_async_result: {
+        Args: { _id: number }
+        Returns: {
+          content: string
+          error_msg: string
+          status_code: number
+          timed_out: boolean
+        }[]
+      }
+      ai_async_submit: {
+        Args: {
+          _body: Json
+          _headers: Json
+          _timeout_ms?: number
+          _url: string
+        }
+        Returns: number
+      }
       appeal_strategy_integrity: {
         Args: { _case: string; _message: string }
         Returns: undefined

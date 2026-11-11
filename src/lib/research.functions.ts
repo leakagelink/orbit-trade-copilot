@@ -3,6 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { researchInput } from "./research";
 import { runResearchStages, runDecisionStages, type ResearchAgent, type AgentResult } from "./research-pipeline";
 import { buildResearchProposal } from "./research-proposal";
+import { AI_MODEL } from "./ai-provider";
 
 export const listResearch = createServerFn({ method: "GET" }).middleware([requireSupabaseAuth]).handler(async ({ context }) => {
   const { data, error } = await context.supabase.from("ai_research_runs").select("*,ai_agent_outputs(*),ai_research_reports(*),ai_research_decisions(*),ai_trade_proposals(*),ai_research_stage_metrics(*)").eq("user_id",context.userId).order("created_at", { ascending: false }).limit(30);
@@ -27,7 +28,7 @@ export const startResearchRun = createServerFn({ method: "POST" }).middleware([r
         const started=Date.now();let result:Awaited<ReturnType<typeof runAnalyst>>;
         try{result=await runAnalyst(agent,data.symbol,input);}catch(error){const metric=await db.from("ai_research_stage_metrics").insert({user_id:context.userId,run_id:data.requestId,agent,duration_ms:Date.now()-started,status:"failed"});if(metric.error)throw new Error("Research monitoring unavailable");throw error;}
         const metric=await db.from("ai_research_stage_metrics").insert({user_id:context.userId,run_id:data.requestId,agent,duration_ms:Date.now()-started,status:"completed",input_tokens:result.inputTokens,output_tokens:result.outputTokens});if(metric.error)throw new Error("Research monitoring unavailable");
-        const usage = await db.from("ai_research_usage").insert({ run_id: data.requestId, user_id: context.userId, agent, model: "openai/gpt-6-astra", input_tokens: result.inputTokens, output_tokens: result.outputTokens });
+        const usage = await db.from("ai_research_usage").insert({ run_id: data.requestId, user_id: context.userId, agent, model: AI_MODEL, input_tokens: result.inputTokens, output_tokens: result.outputTokens });
         if (usage.error) throw usage.error;
         return result.report;
       };

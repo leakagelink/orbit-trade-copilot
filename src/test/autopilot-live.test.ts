@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { liveEnableProblems, liveToolInputs } from "@/lib/autopilot-guard";
-import { applyModelReply, completeTools, INTERRUPTED_RESULT, nextTool, parseBatchLine, RUN_MAX_STEPS, type RunState } from "@/lib/autopilot-run";
+import { applyModelReply, completeTools, INTERRUPTED_RESULT, nextTool, parseModelResponse, RUN_MAX_STEPS, type RunState } from "@/lib/autopilot-run";
 import { derivCloseRecord, derivContractClosed, derivOpenContract, parseDerivCandles } from "@/lib/deriv";
 
 const risk = { max_daily_loss: 50, max_open_exposure: 500, trading_halted: false };
@@ -65,8 +65,14 @@ describe("automatic runs advance safely", () => {
     const s = completeTools({ ...base, step: RUN_MAX_STEPS - 1, status: "executing", pending_tools: [{ id: "t1", name: "x", input: {}, result: "{}" }] });
     expect(s.status).toBe("done");
   });
-  it("reads Claude batch errors instead of acting", () => {
-    expect(parseBatchLine(JSON.stringify({ result: { type: "errored", error: { error: { message: "credit balance too low" } } } }))).toEqual({ ok: false, error: "Claude request errored: credit balance too low" });
+  it("reads AI errors instead of acting", () => {
+    expect(parseModelResponse({ status_code: 402, content: "insufficient balance", timed_out: false, error_msg: null })).toEqual({ ok: false, error: "Your AI Prime Tech balance or plan has run out — top it up in your AI Prime Tech dashboard." });
+    expect(parseModelResponse({ status_code: null, content: null, timed_out: true, error_msg: null }).ok).toBe(false);
+    expect(parseModelResponse({ status_code: 200, content: "not json", timed_out: false, error_msg: null })).toEqual({ ok: false, error: "Unreadable AI reply" });
+  });
+  it("reads a stored Claude reply with a tool call", () => {
+    const r = parseModelResponse({ status_code: 200, content: JSON.stringify({ content: [{ type: "tool_use", id: "t1", name: "get_account_overview", input: {} }], stop_reason: "tool_use" }), timed_out: false, error_msg: null });
+    expect(r.ok && r.message.stop_reason).toBe("tool_use");
   });
 });
 

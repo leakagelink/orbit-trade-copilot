@@ -3,10 +3,13 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { liveEnableProblems } from "./autopilot-guard";
 
-/** Whether the owner's Claude key is configured (never returns the key). */
+/** Whether the AI Prime Tech connection is linked (never returns credentials). */
 export const autopilotStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async () => ({ claudeReady: !!process.env["ANTHROPIC_API_KEY"] }));
+  .handler(async () => {
+    const { aiPrimeReady } = await import("./ai-prime.server");
+    return { claudeReady: aiPrimeReady() };
+  });
 
 const db = async () => (await import("@/integrations/supabase/client.server")).supabaseAdmin;
 
@@ -16,7 +19,8 @@ export const saveAutopilotSchedule = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { requirePro } = await import("./plan.server");
     await requirePro(context.supabase, context.userId);
-    if (data.enabled && !process.env["ANTHROPIC_API_KEY"]) throw new Error("Add your Claude API key before switching on automatic runs");
+    const { aiPrimeReady } = await import("./ai-prime.server");
+    if (data.enabled && !aiPrimeReady()) throw new Error("Connect AI Prime Tech before switching on automatic runs");
     const admin = await db();
     const now = new Date().toISOString();
     const { error } = await admin.from("autopilot_settings").upsert({ user_id: context.userId, enabled: data.enabled, interval_minutes: data.interval, goal: data.goal.trim(), next_run_at: data.enabled ? now : null, updated_at: now });
@@ -71,9 +75,8 @@ export const runAutopilotNow = createServerFn({ method: "POST" })
 
 type Admin = Awaited<ReturnType<typeof db>>;
 export async function stopActive(admin: Admin, userId: string, reason: string) {
-  const { data: runs } = await admin.from("autopilot_runs").select("id,batch_id").eq("user_id", userId).in("status", ["waiting_model", "executing"]);
+  const { data: runs } = await admin.from("autopilot_runs").select("id").eq("user_id", userId).in("status", ["waiting_model", "executing"]);
   if (!runs?.length) return;
+  // A model reply still in flight is ignored once the run is stopped; it can never trigger an action.
   await admin.from("autopilot_runs").update({ status: "stopped", error: reason, finished_at: new Date().toISOString(), lease_until: null }).in("id", runs.map((r) => r.id));
-  const { cancelBatch } = await import("./autopilot-runner.server");
-  for (const r of runs) await cancelBatch(r.batch_id);
 }

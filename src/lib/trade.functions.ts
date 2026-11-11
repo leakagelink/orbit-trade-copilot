@@ -144,17 +144,15 @@ export const aiTradeIdea = createServerFn({ method: "POST" })
     const { marketFacts } = await import("./market-facts");
     const facts = marketFacts(cs, data.symbol, data.timeframe);
     const last = facts.price;
-    const apiKey = process.env["LOVABLE_API_KEY"];
-    if (!apiKey) throw new Error("AI is not configured");
-    const { createOpenAI } = await import("@ai-sdk/openai");
-    const { generateText } = await import("ai");
-    const provider = createOpenAI({ baseURL: "https://ai.gateway.lovable.dev/v1", apiKey, headers: { "Lovable-API-Key": apiKey, "X-Lovable-AIG-SDK": "vercel-ai-sdk" } });
-    const { text } = await generateText({
-      model: provider.responses("openai/gpt-6-astra"),
+    const { aiPrimeMessage, messageText } = await import("./ai-prime.server");
+    const { AI_MODEL } = await import("./ai-provider");
+    const reply = await aiPrimeMessage({
+      model: AI_MODEL,
+      max_tokens: 1500,
       system: "You are a disciplined technical analyst. Use ONLY the provided data. Reply with a single JSON object: {\"bias\":\"long|short|neutral\",\"confidence\":0-100,\"entry\":number|null,\"stop_loss\":number|null,\"take_profit\":number|null,\"rationale\":\"2-4 short sentences\"}. Stop loss must be on the correct side of entry; use ATR for distances; prefer neutral when signals conflict. No markdown.",
-      prompt: JSON.stringify(facts),
-      providerOptions: { openai: { reasoningEffort: "low" } },
+      messages: [{ role: "user", content: JSON.stringify(facts) }],
     });
+    const text = messageText(reply);
     const json = text.match(/\{[\s\S]*\}/)?.[0];
     const idea = ideaSchema.safeParse(json ? JSON.parse(json) : null);
     if (!idea.success) throw new Error("The AI returned an unreadable answer — try again");
