@@ -1,5 +1,17 @@
 # Roadmap
 
+## Phase 4B — Central Risk shadow mode + Futures paper readiness — 12 November 2026
+- [x] Shadow evaluator (ticket → proposal adapter, SELECT-only context, versioned in-memory record), never called by any order path
+- [x] Shadow non-interference + isolation tests; source-readiness matrix
+- [x] Migration 0045 review (3 FAIL, 1 BLOCKED), Futures paper hardening tests + 2 engine fixes, activation-readiness package
+- [x] Lower-frequency Futures research with locked final test set: NO TRADE
+- [x] Risk policy values technical review (values stay NOT APPROVED)
+- [x] Full verification + Phase 4B report
+- [ ] Connect shadow mode to the live Futures path (observe-only) — waits on owner approval
+- [ ] Leverage-bracket + available-margin reads — wait on adapter approval
+- [ ] 0045 successor draft, strategy attribution and shadow-ledger migrations — wait on owner approval
+- [ ] Practice restore + 0045 rehearsal — waits on a fresh database export
+
 ## Phase 4A — risk context, Futures paper, strategy + model research — 12 November 2026
 - [x] Central Risk Engine context builder (SELECT-only reads, INSUFFICIENT_DATA on any failed read) + Futures integration design; not connected
 - [x] Futures paper engine (BTCUSDT/ETHUSDT: long/short, leverage/margin, funding, mark/index, liquidation, exchange-style SL/TP, partial fills, costs, reconciliation, daily-loss/exposure via the Risk Engine) + 14-day real-data replay

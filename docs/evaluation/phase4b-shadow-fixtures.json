@@ -1,0 +1,523 @@
+{
+ "generatedAt": "2026-11-12T17:57:38.779Z",
+ "note": "Synthetic account rows; no project database read; nothing persisted beyond this file.",
+ "sourceMatrix": [
+  {
+   "input": "account_risk_limits",
+   "source": "risk_settings (SELECT)",
+   "status": "READY",
+   "blocker": null
+  },
+  {
+   "input": "futures_limits",
+   "source": "futures_settings (SELECT, production) · fixed TESTNET_FUTURES_LIMITS (Testnet)",
+   "status": "READY",
+   "blocker": null
+  },
+  {
+   "input": "strategy_risk_budget",
+   "source": "strategy_risk_budgets (SELECT)",
+   "status": "BLOCKED",
+   "blocker": "Table is in draft migration 0045, not applied"
+  },
+  {
+   "input": "strategy_loss_attribution",
+   "source": "port strategyUsedLoss",
+   "status": "BLOCKED",
+   "blocker": "Real orders/positions/trades carry no strategy id; needs a new migration + order-path tagging"
+  },
+  {
+   "input": "open_futures_positions",
+   "source": "positions open, same execution_environment (SELECT)",
+   "status": "READY",
+   "blocker": null
+  },
+  {
+   "input": "current_exposure",
+   "source": "derived from open positions (entry × quantity)",
+   "status": "READY",
+   "blocker": null
+  },
+  {
+   "input": "pending_unknown_orders",
+   "source": "orders pending/open/partially_filled (SELECT; production account-wide, Testnet Testnet-only)",
+   "status": "READY",
+   "blocker": null
+  },
+  {
+   "input": "duplicate_proposal",
+   "source": "orders.idempotency_key = futures:<requestId> (SELECT)",
+   "status": "READY",
+   "blocker": null
+  },
+  {
+   "input": "daily_realized_unrealized_loss",
+   "source": "trades closed since 00:00 UTC (tradeNet) + negative unrealized on open positions",
+   "status": "READY",
+   "blocker": null
+  },
+  {
+   "input": "emergency_stop",
+   "source": "risk_settings.trading_halted (shared account stop; Testnet-only stop needs draft 0042)",
+   "status": "READY",
+   "blocker": null
+  },
+  {
+   "input": "mark_price_and_exchange_time",
+   "source": "Live: public GET /fapi/v1/premiumIndex · Testnet: none (production prices are never used for Testnet)",
+   "status": "READY",
+   "blocker": null
+  },
+  {
+   "input": "lot_size_min_notional",
+   "source": "Live: public GET /fapi/v1/exchangeInfo · Testnet: none",
+   "status": "READY",
+   "blocker": null
+  },
+  {
+   "input": "maintenance_margin_rate",
+   "source": "signed GET /fapi/v1/leverageBracket",
+   "status": "BLOCKED",
+   "blocker": "Endpoint is not on the frozen adapter allowlist; adding it needs separate approval"
+  },
+  {
+   "input": "available_margin",
+   "source": "existing signed GET /fapi/v3/account (futuresAccountState)",
+   "status": "BLOCKED",
+   "blocker": "Needs credential decryption inside the shadow path; not connected without separate approval"
+  },
+  {
+   "input": "proposal_timestamp_age",
+   "source": "ticket evaluation time (caller clock) vs. maxProposalAgeMs (proposed policy)",
+   "status": "READY",
+   "blocker": null
+  },
+  {
+   "input": "strategy_identity",
+   "source": "caller-supplied strategy id (manual tickets: 'manual-futures')",
+   "status": "READY",
+   "blocker": null
+  }
+ ],
+ "summary": {
+  "total": 6,
+  "accept": 1,
+  "reject": 3,
+  "insufficient": 2,
+  "duplicates": 1
+ },
+ "rows": [
+  {
+   "scenario": "today's real sources (Live; public mark + lot rules; synthetic account rows)",
+   "verdict": "INSUFFICIENT_DATA",
+   "failedChecks": [],
+   "missingInputs": [
+    "available_margin",
+    "maintenance_margin_rate",
+    "margin_inputs",
+    "strategy_budget",
+    "strategy_risk_budget",
+    "strategy_used_loss"
+   ],
+   "proposedLeverage": null,
+   "proposedLiquidationBufferPct": null,
+   "ticketComparison": {
+    "ticketNotional": 100,
+    "ticketLeverage": 5,
+    "withinEngineSize": null,
+    "withinEngineLeverage": null
+   },
+   "marketDataTimestamp": 1794506257000,
+   "contextSnapshotHash": "3dd30fb3328931e8f231a0175945ecc8e318377370adadd371d936ba4f61d05d",
+   "executionAuthorized": false,
+   "affectsOrderPath": false,
+   "reads": [
+    {
+     "source": "risk_settings",
+     "ok": true,
+     "detail": "read",
+     "observedAt": 1794506258085
+    },
+    {
+     "source": "futures_settings",
+     "ok": true,
+     "detail": "read",
+     "observedAt": 1794506258085
+    },
+    {
+     "source": "strategy_budget",
+     "ok": false,
+     "detail": "read failed (table may not exist yet)",
+     "observedAt": 1794506258085
+    },
+    {
+     "source": "positions",
+     "ok": true,
+     "detail": "read",
+     "observedAt": 1794506258085
+    },
+    {
+     "source": "open_orders",
+     "ok": true,
+     "detail": "read",
+     "observedAt": 1794506258085
+    },
+    {
+     "source": "duplicate_check",
+     "ok": true,
+     "detail": "read",
+     "observedAt": 1794506258085
+    },
+    {
+     "source": "today_trades",
+     "ok": true,
+     "detail": "read",
+     "observedAt": 1794506258085
+    },
+    {
+     "source": "mark_price",
+     "ok": true,
+     "detail": "exchange time 1794506257000",
+     "observedAt": 1794506257000
+    },
+    {
+     "source": "symbol_rules",
+     "ok": true,
+     "detail": "lot rules read; maintenance margin unavailable",
+     "observedAt": 1794506258085
+    },
+    {
+     "source": "available_margin",
+     "ok": false,
+     "detail": "unavailable (not wired)",
+     "observedAt": 1794506258085
+    },
+    {
+     "source": "strategy_used_loss",
+     "ok": false,
+     "detail": "no per-strategy attribution for real trades yet",
+     "observedAt": 1794506258085
+    }
+   ]
+  },
+  {
+   "scenario": "today's real sources (Testnet; no Testnet market source)",
+   "verdict": "INSUFFICIENT_DATA",
+   "failedChecks": [],
+   "missingInputs": [
+    "mark_price",
+    "market_data"
+   ],
+   "proposedLeverage": null,
+   "proposedLiquidationBufferPct": null,
+   "ticketComparison": {
+    "ticketNotional": 100,
+    "ticketLeverage": 5,
+    "withinEngineSize": null,
+    "withinEngineLeverage": null
+   },
+   "marketDataTimestamp": null,
+   "contextSnapshotHash": null,
+   "executionAuthorized": false,
+   "affectsOrderPath": false,
+   "reads": [
+    {
+     "source": "mark_price",
+     "ok": false,
+     "detail": "unavailable",
+     "observedAt": null
+    }
+   ]
+  },
+  {
+   "scenario": "hypothetical: all four blocked sources present",
+   "verdict": "ACCEPT",
+   "failedChecks": [],
+   "missingInputs": [],
+   "proposedLeverage": 9,
+   "proposedLiquidationBufferPct": 9.711111111111109,
+   "ticketComparison": {
+    "ticketNotional": 100,
+    "ticketLeverage": 5,
+    "withinEngineSize": true,
+    "withinEngineLeverage": true
+   },
+   "marketDataTimestamp": 1794506257311,
+   "contextSnapshotHash": "0cac30896e7642cb09a7349afce3465a19ff6700e24e9a128b047c2d8edb1195",
+   "executionAuthorized": false,
+   "affectsOrderPath": false,
+   "reads": [
+    {
+     "source": "risk_settings",
+     "ok": true,
+     "detail": "read",
+     "observedAt": 1794506257811
+    },
+    {
+     "source": "futures_settings",
+     "ok": true,
+     "detail": "read",
+     "observedAt": 1794506257811
+    },
+    {
+     "source": "strategy_budget",
+     "ok": true,
+     "detail": "read",
+     "observedAt": 1794506257811
+    },
+    {
+     "source": "positions",
+     "ok": true,
+     "detail": "read",
+     "observedAt": 1794506257811
+    },
+    {
+     "source": "open_orders",
+     "ok": true,
+     "detail": "read",
+     "observedAt": 1794506257811
+    },
+    {
+     "source": "duplicate_check",
+     "ok": true,
+     "detail": "read",
+     "observedAt": 1794506257811
+    },
+    {
+     "source": "today_trades",
+     "ok": true,
+     "detail": "read",
+     "observedAt": 1794506257811
+    },
+    {
+     "source": "mark_price",
+     "ok": true,
+     "detail": "exchange time 1794506257311",
+     "observedAt": 1794506257311
+    },
+    {
+     "source": "symbol_rules",
+     "ok": true,
+     "detail": "read",
+     "observedAt": 1794506257811
+    },
+    {
+     "source": "available_margin",
+     "ok": true,
+     "detail": "read",
+     "observedAt": 1794506257811
+    },
+    {
+     "source": "strategy_used_loss",
+     "ok": true,
+     "detail": "read",
+     "observedAt": 1794506257811
+    }
+   ]
+  },
+  {
+   "scenario": "hypothetical: emergency stop on",
+   "verdict": "REJECT",
+   "failedChecks": [
+    "emergency_stop"
+   ],
+   "missingInputs": [],
+   "proposedLeverage": null,
+   "proposedLiquidationBufferPct": null,
+   "ticketComparison": {
+    "ticketNotional": 100,
+    "ticketLeverage": 5,
+    "withinEngineSize": null,
+    "withinEngineLeverage": null
+   },
+   "marketDataTimestamp": 1794506257311,
+   "contextSnapshotHash": "ced0d4226df3595bc8d7b2834d80e930c49a439e2cac23cf4a19839649872ee7",
+   "executionAuthorized": false,
+   "affectsOrderPath": false,
+   "reads": [
+    {
+     "source": "risk_settings",
+     "ok": true,
+     "detail": "read",
+     "observedAt": 1794506257811
+    },
+    {
+     "source": "futures_settings",
+     "ok": true,
+     "detail": "read",
+     "observedAt": 1794506257811
+    },
+    {
+     "source": "strategy_budget",
+     "ok": true,
+     "detail": "read",
+     "observedAt": 1794506257811
+    },
+    {
+     "source": "positions",
+     "ok": true,
+     "detail": "read",
+     "observedAt": 1794506257811
+    },
+    {
+     "source": "open_orders",
+     "ok": true,
+     "detail": "read",
+     "observedAt": 1794506257811
+    },
+    {
+     "source": "duplicate_check",
+     "ok": true,
+     "detail": "read",
+     "observedAt": 1794506257811
+    },
+    {
+     "source": "today_trades",
+     "ok": true,
+     "detail": "read",
+     "observedAt": 1794506257811
+    },
+    {
+     "source": "mark_price",
+     "ok": true,
+     "detail": "exchange time 1794506257311",
+     "observedAt": 1794506257311
+    },
+    {
+     "source": "symbol_rules",
+     "ok": true,
+     "detail": "read",
+     "observedAt": 1794506257811
+    },
+    {
+     "source": "available_margin",
+     "ok": true,
+     "detail": "read",
+     "observedAt": 1794506257811
+    },
+    {
+     "source": "strategy_used_loss",
+     "ok": true,
+     "detail": "read",
+     "observedAt": 1794506257811
+    }
+   ]
+  },
+  {
+   "scenario": "hypothetical: stale mark price (60 s)",
+   "verdict": "REJECT",
+   "failedChecks": [
+    "market_data"
+   ],
+   "missingInputs": [],
+   "proposedLeverage": null,
+   "proposedLiquidationBufferPct": null,
+   "ticketComparison": {
+    "ticketNotional": 100,
+    "ticketLeverage": 5,
+    "withinEngineSize": null,
+    "withinEngineLeverage": null
+   },
+   "marketDataTimestamp": 1794506197811,
+   "contextSnapshotHash": "e3fc08e319df14427b4f2505dadbaf98ac0d5a5477db8b8fe96ab29408c5da6e",
+   "executionAuthorized": false,
+   "affectsOrderPath": false,
+   "reads": [
+    {
+     "source": "risk_settings",
+     "ok": true,
+     "detail": "read",
+     "observedAt": 1794506257811
+    },
+    {
+     "source": "futures_settings",
+     "ok": true,
+     "detail": "read",
+     "observedAt": 1794506257811
+    },
+    {
+     "source": "strategy_budget",
+     "ok": true,
+     "detail": "read",
+     "observedAt": 1794506257811
+    },
+    {
+     "source": "positions",
+     "ok": true,
+     "detail": "read",
+     "observedAt": 1794506257811
+    },
+    {
+     "source": "open_orders",
+     "ok": true,
+     "detail": "read",
+     "observedAt": 1794506257811
+    },
+    {
+     "source": "duplicate_check",
+     "ok": true,
+     "detail": "read",
+     "observedAt": 1794506257811
+    },
+    {
+     "source": "today_trades",
+     "ok": true,
+     "detail": "read",
+     "observedAt": 1794506257811
+    },
+    {
+     "source": "mark_price",
+     "ok": true,
+     "detail": "exchange time 1794506197811",
+     "observedAt": 1794506197811
+    },
+    {
+     "source": "symbol_rules",
+     "ok": true,
+     "detail": "read",
+     "observedAt": 1794506257811
+    },
+    {
+     "source": "available_margin",
+     "ok": true,
+     "detail": "read",
+     "observedAt": 1794506257811
+    },
+    {
+     "source": "strategy_used_loss",
+     "ok": true,
+     "detail": "read",
+     "observedAt": 1794506257811
+    }
+   ]
+  },
+  {
+   "scenario": "environment label mismatch (LIVE ticket on Testnet connection)",
+   "verdict": "REJECT",
+   "failedChecks": [
+    "environment_label"
+   ],
+   "missingInputs": [],
+   "proposedLeverage": null,
+   "proposedLiquidationBufferPct": null,
+   "ticketComparison": {
+    "ticketNotional": 100,
+    "ticketLeverage": 5,
+    "withinEngineSize": null,
+    "withinEngineLeverage": null
+   },
+   "marketDataTimestamp": null,
+   "contextSnapshotHash": null,
+   "executionAuthorized": false,
+   "affectsOrderPath": false,
+   "reads": [
+    {
+     "source": "mark_price",
+     "ok": true,
+     "detail": "read",
+     "observedAt": 1794506257311
+    }
+   ]
+  }
+ ]
+}

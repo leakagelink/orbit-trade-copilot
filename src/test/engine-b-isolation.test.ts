@@ -21,7 +21,7 @@ function graph(entries: string[]) {
   }
   return [...seen].map((f) => relative(ROOT, f));
 }
-const ENTRIES = ["src/lib/central-risk.ts", "src/lib/central-risk-proposals.ts", "src/lib/scalp-intraday.ts", "src/lib/scalp-microstructure.ts", "src/lib/scalp-model.ts", "src/lib/ml-logistic.ts", "src/lib/ml-gbdt.ts", "src/lib/scalp-research.ts"];
+const ENTRIES = ["src/lib/central-risk.ts", "src/lib/central-risk-proposals.ts", "src/lib/scalp-intraday.ts", "src/lib/scalp-microstructure.ts", "src/lib/scalp-model.ts", "src/lib/ml-logistic.ts", "src/lib/ml-gbdt.ts", "src/lib/scalp-research.ts", "src/lib/lowfreq-research.ts", "src/lib/central-risk-shadow.ts"];
 const FORBIDDEN = /\.server\.ts$|\.functions\.ts$|src\/routes\/|src\/integrations\/|ai-provider|ai-prime|exchange-adapters|futures|binance|deriv|wallet|engine|autopilot|manual|arbitrage/;
 
 describe("Engine B and the Central Risk Engine are pure", () => {

@@ -51,6 +51,8 @@ export interface FPPending { symbol: string; side: PerpSide; qtyTotal: number; q
 export interface FPState {
   version: typeof FUTURES_PAPER_VERSION; wallet: number; seq: number; day: number; dayCash: number; halted: boolean;
   positions: Record<string, FPPosition>; pending: Record<string, FPPending>; strategyLoss: Record<string, number>; seen: string[];
+  /** Last processed candle open time per symbol. A candle at or before it is refused (duplicate / out of order). */
+  cursors?: Record<string, number>;
 }
 export type FPEventKind = "funding" | "entry_fill" | "entry_cancelled" | "exit_fill" | "liquidation" | "order_accepted" | "order_rejected";
 export interface FPEvent { seq: number; t: number; symbol: string; kind: FPEventKind; side: PerpSide | null; qty: number; price: number | null; fee: number; pnl: number; walletDelta: number; marginDelta: number; reason: string; proposalId: string | null }
@@ -59,7 +61,7 @@ export interface FPStepResult { state: FPState; events: FPEvent[]; trades: FPTra
 
 export class FuturesPaperDataError extends Error {}
 
-export const initialFuturesPaperState = (balance: number): FPState => ({ version: FUTURES_PAPER_VERSION, wallet: balance, seq: 0, day: -1, dayCash: 0, halted: false, positions: {}, pending: {}, strategyLoss: {}, seen: [] });
+export const initialFuturesPaperState = (balance: number): FPState => ({ version: FUTURES_PAPER_VERSION, wallet: balance, seq: 0, day: -1, dayCash: 0, halted: false, positions: {}, pending: {}, strategyLoss: {}, seen: [], cursors: {} });
 
 const dir = (s: PerpSide) => (s === "LONG" ? 1 : -1);
 const fin = (x: unknown): x is number => typeof x === "number" && Number.isFinite(x);
@@ -93,6 +95,8 @@ function validateBar(b: FPBar) {
  */
 export function stepFuturesPaper(prev: FPState, cfg: FPConfig, bar: FPBar, intents: FPIntent[], marks: Record<string, number> = {}): FPStepResult {
   validateBar(bar);
+  const last = prev.cursors?.[bar.symbol];
+  if (last !== undefined && bar.t <= last) throw new FuturesPaperDataError(`${bar.symbol} ${bar.t}: duplicate or out-of-order candle (last processed ${last})`);
   const spec = cfg.specs[bar.symbol];
   if (!spec) throw new FuturesPaperDataError(`${bar.symbol}: no symbol specification`);
   const s: FPState = structuredClone(prev);
@@ -116,7 +120,11 @@ export function stepFuturesPaper(prev: FPState, cfg: FPConfig, bar: FPBar, inten
 
   // Pending (partially filled) entries continue at this candle's open.
   const pend = s.pending[sym];
-  if (pend) {
+  if (pend && s.halted) {
+    // Emergency paper stop: no new exposure. The unfilled remainder is cancelled; exits below still run.
+    delete s.pending[sym];
+    emit({ t: bar.t, kind: "entry_cancelled", side: pend.side, qty: pend.qtyTotal - pend.qtyFilled, price: null, fee: 0, pnl: 0, walletDelta: 0, marginDelta: 0, reason: "emergency paper stop: unfilled entry cancelled", proposalId: pend.proposalId });
+  } else if (pend) {
     pend.barsWaited++;
     const left = pend.qtyTotal - pend.qtyFilled;
     const cap = cfg.costs.maxParticipationPct === null ? left : (bar.trade.v * cfg.costs.maxParticipationPct) / 100;
@@ -216,6 +224,7 @@ export function stepFuturesPaper(prev: FPState, cfg: FPConfig, bar: FPBar, inten
     s.pending[sym] = { symbol: sym, side: p.side, qtyTotal: d.sizing.qty, qtyFilled: 0, leverage: d.sizing.leverage, stopDist, targetDist, strategyId: p.strategyId, proposalId: p.proposalId, maxHoldBars: it.maxHoldBars, barsWaited: 0, ttlBars: cfg.entryTtlBars };
     emit({ t: closeT, kind: "order_accepted", side: p.side, qty: d.sizing.qty, price: null, fee: 0, pnl: 0, walletDelta: 0, marginDelta: 0, reason: `Risk Engine sized ${d.sizing.qty} at ${d.sizing.leverage}× (limited by ${d.sizing.binding}); fills from the next open`, proposalId: p.proposalId });
   }
+  s.cursors = { ...(s.cursors ?? {}), [sym]: bar.t };
   return { state: s, events, trades, decisions };
 }
 

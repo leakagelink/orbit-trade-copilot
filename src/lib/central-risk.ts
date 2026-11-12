@@ -13,7 +13,7 @@ export interface RiskCheck { id: string; status: CheckStatus; detail: string }
 
 export const tradeProposalSchema = z.object({
   proposalId: z.string().min(8).max(200), // idempotency key: one evaluation authority per proposal
-  engine: z.enum(["research", "scalp_intraday", "scalp_ultrafast"]),
+  engine: z.enum(["research", "scalp_intraday", "scalp_ultrafast", "futures_ticket"]), // futures_ticket: shadow-only view of an existing manual/Autopilot ticket
   strategyId: z.string().min(1).max(200),
   symbol: z.string().regex(/^[A-Z0-9]{2,15}\/?[A-Z0-9]{2,10}$/),
   market: z.enum(["spot", "usdm_futures"]),

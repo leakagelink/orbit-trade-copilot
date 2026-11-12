@@ -69,7 +69,7 @@ Strictly **additive**: every existing check stays. The Central Risk Engine can o
 | Step | Behaviour | Precondition |
 |---|---|---|
 | S0 (now) | Not connected. Paper engine + offline tests only. | — |
-| S1 Shadow | Evaluate at G1, record decision, never block. Compare with existing outcomes. | 0045 applied, `risk_decisions` migration, available-margin + leverage-bracket ports, policy values approved |
+| S1 Shadow | Evaluate at G1, record decision, never block. Compare with existing outcomes. Evaluator built in Phase 4B (`central-risk-shadow*.ts`, see `central-risk-shadow-mode.md`) but **not called** from G1 | 0045 applied, `risk_decisions` migration, available-margin + leverage-bracket ports, policy values approved |
 | S2 Enforce on Testnet | G1–G3 block on Testnet only. | Dedicated Testnet account, 0040–0042 applied, S1 shows no unexplained divergence |
 | S3 Enforce on production | G1–G3 block on production. | Separate approval; Live Futures and Autopilot stay under their existing gates |
 

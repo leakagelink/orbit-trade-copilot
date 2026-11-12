@@ -1,0 +1,1178 @@
+{
+ "version": "lowfreq-research-v1",
+ "generatedAt": "2026-11-12T18:02:18.212Z",
+ "costs": {
+  "takerFeePct": 0.05,
+  "makerFeePct": 0.02,
+  "spreadPct": 0.01,
+  "slippagePct": 0.01
+ },
+ "notionalPerTrade": 1000,
+ "gapDays": 14,
+ "maxHoldDays": 8,
+ "rule": {
+  "trainMinTrades": 30,
+  "trainMinT": 2,
+  "topK": 5,
+  "valMinTrades": 15,
+  "testMinTrades": 15
+ },
+ "gridSize": 384,
+ "symbols": {
+  "BTCUSDT": {
+   "data": {
+    "from": "2023-11-13",
+    "toExclusive": "2026-11-12",
+    "bars1h": 26280,
+    "bars4h": 6570,
+    "internalGaps1h": 0,
+    "fundingEvents": 3285,
+    "fundingGapsOver8_5h": 0,
+    "fundingWithMark": 3285
+   },
+   "periods": [
+    {
+     "name": "train",
+     "from": "2023-11-13",
+     "toExclusive": "2025-08-14"
+    },
+    {
+     "name": "validation",
+     "from": "2025-08-28",
+     "toExclusive": "2026-03-29"
+    },
+    {
+     "name": "test",
+     "from": "2026-04-12",
+     "toExclusive": "2026-11-12"
+    }
+   ],
+   "trainPositiveNetWithFloor": 93,
+   "trainPassCount": 4,
+   "checkedOnValidation": [
+    {
+     "id": "4h-reversion-50-30-s3-r2-any-foff-maker",
+     "train": {
+      "trades": 80,
+      "grossExp": 15.65,
+      "netExp": 15.53,
+      "netExpPct": 1.553,
+      "net": 1242.24,
+      "fees": 56.28,
+      "spread": 4.03,
+      "slippage": 8.06,
+      "funding": 58.27,
+      "winRate": 55,
+      "profitFactor": 1.81,
+      "maxDrawdownRealized": 232.89,
+      "dailySharpe": 1.64,
+      "tStat": 2.31
+     },
+     "validation": {
+      "trades": 30,
+      "grossExp": 5.88,
+      "netExp": 4.96,
+      "netExpPct": 0.496,
+      "net": 148.83,
+      "fees": 20.91,
+      "spread": 1.49,
+      "slippage": 2.98,
+      "funding": -2.11,
+      "winRate": 43.3,
+      "profitFactor": 1.25,
+      "maxDrawdownRealized": 249.8,
+      "dailySharpe": 0.6,
+      "tStat": 0.51
+     }
+    },
+    {
+     "id": "4h-reversion-50-30-s3-r2-any-fon-maker",
+     "train": {
+      "trades": 80,
+      "grossExp": 15.65,
+      "netExp": 15.53,
+      "netExpPct": 1.553,
+      "net": 1242.24,
+      "fees": 56.28,
+      "spread": 4.03,
+      "slippage": 8.06,
+      "funding": 58.27,
+      "winRate": 55,
+      "profitFactor": 1.81,
+      "maxDrawdownRealized": 232.89,
+      "dailySharpe": 1.64,
+      "tStat": 2.31
+     },
+     "validation": {
+      "trades": 30,
+      "grossExp": 5.88,
+      "netExp": 4.96,
+      "netExpPct": 0.496,
+      "net": 148.83,
+      "fees": 20.91,
+      "spread": 1.49,
+      "slippage": 2.98,
+      "funding": -2.11,
+      "winRate": 43.3,
+      "profitFactor": 1.25,
+      "maxDrawdownRealized": 249.8,
+      "dailySharpe": 0.6,
+      "tStat": 0.51
+     }
+    },
+    {
+     "id": "4h-reversion-50-30-s3-r2-any-foff-taker",
+     "train": {
+      "trades": 80,
+      "grossExp": 15.62,
+      "netExp": 15.05,
+      "netExpPct": 1.505,
+      "net": 1203.92,
+      "fees": 80.28,
+      "spread": 8.03,
+      "slippage": 16.06,
+      "funding": 59.03,
+      "winRate": 53.8,
+      "profitFactor": 1.78,
+      "maxDrawdownRealized": 236.04,
+      "dailySharpe": 1.59,
+      "tStat": 2.24
+     },
+     "validation": {
+      "trades": 30,
+      "grossExp": 5.88,
+      "netExp": 4.51,
+      "netExpPct": 0.451,
+      "net": 135.32,
+      "fees": 29.91,
+      "spread": 2.99,
+      "slippage": 5.98,
+      "funding": -2.11,
+      "winRate": 43.3,
+      "profitFactor": 1.22,
+      "maxDrawdownRealized": 252.05,
+      "dailySharpe": 0.54,
+      "tStat": 0.47
+     }
+    },
+    {
+     "id": "4h-reversion-50-30-s3-r2-any-fon-taker",
+     "train": {
+      "trades": 80,
+      "grossExp": 15.62,
+      "netExp": 15.05,
+      "netExpPct": 1.505,
+      "net": 1203.92,
+      "fees": 80.28,
+      "spread": 8.03,
+      "slippage": 16.06,
+      "funding": 59.03,
+      "winRate": 53.8,
+      "profitFactor": 1.78,
+      "maxDrawdownRealized": 236.04,
+      "dailySharpe": 1.59,
+      "tStat": 2.24
+     },
+     "validation": {
+      "trades": 30,
+      "grossExp": 5.88,
+      "netExp": 4.51,
+      "netExpPct": 0.451,
+      "net": 135.32,
+      "fees": 29.91,
+      "spread": 2.99,
+      "slippage": 5.98,
+      "funding": -2.11,
+      "winRate": 43.3,
+      "profitFactor": 1.22,
+      "maxDrawdownRealized": 252.05,
+      "dailySharpe": 0.54,
+      "tStat": 0.47
+     }
+    }
+   ],
+   "validationPassCount": 4,
+   "lockedTest": [
+    {
+     "id": "4h-reversion-50-30-s3-r2-any-foff-maker",
+     "train": {
+      "trades": 80,
+      "grossExp": 15.65,
+      "netExp": 15.53,
+      "netExpPct": 1.553,
+      "net": 1242.24,
+      "fees": 56.28,
+      "spread": 4.03,
+      "slippage": 8.06,
+      "funding": 58.27,
+      "winRate": 55,
+      "profitFactor": 1.81,
+      "maxDrawdownRealized": 232.89,
+      "dailySharpe": 1.64,
+      "tStat": 2.31
+     },
+     "validation": {
+      "trades": 30,
+      "grossExp": 5.88,
+      "netExp": 4.96,
+      "netExpPct": 0.496,
+      "net": 148.83,
+      "fees": 20.91,
+      "spread": 1.49,
+      "slippage": 2.98,
+      "funding": -2.11,
+      "winRate": 43.3,
+      "profitFactor": 1.25,
+      "maxDrawdownRealized": 249.8,
+      "dailySharpe": 0.6,
+      "tStat": 0.51
+     },
+     "test": {
+      "trades": 19,
+      "grossExp": -2.53,
+      "netExp": -3.4,
+      "netExpPct": -0.34,
+      "net": -64.69,
+      "fees": 13.22,
+      "spread": 0.94,
+      "slippage": 1.88,
+      "funding": -0.59,
+      "winRate": 52.6,
+      "profitFactor": 0.82,
+      "maxDrawdownRealized": 188.47,
+      "dailySharpe": -0.47,
+      "tStat": -0.37
+     }
+    },
+    {
+     "id": "4h-reversion-50-30-s3-r2-any-fon-maker",
+     "train": {
+      "trades": 80,
+      "grossExp": 15.65,
+      "netExp": 15.53,
+      "netExpPct": 1.553,
+      "net": 1242.24,
+      "fees": 56.28,
+      "spread": 4.03,
+      "slippage": 8.06,
+      "funding": 58.27,
+      "winRate": 55,
+      "profitFactor": 1.81,
+      "maxDrawdownRealized": 232.89,
+      "dailySharpe": 1.64,
+      "tStat": 2.31
+     },
+     "validation": {
+      "trades": 30,
+      "grossExp": 5.88,
+      "netExp": 4.96,
+      "netExpPct": 0.496,
+      "net": 148.83,
+      "fees": 20.91,
+      "spread": 1.49,
+      "slippage": 2.98,
+      "funding": -2.11,
+      "winRate": 43.3,
+      "profitFactor": 1.25,
+      "maxDrawdownRealized": 249.8,
+      "dailySharpe": 0.6,
+      "tStat": 0.51
+     },
+     "test": {
+      "trades": 19,
+      "grossExp": -2.53,
+      "netExp": -3.4,
+      "netExpPct": -0.34,
+      "net": -64.69,
+      "fees": 13.22,
+      "spread": 0.94,
+      "slippage": 1.88,
+      "funding": -0.59,
+      "winRate": 52.6,
+      "profitFactor": 0.82,
+      "maxDrawdownRealized": 188.47,
+      "dailySharpe": -0.47,
+      "tStat": -0.37
+     }
+    },
+    {
+     "id": "4h-reversion-50-30-s3-r2-any-foff-taker",
+     "train": {
+      "trades": 80,
+      "grossExp": 15.62,
+      "netExp": 15.05,
+      "netExpPct": 1.505,
+      "net": 1203.92,
+      "fees": 80.28,
+      "spread": 8.03,
+      "slippage": 16.06,
+      "funding": 59.03,
+      "winRate": 53.8,
+      "profitFactor": 1.78,
+      "maxDrawdownRealized": 236.04,
+      "dailySharpe": 1.59,
+      "tStat": 2.24
+     },
+     "validation": {
+      "trades": 30,
+      "grossExp": 5.88,
+      "netExp": 4.51,
+      "netExpPct": 0.451,
+      "net": 135.32,
+      "fees": 29.91,
+      "spread": 2.99,
+      "slippage": 5.98,
+      "funding": -2.11,
+      "winRate": 43.3,
+      "profitFactor": 1.22,
+      "maxDrawdownRealized": 252.05,
+      "dailySharpe": 0.54,
+      "tStat": 0.47
+     },
+     "test": {
+      "trades": 19,
+      "grossExp": -2.53,
+      "netExp": -3.86,
+      "netExpPct": -0.386,
+      "net": -73.25,
+      "fees": 18.92,
+      "spread": 1.89,
+      "slippage": 3.78,
+      "funding": -0.59,
+      "winRate": 47.4,
+      "profitFactor": 0.8,
+      "maxDrawdownRealized": 190.72,
+      "dailySharpe": -0.53,
+      "tStat": -0.42
+     }
+    },
+    {
+     "id": "4h-reversion-50-30-s3-r2-any-fon-taker",
+     "train": {
+      "trades": 80,
+      "grossExp": 15.62,
+      "netExp": 15.05,
+      "netExpPct": 1.505,
+      "net": 1203.92,
+      "fees": 80.28,
+      "spread": 8.03,
+      "slippage": 16.06,
+      "funding": 59.03,
+      "winRate": 53.8,
+      "profitFactor": 1.78,
+      "maxDrawdownRealized": 236.04,
+      "dailySharpe": 1.59,
+      "tStat": 2.24
+     },
+     "validation": {
+      "trades": 30,
+      "grossExp": 5.88,
+      "netExp": 4.51,
+      "netExpPct": 0.451,
+      "net": 135.32,
+      "fees": 29.91,
+      "spread": 2.99,
+      "slippage": 5.98,
+      "funding": -2.11,
+      "winRate": 43.3,
+      "profitFactor": 1.22,
+      "maxDrawdownRealized": 252.05,
+      "dailySharpe": 0.54,
+      "tStat": 0.47
+     },
+     "test": {
+      "trades": 19,
+      "grossExp": -2.53,
+      "netExp": -3.86,
+      "netExpPct": -0.386,
+      "net": -73.25,
+      "fees": 18.92,
+      "spread": 1.89,
+      "slippage": 3.78,
+      "funding": -0.59,
+      "winRate": 47.4,
+      "profitFactor": 0.8,
+      "maxDrawdownRealized": 190.72,
+      "dailySharpe": -0.53,
+      "tStat": -0.42
+     }
+    }
+   ],
+   "verdict": "NO TRADE",
+   "diagnosticBestTrain": {
+    "id": "4h-reversion-50-30-s3-r2-any-foff-maker",
+    "note": "Diagnostic only; it did not pass the selection rule unless listed above, and its test numbers drove nothing.",
+    "train": {
+     "trades": 80,
+     "grossExp": 15.65,
+     "netExp": 15.53,
+     "netExpPct": 1.553,
+     "net": 1242.24,
+     "fees": 56.28,
+     "spread": 4.03,
+     "slippage": 8.06,
+     "funding": 58.27,
+     "winRate": 55,
+     "profitFactor": 1.81,
+     "maxDrawdownRealized": 232.89,
+     "dailySharpe": 1.64,
+     "tStat": 2.31
+    },
+    "validation": {
+     "trades": 30,
+     "grossExp": 5.88,
+     "netExp": 4.96,
+     "netExpPct": 0.496,
+     "net": 148.83,
+     "fees": 20.91,
+     "spread": 1.49,
+     "slippage": 2.98,
+     "funding": -2.11,
+     "winRate": 43.3,
+     "profitFactor": 1.25,
+     "maxDrawdownRealized": 249.8,
+     "dailySharpe": 0.6,
+     "tStat": 0.51
+    },
+    "test": {
+     "trades": 19,
+     "grossExp": -2.53,
+     "netExp": -3.4,
+     "netExpPct": -0.34,
+     "net": -64.69,
+     "fees": 13.22,
+     "spread": 0.94,
+     "slippage": 1.88,
+     "funding": -0.59,
+     "winRate": 52.6,
+     "profitFactor": 0.82,
+     "maxDrawdownRealized": 188.47,
+     "dailySharpe": -0.47,
+     "tStat": -0.37
+    },
+    "neighboursTrain": [
+     {
+      "id": "1h-reversion-50-30-s3-r2-any-foff-maker",
+      "netExp": -0.86,
+      "trades": 275,
+      "tStat": -0.46
+     },
+     {
+      "id": "4h-ema_cross-20-50-s3-r2-any-foff-maker",
+      "netExp": -6.3,
+      "trades": 41,
+      "tStat": -0.74
+     },
+     {
+      "id": "4h-ema_cross-50-200-s3-r2-any-foff-maker",
+      "netExp": 20.26,
+      "trades": 18,
+      "tStat": 1.59
+     },
+     {
+      "id": "4h-donchian-20-0-s3-r2-any-foff-maker",
+      "netExp": -3.64,
+      "trades": 86,
+      "tStat": -0.68
+     },
+     {
+      "id": "4h-donchian-55-0-s3-r2-any-foff-maker",
+      "netExp": -8.45,
+      "trades": 69,
+      "tStat": -1.41
+     },
+     {
+      "id": "4h-reversion-50-20-s3-r2-any-foff-maker",
+      "netExp": -0.93,
+      "trades": 107,
+      "tStat": -0.17
+     },
+     {
+      "id": "4h-reversion-50-30-s2-r2-any-foff-maker",
+      "netExp": 4.44,
+      "trades": 100,
+      "tStat": 0.98
+     },
+     {
+      "id": "4h-reversion-50-30-s3-r2-any-foff-taker",
+      "netExp": 15.05,
+      "trades": 80,
+      "tStat": 2.24
+     },
+     {
+      "id": "4h-reversion-50-30-s3-r2-any-fon-maker",
+      "netExp": 15.53,
+      "trades": 80,
+      "tStat": 2.31
+     },
+     {
+      "id": "4h-reversion-50-30-s3-r2-mid-foff-maker",
+      "netExp": 3.82,
+      "trades": 52,
+      "tStat": 0.51
+     },
+     {
+      "id": "4h-reversion-50-30-s3-r4-any-foff-maker",
+      "netExp": 9.24,
+      "trades": 71,
+      "tStat": 1.3
+     }
+    ]
+   },
+   "walkForward": {
+    "selectDays": 180,
+    "embargoDays": 14,
+    "testDays": 60,
+    "folds": 11,
+    "foldsTraded": 0,
+    "positiveFolds": 0,
+    "pooledOosTrades": 0,
+    "pooledOosNet": 0,
+    "chosen": [
+     {
+      "test": "2024-05-25..2024-07-24",
+      "chosen": null,
+      "oosNet": null,
+      "oosTrades": 0
+     },
+     {
+      "test": "2024-07-24..2024-09-22",
+      "chosen": null,
+      "oosNet": null,
+      "oosTrades": 0
+     },
+     {
+      "test": "2024-09-22..2024-11-21",
+      "chosen": null,
+      "oosNet": null,
+      "oosTrades": 0
+     },
+     {
+      "test": "2024-11-21..2025-01-20",
+      "chosen": null,
+      "oosNet": null,
+      "oosTrades": 0
+     },
+     {
+      "test": "2025-01-20..2025-03-21",
+      "chosen": null,
+      "oosNet": null,
+      "oosTrades": 0
+     },
+     {
+      "test": "2025-03-21..2025-05-20",
+      "chosen": null,
+      "oosNet": null,
+      "oosTrades": 0
+     },
+     {
+      "test": "2025-05-20..2025-07-19",
+      "chosen": null,
+      "oosNet": null,
+      "oosTrades": 0
+     },
+     {
+      "test": "2025-07-19..2025-09-17",
+      "chosen": null,
+      "oosNet": null,
+      "oosTrades": 0
+     },
+     {
+      "test": "2025-09-17..2025-11-16",
+      "chosen": null,
+      "oosNet": null,
+      "oosTrades": 0
+     },
+     {
+      "test": "2025-11-16..2026-01-15",
+      "chosen": null,
+      "oosNet": null,
+      "oosTrades": 0
+     },
+     {
+      "test": "2026-01-15..2026-03-16",
+      "chosen": null,
+      "oosNet": null,
+      "oosTrades": 0
+     }
+    ]
+   },
+   "makerVsTaker": {
+    "twinPairs": 192,
+    "makerBetterNetExpPairs": 170,
+    "makerFillRatePct": 99.03,
+    "avgMarkout4BarsBps": {
+     "maker": -4.16,
+     "taker": -3.57
+    },
+    "makerStoppedOnFillBarPct": 3.46
+   },
+   "leakageChecks": {
+    "sampled": 11,
+    "allOk": true
+   },
+   "benchmarks": {
+    "train": {
+     "buyAndHold": {
+      "net": 1988.44,
+      "gross": 2325.39,
+      "funding": -334.14,
+      "maxDrawdownMtm": 904.68
+     },
+     "emaAlwaysIn1h_50_200": {
+      "trades": 95,
+      "grossExp": 2.97,
+      "netExp": 0.71,
+      "netExpPct": 0.071,
+      "net": 67.9,
+      "fees": 95.72,
+      "spread": 9.57,
+      "slippage": 19.14,
+      "funding": -89.91,
+      "winRate": 29.5,
+      "profitFactor": 1.04,
+      "maxDrawdownRealized": 536.27,
+      "dailySharpe": 0.02,
+      "tStat": 0.09
+     },
+     "emaAlwaysIn4h_50_200": {
+      "trades": 19,
+      "grossExp": 46.82,
+      "netExp": 37.35,
+      "netExpPct": 3.735,
+      "net": 709.57,
+      "fees": 19.66,
+      "spread": 1.97,
+      "slippage": 3.93,
+      "funding": -154.46,
+      "winRate": 31.6,
+      "profitFactor": 2.08,
+      "maxDrawdownRealized": 329.39,
+      "dailySharpe": 0.63,
+      "tStat": 1.01
+     }
+    },
+    "validation": {
+     "buyAndHold": {
+      "net": -422.97,
+      "gross": -403.44,
+      "funding": -18.5,
+      "maxDrawdownMtm": 567.63
+     },
+     "emaAlwaysIn1h_50_200": {
+      "trades": 37,
+      "grossExp": -3.84,
+      "netExp": -5.11,
+      "netExpPct": -0.511,
+      "net": -188.98,
+      "fees": 36.77,
+      "spread": 3.68,
+      "slippage": 7.35,
+      "funding": 0.91,
+      "winRate": 24.3,
+      "profitFactor": 0.75,
+      "maxDrawdownRealized": 367.46,
+      "dailySharpe": -0.89,
+      "tStat": -0.55
+     },
+     "emaAlwaysIn4h_50_200": {
+      "trades": 9,
+      "grossExp": 8.37,
+      "netExp": 7.88,
+      "netExpPct": 0.788,
+      "net": 70.96,
+      "fees": 8.76,
+      "spread": 0.88,
+      "slippage": 1.75,
+      "funding": 7.04,
+      "winRate": 33.3,
+      "profitFactor": 1.22,
+      "maxDrawdownRealized": 205.3,
+      "dailySharpe": 0.16,
+      "tStat": 0.24
+     }
+    },
+    "test": {
+     "buyAndHold": {
+      "net": -13.37,
+      "gross": 13.24,
+      "funding": -25.3,
+      "maxDrawdownMtm": 331.95
+     },
+     "emaAlwaysIn1h_50_200": {
+      "trades": 32,
+      "grossExp": 3.2,
+      "netExp": 2.05,
+      "netExpPct": 0.205,
+      "net": 65.45,
+      "fees": 32.03,
+      "spread": 3.2,
+      "slippage": 6.41,
+      "funding": 4.55,
+      "winRate": 34.4,
+      "profitFactor": 1.13,
+      "maxDrawdownRealized": 191.7,
+      "dailySharpe": 0.15,
+      "tStat": 0.21
+     },
+     "emaAlwaysIn4h_50_200": {
+      "trades": 8,
+      "grossExp": 30.09,
+      "netExp": 28.68,
+      "netExpPct": 2.868,
+      "net": 229.48,
+      "fees": 8.02,
+      "spread": 0.8,
+      "slippage": 1.6,
+      "funding": -0.84,
+      "winRate": 50,
+      "profitFactor": 2.41,
+      "maxDrawdownRealized": 162.8,
+      "dailySharpe": 0.88,
+      "tStat": 0.95
+     }
+    }
+   }
+  },
+  "ETHUSDT": {
+   "data": {
+    "from": "2023-11-13",
+    "toExclusive": "2026-11-12",
+    "bars1h": 26280,
+    "bars4h": 6570,
+    "internalGaps1h": 0,
+    "fundingEvents": 3285,
+    "fundingGapsOver8_5h": 0,
+    "fundingWithMark": 3285
+   },
+   "periods": [
+    {
+     "name": "train",
+     "from": "2023-11-13",
+     "toExclusive": "2025-08-14"
+    },
+    {
+     "name": "validation",
+     "from": "2025-08-28",
+     "toExclusive": "2026-03-29"
+    },
+    {
+     "name": "test",
+     "from": "2026-04-12",
+     "toExclusive": "2026-11-12"
+    }
+   ],
+   "trainPositiveNetWithFloor": 124,
+   "trainPassCount": 2,
+   "checkedOnValidation": [
+    {
+     "id": "4h-donchian-55-0-s2-r4-any-fon-maker",
+     "train": {
+      "trades": 61,
+      "grossExp": 22.08,
+      "netExp": 20.91,
+      "netExpPct": 2.091,
+      "net": 1275.36,
+      "fees": 43.08,
+      "spread": 3.09,
+      "slippage": 6.18,
+      "funding": -19.24,
+      "winRate": 45.9,
+      "profitFactor": 2.01,
+      "maxDrawdownRealized": 190.29,
+      "dailySharpe": 1.64,
+      "tStat": 2.15
+     },
+     "validation": {
+      "trades": 24,
+      "grossExp": -18.9,
+      "netExp": -19.98,
+      "netExpPct": -1.998,
+      "net": -479.57,
+      "fees": 16.73,
+      "spread": 1.19,
+      "slippage": 2.39,
+      "funding": -5.61,
+      "winRate": 25,
+      "profitFactor": 0.41,
+      "maxDrawdownRealized": 575.68,
+      "dailySharpe": -1.97,
+      "tStat": -1.7
+     }
+    },
+    {
+     "id": "4h-donchian-55-0-s2-r4-any-fon-taker",
+     "train": {
+      "trades": 61,
+      "grossExp": 22.13,
+      "netExp": 20.5,
+      "netExpPct": 2.05,
+      "net": 1250.76,
+      "fees": 61.38,
+      "spread": 6.14,
+      "slippage": 12.28,
+      "funding": -19.42,
+      "winRate": 45.9,
+      "profitFactor": 1.98,
+      "maxDrawdownRealized": 192.99,
+      "dailySharpe": 1.61,
+      "tStat": 2.11
+     },
+     "validation": {
+      "trades": 24,
+      "grossExp": -18.81,
+      "netExp": -20.35,
+      "netExpPct": -2.035,
+      "net": -488.3,
+      "fees": 23.93,
+      "spread": 2.39,
+      "slippage": 4.79,
+      "funding": -5.77,
+      "winRate": 25,
+      "profitFactor": 0.4,
+      "maxDrawdownRealized": 583.07,
+      "dailySharpe": -2,
+      "tStat": -1.73
+     }
+    }
+   ],
+   "validationPassCount": 0,
+   "lockedTest": [],
+   "verdict": "NO TRADE",
+   "diagnosticBestTrain": {
+    "id": "4h-donchian-55-0-s2-r4-any-fon-maker",
+    "note": "Diagnostic only; it did not pass the selection rule unless listed above, and its test numbers drove nothing.",
+    "train": {
+     "trades": 61,
+     "grossExp": 22.08,
+     "netExp": 20.91,
+     "netExpPct": 2.091,
+     "net": 1275.36,
+     "fees": 43.08,
+     "spread": 3.09,
+     "slippage": 6.18,
+     "funding": -19.24,
+     "winRate": 45.9,
+     "profitFactor": 2.01,
+     "maxDrawdownRealized": 190.29,
+     "dailySharpe": 1.64,
+     "tStat": 2.15
+    },
+    "validation": {
+     "trades": 24,
+     "grossExp": -18.9,
+     "netExp": -19.98,
+     "netExpPct": -1.998,
+     "net": -479.57,
+     "fees": 16.73,
+     "spread": 1.19,
+     "slippage": 2.39,
+     "funding": -5.61,
+     "winRate": 25,
+     "profitFactor": 0.41,
+     "maxDrawdownRealized": 575.68,
+     "dailySharpe": -1.97,
+     "tStat": -1.7
+    },
+    "test": {
+     "trades": 21,
+     "grossExp": 1.02,
+     "netExp": 0.19,
+     "netExpPct": 0.019,
+     "net": 3.94,
+     "fees": 14.59,
+     "spread": 1.04,
+     "slippage": 2.08,
+     "funding": 0.15,
+     "winRate": 28.6,
+     "profitFactor": 1.01,
+     "maxDrawdownRealized": 150.6,
+     "dailySharpe": -0.15,
+     "tStat": 0.02
+    },
+    "neighboursTrain": [
+     {
+      "id": "1h-donchian-55-0-s2-r4-any-fon-maker",
+      "netExp": 0.3,
+      "trades": 239,
+      "tStat": 0.12
+     },
+     {
+      "id": "4h-ema_cross-20-50-s2-r4-any-fon-maker",
+      "netExp": -0.1,
+      "trades": 58,
+      "tStat": -0.01
+     },
+     {
+      "id": "4h-ema_cross-50-200-s2-r4-any-fon-maker",
+      "netExp": -12.54,
+      "trades": 22,
+      "tStat": -0.92
+     },
+     {
+      "id": "4h-donchian-20-0-s2-r4-any-fon-maker",
+      "netExp": 5.05,
+      "trades": 96,
+      "tStat": 0.71
+     },
+     {
+      "id": "4h-donchian-55-0-s2-r2-any-fon-maker",
+      "netExp": 13.32,
+      "trades": 71,
+      "tStat": 1.79
+     },
+     {
+      "id": "4h-donchian-55-0-s2-r4-any-foff-maker",
+      "netExp": 16.8,
+      "trades": 66,
+      "tStat": 1.83
+     },
+     {
+      "id": "4h-donchian-55-0-s2-r4-any-fon-taker",
+      "netExp": 20.5,
+      "trades": 61,
+      "tStat": 2.11
+     },
+     {
+      "id": "4h-donchian-55-0-s2-r4-mid-fon-maker",
+      "netExp": 7.46,
+      "trades": 40,
+      "tStat": 0.68
+     },
+     {
+      "id": "4h-donchian-55-0-s3-r4-any-fon-maker",
+      "netExp": 17.02,
+      "trades": 55,
+      "tStat": 1.53
+     },
+     {
+      "id": "4h-reversion-50-20-s2-r4-any-fon-maker",
+      "netExp": -3.43,
+      "trades": 133,
+      "tStat": -0.66
+     },
+     {
+      "id": "4h-reversion-50-30-s2-r4-any-fon-maker",
+      "netExp": -6.27,
+      "trades": 102,
+      "tStat": -1.08
+     }
+    ]
+   },
+   "walkForward": {
+    "selectDays": 180,
+    "embargoDays": 14,
+    "testDays": 60,
+    "folds": 11,
+    "foldsTraded": 3,
+    "positiveFolds": 1,
+    "pooledOosTrades": 44,
+    "pooledOosNet": -88.63,
+    "chosen": [
+     {
+      "test": "2024-05-25..2024-07-24",
+      "chosen": "1h-donchian-55-0-s3-r2-mid-fon-maker",
+      "oosNet": -86.09,
+      "oosTrades": 16
+     },
+     {
+      "test": "2024-07-24..2024-09-22",
+      "chosen": null,
+      "oosNet": null,
+      "oosTrades": 0
+     },
+     {
+      "test": "2024-09-22..2024-11-21",
+      "chosen": null,
+      "oosNet": null,
+      "oosTrades": 0
+     },
+     {
+      "test": "2024-11-21..2025-01-20",
+      "chosen": null,
+      "oosNet": null,
+      "oosTrades": 0
+     },
+     {
+      "test": "2025-01-20..2025-03-21",
+      "chosen": null,
+      "oosNet": null,
+      "oosTrades": 0
+     },
+     {
+      "test": "2025-03-21..2025-05-20",
+      "chosen": "1h-ema_cross-20-50-s2-r2-mid-foff-maker",
+      "oosNet": 48.81,
+      "oosTrades": 14
+     },
+     {
+      "test": "2025-05-20..2025-07-19",
+      "chosen": null,
+      "oosNet": null,
+      "oosTrades": 0
+     },
+     {
+      "test": "2025-07-19..2025-09-17",
+      "chosen": null,
+      "oosNet": null,
+      "oosTrades": 0
+     },
+     {
+      "test": "2025-09-17..2025-11-16",
+      "chosen": null,
+      "oosNet": null,
+      "oosTrades": 0
+     },
+     {
+      "test": "2025-11-16..2026-01-15",
+      "chosen": null,
+      "oosNet": null,
+      "oosTrades": 0
+     },
+     {
+      "test": "2026-01-15..2026-03-16",
+      "chosen": "1h-donchian-55-0-s3-r2-mid-foff-maker",
+      "oosNet": -51.36,
+      "oosTrades": 14
+     }
+    ]
+   },
+   "makerVsTaker": {
+    "twinPairs": 192,
+    "makerBetterNetExpPairs": 165,
+    "makerFillRatePct": 99.27,
+    "avgMarkout4BarsBps": {
+     "maker": -7.29,
+     "taker": -6.67
+    },
+    "makerStoppedOnFillBarPct": 2.97
+   },
+   "leakageChecks": {
+    "sampled": 11,
+    "allOk": true
+   },
+   "benchmarks": {
+    "train": {
+     "buyAndHold": {
+      "net": 1038.37,
+      "gross": 1320.73,
+      "funding": -280.2,
+      "maxDrawdownMtm": 1304.59
+     },
+     "emaAlwaysIn1h_50_200": {
+      "trades": 101,
+      "grossExp": 7.68,
+      "netExp": 5.42,
+      "netExpPct": 0.542,
+      "net": 547.86,
+      "fees": 101.68,
+      "spread": 10.17,
+      "slippage": 20.34,
+      "funding": -95.97,
+      "winRate": 26.7,
+      "profitFactor": 1.19,
+      "maxDrawdownRealized": 715.46,
+      "dailySharpe": 0.2,
+      "tStat": 0.52
+     },
+     "emaAlwaysIn4h_50_200": {
+      "trades": 23,
+      "grossExp": 32.38,
+      "netExp": 25.84,
+      "netExpPct": 2.584,
+      "net": 594.25,
+      "fees": 23.65,
+      "spread": 2.37,
+      "slippage": 4.73,
+      "funding": -119.77,
+      "winRate": 30.4,
+      "profitFactor": 1.39,
+      "maxDrawdownRealized": 943.36,
+      "dailySharpe": -0.22,
+      "tStat": 0.53
+     }
+    },
+    "validation": {
+     "buyAndHold": {
+      "net": -570.8,
+      "gross": -557.48,
+      "funding": -12.38,
+      "maxDrawdownMtm": 652.66
+     },
+     "emaAlwaysIn1h_50_200": {
+      "trades": 34,
+      "grossExp": 3.32,
+      "netExp": 2,
+      "netExpPct": 0.2,
+      "net": 68.13,
+      "fees": 33.66,
+      "spread": 3.37,
+      "slippage": 6.73,
+      "funding": -1,
+      "winRate": 41.2,
+      "profitFactor": 1.09,
+      "maxDrawdownRealized": 356.34,
+      "dailySharpe": 0.1,
+      "tStat": 0.15
+     },
+     "emaAlwaysIn4h_50_200": {
+      "trades": 8,
+      "grossExp": -10.44,
+      "netExp": -11.52,
+      "netExpPct": -1.152,
+      "net": -92.15,
+      "fees": 7.63,
+      "spread": 0.76,
+      "slippage": 1.53,
+      "funding": 1.29,
+      "winRate": 37.5,
+      "profitFactor": 0.82,
+      "maxDrawdownRealized": 303.85,
+      "dailySharpe": -0.46,
+      "tStat": -0.24
+     }
+    },
+    "test": {
+     "buyAndHold": {
+      "net": -119.43,
+      "gross": -100.05,
+      "funding": -18.14,
+      "maxDrawdownMtm": 406.53
+     },
+     "emaAlwaysIn1h_50_200": {
+      "trades": 32,
+      "grossExp": -1.98,
+      "netExp": -3.38,
+      "netExpPct": -0.338,
+      "net": -108.27,
+      "fees": 31.99,
+      "spread": 3.2,
+      "slippage": 6.4,
+      "funding": -3.35,
+      "winRate": 21.9,
+      "profitFactor": 0.87,
+      "maxDrawdownRealized": 397.43,
+      "dailySharpe": -0.58,
+      "tStat": -0.25
+     },
+     "emaAlwaysIn4h_50_200": {
+      "trades": 4,
+      "grossExp": 184.39,
+      "netExp": 181.54,
+      "netExpPct": 18.154,
+      "net": 726.14,
+      "fees": 4,
+      "spread": 0.4,
+      "slippage": 0.8,
+      "funding": -6.2,
+      "winRate": 75,
+      "profitFactor": 19.18,
+      "maxDrawdownRealized": 39.94,
+      "dailySharpe": 1.61,
+      "tStat": 2.06
+     }
+    }
+   }
+  }
+ }
+}
