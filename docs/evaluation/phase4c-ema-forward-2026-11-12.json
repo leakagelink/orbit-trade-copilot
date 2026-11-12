@@ -1,0 +1,931 @@
+{
+ "version": "ema-forward-v1",
+ "specSha256": "fef1112b6bf333e22996ab37ac2fb0232a2dfd3dadcf335a6b95c67e9aa666de",
+ "specFrozenAtUtc": "2026-11-12T18:14:41.665Z",
+ "runAtUtc": "2026-11-12T18:16:02.097Z",
+ "lastClosed4hBarEndUtc": "2026-11-12T16:00:00Z",
+ "source": "https://fapi.binance.com",
+ "symbols": {
+  "BTCUSDT": {
+   "data": {
+    "first1h": "2019-09-08T17:00:00Z",
+    "last1hOpen": "2026-11-12T15:00:00Z",
+    "bars1h": 62927,
+    "bars4h": 15731,
+    "internalGaps1h": 0,
+    "gapList": [],
+    "largestGapHours": 0,
+    "fundingEvents": 7861,
+    "fundingWithMark": 3325,
+    "fundingFirst": "2019-09-10T08:00:00Z",
+    "sha256": {
+     "historyUnseen1h": "8a9bfb05da3b255e9be788a1252e6037c5b582a681a941f5e9c8089bbeeb4938",
+     "forward1h": "d30382d10ee687e071fe3afa9f9245134cddc2bbdd59b8e1796118ebf2f7bc85"
+    },
+    "historyUnseenBars1h": 34848,
+    "forwardClosed4hBars": 4
+   },
+   "windows": {
+    "historyUnseen": {
+     "from": "2019-11-08T00:00:00Z",
+     "toExclusive": "2023-10-30T00:00:00Z"
+    },
+    "periods": [
+     {
+      "name": "train",
+      "from": "2019-11-08T00:00:00Z",
+      "toExclusive": "2022-03-11T00:00:00Z"
+     },
+     {
+      "name": "validation",
+      "from": "2022-03-25T00:00:00Z",
+      "toExclusive": "2023-01-03T00:00:00Z"
+     },
+     {
+      "name": "test",
+      "from": "2023-01-17T00:00:00Z",
+      "toExclusive": "2023-10-30T00:00:00Z"
+     }
+    ],
+    "contaminated": {
+     "from": "2023-11-13T00:00:00Z",
+     "toExclusive": "2026-11-12T00:00:00Z",
+     "note": "Phase 4B window where the candidate was noticed — context only, not evidence"
+    },
+    "forward": {
+     "from": "2026-11-12T00:00:00Z",
+     "toExclusive": "2026-11-12T16:00:00Z"
+    }
+   },
+   "historyUnseen": {
+    "full": {
+     "trades": 39,
+     "grossExp": 125.18,
+     "netExp": 113.62,
+     "net": 4431.19,
+     "totalNetReturnPct": 443.12,
+     "profitFactor": 3.4,
+     "maxDrawdownRealized": 624.72,
+     "maxDrawdownMarked": 1410.21,
+     "winRatePct": 43.59,
+     "avgWin": 369.37,
+     "avgLoss": -84.01,
+     "exposurePct": 100,
+     "avgHoldHours": 893.54,
+     "fees": 41.05,
+     "spread": 4.11,
+     "slippage": 8.21,
+     "funding": -397.55,
+     "tStat": 1.18,
+     "dailySharpe": 0.56
+    },
+    "train": {
+     "trades": 22,
+     "grossExp": 206.98,
+     "netExp": 187.74,
+     "net": 4130.35,
+     "totalNetReturnPct": 413.03,
+     "profitFactor": 5.32,
+     "maxDrawdownRealized": 343.21,
+     "maxDrawdownMarked": 1410.21,
+     "winRatePct": 45.45,
+     "avgWin": 508.74,
+     "avgLoss": -79.75,
+     "exposurePct": 100,
+     "avgHoldHours": 931.64,
+     "fees": 23.99,
+     "spread": 2.4,
+     "slippage": 4.8,
+     "funding": -392.05,
+     "tStat": 1.12,
+     "dailySharpe": 0.73
+    },
+    "validation": {
+     "trades": 10,
+     "grossExp": -23.9,
+     "netExp": -24.06,
+     "net": -240.58,
+     "totalNetReturnPct": -24.06,
+     "profitFactor": 0.66,
+     "maxDrawdownRealized": 576.25,
+     "maxDrawdownMarked": 693.69,
+     "winRatePct": 30,
+     "avgWin": 157.17,
+     "avgLoss": -101.73,
+     "exposurePct": 100,
+     "avgHoldHours": 681.6,
+     "fees": 9.6,
+     "spread": 0.96,
+     "slippage": 1.92,
+     "funding": 10.92,
+     "tStat": -0.45,
+     "dailySharpe": -0.57
+    },
+    "test": {
+     "trades": 7,
+     "grossExp": 52.07,
+     "netExp": 48.55,
+     "net": 339.84,
+     "totalNetReturnPct": 33.98,
+     "profitFactor": 3.16,
+     "maxDrawdownRealized": 112.68,
+     "maxDrawdownMarked": 300.26,
+     "winRatePct": 71.43,
+     "avgWin": 99.37,
+     "avgLoss": -78.5,
+     "exposurePct": 100,
+     "avgHoldHours": 980.57,
+     "fees": 7.27,
+     "spread": 0.73,
+     "slippage": 1.45,
+     "funding": -15.21,
+     "tStat": 1.04,
+     "dailySharpe": 0.41
+    },
+    "stress2xCosts": {
+     "trades": 39,
+     "grossExp": 125.18,
+     "netExp": 112.25,
+     "net": 4377.83,
+     "totalNetReturnPct": 437.78,
+     "profitFactor": 3.33,
+     "maxDrawdownRealized": 642.44,
+     "maxDrawdownMarked": 1415.39,
+     "winRatePct": 43.59,
+     "avgWin": 367.92,
+     "avgLoss": -85.31,
+     "exposurePct": 100,
+     "avgHoldHours": 893.54,
+     "fees": 82.1,
+     "spread": 8.21,
+     "slippage": 16.42,
+     "funding": -397.55,
+     "tStat": 1.17,
+     "dailySharpe": 0.55
+    }
+   },
+   "walkForward": {
+    "windowDays": 90,
+    "windows": 16,
+    "traded": 16,
+    "positive": 11,
+    "list": [
+     {
+      "from": "2019-11-08T00:00:00Z",
+      "net": 214.56,
+      "trades": 3
+     },
+     {
+      "from": "2020-02-06T00:00:00Z",
+      "net": 168.69,
+      "trades": 5
+     },
+     {
+      "from": "2020-05-06T00:00:00Z",
+      "net": 128.41,
+      "trades": 3
+     },
+     {
+      "from": "2020-08-04T00:00:00Z",
+      "net": 87.13,
+      "trades": 3
+     },
+     {
+      "from": "2020-11-02T00:00:00Z",
+      "net": 1392.71,
+      "trades": 1
+     },
+     {
+      "from": "2021-01-31T00:00:00Z",
+      "net": 367.92,
+      "trades": 2
+     },
+     {
+      "from": "2021-05-01T00:00:00Z",
+      "net": 211.05,
+      "trades": 4
+     },
+     {
+      "from": "2021-07-30T00:00:00Z",
+      "net": 81.38,
+      "trades": 3
+     },
+     {
+      "from": "2021-10-28T00:00:00Z",
+      "net": 361.91,
+      "trades": 2
+     },
+     {
+      "from": "2022-01-26T00:00:00Z",
+      "net": -659.38,
+      "trades": 7
+     },
+     {
+      "from": "2022-04-26T00:00:00Z",
+      "net": 411.04,
+      "trades": 2
+     },
+     {
+      "from": "2022-07-25T00:00:00Z",
+      "net": -182.61,
+      "trades": 4
+     },
+     {
+      "from": "2022-10-23T00:00:00Z",
+      "net": -77.85,
+      "trades": 6
+     },
+     {
+      "from": "2023-01-21T00:00:00Z",
+      "net": -10.83,
+      "trades": 3
+     },
+     {
+      "from": "2023-04-21T00:00:00Z",
+      "net": -46.79,
+      "trades": 3
+     },
+     {
+      "from": "2023-07-20T00:00:00Z",
+      "net": 105.94,
+      "trades": 3
+     }
+    ]
+   },
+   "sensitivityHistoryUnseen": [
+    {
+     "id": "4h-20/100",
+     "trades": 111,
+     "netExp": 15.01,
+     "net": 1665.72,
+     "profitFactor": 1.43
+    },
+    {
+     "id": "4h-30/150",
+     "trades": 69,
+     "netExp": 47.08,
+     "net": 3248.78,
+     "profitFactor": 2.32
+    },
+    {
+     "id": "4h-40/200",
+     "trades": 51,
+     "netExp": 75.98,
+     "net": 3875.17,
+     "profitFactor": 2.55
+    },
+    {
+     "id": "4h-50/150",
+     "trades": 47,
+     "netExp": 47.72,
+     "net": 2242.72,
+     "profitFactor": 1.98
+    },
+    {
+     "id": "4h-50/250",
+     "trades": 39,
+     "netExp": 84.42,
+     "net": 3292.55,
+     "profitFactor": 2.76
+    },
+    {
+     "id": "4h-60/200",
+     "trades": 35,
+     "netExp": 114.68,
+     "net": 4013.71,
+     "profitFactor": 3.15
+    },
+    {
+     "id": "4h-100/200",
+     "trades": 31,
+     "netExp": 108.14,
+     "net": 3352.3,
+     "profitFactor": 3.03
+    },
+    {
+     "id": "1h-50/200",
+     "trades": 207,
+     "netExp": 2.88,
+     "net": 597,
+     "profitFactor": 1.11
+    }
+   ],
+   "forward": {
+    "trades": 1,
+    "grossExp": 31.12,
+    "netExp": 29.91,
+    "net": 29.91,
+    "totalNetReturnPct": 2.99,
+    "profitFactor": null,
+    "maxDrawdownRealized": 0,
+    "maxDrawdownMarked": 0,
+    "winRatePct": 100,
+    "avgWin": 29.91,
+    "avgLoss": null,
+    "exposurePct": 100,
+    "avgHoldHours": 16,
+    "fees": 0.98,
+    "spread": 0.1,
+    "slippage": 0.2,
+    "funding": 0.06,
+    "tStat": null,
+    "dailySharpe": null
+   },
+   "contaminatedContextOnly": {
+    "trades": 36,
+    "grossExp": 33.49,
+    "netExp": 27.68,
+    "net": 996.6,
+    "totalNetReturnPct": 99.66,
+    "profitFactor": 1.89,
+    "maxDrawdownRealized": 329.39,
+    "maxDrawdownMarked": 679.38,
+    "winRatePct": 36.11,
+    "avgWin": 162.96,
+    "avgLoss": -48.78,
+    "exposurePct": 100,
+    "avgHoldHours": 730,
+    "fees": 36.5,
+    "spread": 3.65,
+    "slippage": 7.3,
+    "funding": -161.73,
+    "tStat": 1.28,
+    "dailySharpe": 0.68
+   },
+   "baselines": {
+    "historyUnseen": {
+     "cash": 0,
+     "buyAndHold": {
+      "net": 2165.57,
+      "gross": 2744.31,
+      "funding": -575.65,
+      "maxDrawdownMarked": 5755.7
+     },
+     "emaAlwaysIn1h_50_200": {
+      "trades": 207,
+      "net": 597,
+      "netExp": 2.88
+     }
+    },
+    "train": {
+     "cash": 0,
+     "buyAndHold": {
+      "net": 2777.73,
+      "gross": 3273.34,
+      "funding": -492.18,
+      "maxDrawdownMarked": 3864.27
+     },
+     "emaAlwaysIn1h_50_200": {
+      "trades": 132,
+      "net": -86.02,
+      "netExp": -0.65
+     }
+    },
+    "validation": {
+     "cash": 0,
+     "buyAndHold": {
+      "net": -652.66,
+      "gross": -621,
+      "funding": -30.77,
+      "maxDrawdownMarked": 735
+     },
+     "emaAlwaysIn1h_50_200": {
+      "trades": 42,
+      "net": 93.83,
+      "netExp": 2.23
+     }
+    },
+    "test": {
+     "cash": 0,
+     "buyAndHold": {
+      "net": 580.41,
+      "gross": 629.61,
+      "funding": -47.5,
+      "maxDrawdownMarked": 311.13
+     },
+     "emaAlwaysIn1h_50_200": {
+      "trades": 33,
+      "net": 246.91,
+      "netExp": 7.48
+     }
+    },
+    "contaminated": {
+     "cash": 0,
+     "buyAndHold": {
+      "net": 544.43,
+      "gross": 994.84,
+      "funding": -448.46,
+      "maxDrawdownMarked": 1826.52
+     },
+     "emaAlwaysIn1h_50_200": {
+      "trades": 166,
+      "net": -127.6,
+      "netExp": -0.77
+     }
+    },
+    "forward": {
+     "cash": 0,
+     "buyAndHold": {
+      "net": -32.46,
+      "gross": -31.12,
+      "funding": -0.06,
+      "maxDrawdownMarked": 32.98
+     },
+     "emaAlwaysIn1h_50_200": {
+      "trades": 1,
+      "net": 29.91,
+      "netExp": 29.91
+     }
+    }
+   },
+   "verdict": {
+    "verdict": "NO TRADE",
+    "status": "RESEARCH_ONLY",
+    "rules": {
+     "R1": {
+      "pass": false,
+      "detail": "39 trades, net exp 113.62, t 1.18"
+     },
+     "R2": {
+      "pass": false,
+      "detail": "net train 4130.35 / validation -240.58 (10) / test 339.84 (7)"
+     },
+     "R3": {
+      "pass": true,
+      "detail": "11/16 traded windows positive"
+     },
+     "R4": {
+      "pass": true,
+      "detail": "profit factor 3.40"
+     },
+     "R5": {
+      "pass": true,
+      "detail": "net exp at 2x costs 112.25"
+     },
+     "R6": {
+      "pass": false,
+      "detail": "1 forward trades (need 30)"
+     }
+    }
+   }
+  },
+  "ETHUSDT": {
+   "data": {
+    "first1h": "2019-11-27T07:00:00Z",
+    "last1hOpen": "2026-11-12T15:00:00Z",
+    "bars1h": 61017,
+    "bars4h": 15254,
+    "internalGaps1h": 0,
+    "gapList": [],
+    "largestGapHours": 0,
+    "fundingEvents": 7627,
+    "fundingWithMark": 3325,
+    "fundingFirst": "2019-11-27T08:00:00Z",
+    "sha256": {
+     "historyUnseen1h": "7d231cf82b0061554985a1e2d871c552c098ec19ff0e8f00baacde1050a632a5",
+     "forward1h": "49306808a975f355a71cf342a17d6f8a4e8b0d5f296fac17c5d467d678257809"
+    },
+    "historyUnseenBars1h": 32928,
+    "forwardClosed4hBars": 4
+   },
+   "windows": {
+    "historyUnseen": {
+     "from": "2020-01-27T00:00:00Z",
+     "toExclusive": "2023-10-30T00:00:00Z"
+    },
+    "periods": [
+     {
+      "name": "train",
+      "from": "2020-01-27T00:00:00Z",
+      "toExclusive": "2022-04-12T00:00:00Z"
+     },
+     {
+      "name": "validation",
+      "from": "2022-04-26T00:00:00Z",
+      "toExclusive": "2023-01-19T00:00:00Z"
+     },
+     {
+      "name": "test",
+      "from": "2023-02-02T00:00:00Z",
+      "toExclusive": "2023-10-30T00:00:00Z"
+     }
+    ],
+    "contaminated": {
+     "from": "2023-11-13T00:00:00Z",
+     "toExclusive": "2026-11-12T00:00:00Z",
+     "note": "Phase 4B window where the candidate was noticed — context only, not evidence"
+    },
+    "forward": {
+     "from": "2026-11-12T00:00:00Z",
+     "toExclusive": "2026-11-12T16:00:00Z"
+    }
+   },
+   "historyUnseen": {
+    "full": {
+     "trades": 47,
+     "grossExp": 63.25,
+     "netExp": 50.07,
+     "net": 2353.28,
+     "totalNetReturnPct": 235.33,
+     "profitFactor": 1.88,
+     "maxDrawdownRealized": 961.34,
+     "maxDrawdownMarked": 2669.99,
+     "winRatePct": 34.04,
+     "avgWin": 313.81,
+     "avgLoss": -86.06,
+     "exposurePct": 100,
+     "avgHoldHours": 700.6,
+     "fees": 49.12,
+     "spread": 4.91,
+     "slippage": 9.82,
+     "funding": -555.43,
+     "tStat": 0.97,
+     "dailySharpe": 0.49
+    },
+    "train": {
+     "trades": 25,
+     "grossExp": 133.06,
+     "netExp": 109.75,
+     "net": 2743.73,
+     "totalNetReturnPct": 274.37,
+     "profitFactor": 3.06,
+     "maxDrawdownRealized": 399.28,
+     "maxDrawdownMarked": 2514.34,
+     "winRatePct": 44,
+     "avgWin": 370.33,
+     "avgLoss": -94.99,
+     "exposurePct": 100,
+     "avgHoldHours": 773.76,
+     "fees": 27.22,
+     "spread": 2.72,
+     "slippage": 5.44,
+     "funding": -547.42,
+     "tStat": 1.19,
+     "dailySharpe": 0.79
+    },
+    "validation": {
+     "trades": 10,
+     "grossExp": -15.53,
+     "netExp": -15.95,
+     "net": -159.48,
+     "totalNetReturnPct": -15.95,
+     "profitFactor": 0.81,
+     "maxDrawdownRealized": 845.42,
+     "maxDrawdownMarked": 1183.55,
+     "winRatePct": 20,
+     "avgWin": 342.97,
+     "avgLoss": -105.68,
+     "exposurePct": 100,
+     "avgHoldHours": 643.2,
+     "fees": 9.79,
+     "spread": 0.98,
+     "slippage": 1.96,
+     "funding": 8.57,
+     "tStat": -0.24,
+     "dailySharpe": -0.67
+    },
+    "test": {
+     "trades": 13,
+     "grossExp": -24.03,
+     "netExp": -26.26,
+     "net": -341.32,
+     "totalNetReturnPct": -34.13,
+     "profitFactor": 0.38,
+     "maxDrawdownRealized": 389.51,
+     "maxDrawdownMarked": 482.98,
+     "winRatePct": 23.08,
+     "avgWin": 69.46,
+     "avgLoss": -54.97,
+     "exposurePct": 100,
+     "avgHoldHours": 498.46,
+     "fees": 13.06,
+     "spread": 1.31,
+     "slippage": 2.61,
+     "funding": -11.94,
+     "tStat": -1.55,
+     "dailySharpe": -2
+    },
+    "stress2xCosts": {
+     "trades": 47,
+     "grossExp": 63.25,
+     "netExp": 48.71,
+     "net": 2289.42,
+     "totalNetReturnPct": 228.94,
+     "profitFactor": 1.85,
+     "maxDrawdownRealized": 987.49,
+     "maxDrawdownMarked": 2722.74,
+     "winRatePct": 34.04,
+     "avgWin": 312.36,
+     "avgLoss": -87.37,
+     "exposurePct": 100,
+     "avgHoldHours": 700.6,
+     "fees": 98.24,
+     "spread": 9.82,
+     "slippage": 19.65,
+     "funding": -555.43,
+     "tStat": 0.95,
+     "dailySharpe": 0.48
+    }
+   },
+   "walkForward": {
+    "windowDays": 90,
+    "windows": 15,
+    "traded": 15,
+    "positive": 8,
+    "list": [
+     {
+      "from": "2020-01-27T00:00:00Z",
+      "net": 422.9,
+      "trades": 3
+     },
+     {
+      "from": "2020-04-26T00:00:00Z",
+      "net": 245.9,
+      "trades": 3
+     },
+     {
+      "from": "2020-07-25T00:00:00Z",
+      "net": 63.29,
+      "trades": 3
+     },
+     {
+      "from": "2020-10-23T00:00:00Z",
+      "net": 2193.45,
+      "trades": 1
+     },
+     {
+      "from": "2021-01-21T00:00:00Z",
+      "net": -229.08,
+      "trades": 5
+     },
+     {
+      "from": "2021-04-21T00:00:00Z",
+      "net": 141.22,
+      "trades": 2
+     },
+     {
+      "from": "2021-07-20T00:00:00Z",
+      "net": 96.74,
+      "trades": 4
+     },
+     {
+      "from": "2021-10-18T00:00:00Z",
+      "net": -88.76,
+      "trades": 6
+     },
+     {
+      "from": "2022-01-16T00:00:00Z",
+      "net": -239.09,
+      "trades": 6
+     },
+     {
+      "from": "2022-04-16T00:00:00Z",
+      "net": 606.08,
+      "trades": 2
+     },
+     {
+      "from": "2022-07-15T00:00:00Z",
+      "net": -429.4,
+      "trades": 5
+     },
+     {
+      "from": "2022-10-13T00:00:00Z",
+      "net": -661.74,
+      "trades": 6
+     },
+     {
+      "from": "2023-01-11T00:00:00Z",
+      "net": 174.36,
+      "trades": 3
+     },
+     {
+      "from": "2023-04-11T00:00:00Z",
+      "net": -307.98,
+      "trades": 7
+     },
+     {
+      "from": "2023-07-10T00:00:00Z",
+      "net": -1.93,
+      "trades": 4
+     }
+    ]
+   },
+   "sensitivityHistoryUnseen": [
+    {
+     "id": "4h-20/100",
+     "trades": 101,
+     "netExp": 34.8,
+     "net": 3515,
+     "profitFactor": 1.95
+    },
+    {
+     "id": "4h-30/150",
+     "trades": 59,
+     "netExp": 55.42,
+     "net": 3269.63,
+     "profitFactor": 2.03
+    },
+    {
+     "id": "4h-40/200",
+     "trades": 53,
+     "netExp": 42.49,
+     "net": 2252.01,
+     "profitFactor": 1.75
+    },
+    {
+     "id": "4h-50/150",
+     "trades": 51,
+     "netExp": 73.33,
+     "net": 3739.73,
+     "profitFactor": 2.38
+    },
+    {
+     "id": "4h-50/250",
+     "trades": 29,
+     "netExp": 195.23,
+     "net": 5661.55,
+     "profitFactor": 4.42
+    },
+    {
+     "id": "4h-60/200",
+     "trades": 41,
+     "netExp": 85.26,
+     "net": 3495.5,
+     "profitFactor": 2.81
+    },
+    {
+     "id": "4h-100/200",
+     "trades": 31,
+     "netExp": 178.97,
+     "net": 5548.01,
+     "profitFactor": 4.65
+    },
+    {
+     "id": "1h-50/200",
+     "trades": 195,
+     "netExp": 10.65,
+     "net": 2077.13,
+     "profitFactor": 1.36
+    }
+   ],
+   "forward": {
+    "trades": 1,
+    "grossExp": 22.98,
+    "netExp": 21.75,
+    "net": 21.75,
+    "totalNetReturnPct": 2.17,
+    "profitFactor": null,
+    "maxDrawdownRealized": 0,
+    "maxDrawdownMarked": 0,
+    "winRatePct": 100,
+    "avgWin": 21.75,
+    "avgLoss": null,
+    "exposurePct": 100,
+    "avgHoldHours": 16,
+    "fees": 0.99,
+    "spread": 0.1,
+    "slippage": 0.2,
+    "funding": 0.05,
+    "tStat": null,
+    "dailySharpe": null
+   },
+   "contaminatedContextOnly": {
+    "trades": 34,
+    "grossExp": 36.3,
+    "netExp": 30.7,
+    "net": 1043.82,
+    "totalNetReturnPct": 104.38,
+    "profitFactor": 1.51,
+    "maxDrawdownRealized": 943.36,
+    "maxDrawdownMarked": 1397.95,
+    "winRatePct": 38.24,
+    "avgWin": 237.52,
+    "avgLoss": -97.33,
+    "exposurePct": 100,
+    "avgHoldHours": 772.94,
+    "fees": 34.33,
+    "spread": 3.43,
+    "slippage": 6.87,
+    "funding": -145.72,
+    "tStat": 0.93,
+    "dailySharpe": 0.45
+   },
+   "baselines": {
+    "historyUnseen": {
+     "cash": 0,
+     "buyAndHold": {
+      "net": 8982.59,
+      "gross": 9688.71,
+      "funding": -698.53,
+      "maxDrawdownMarked": 23507.68
+     },
+     "emaAlwaysIn1h_50_200": {
+      "trades": 195,
+      "net": 2077.13,
+      "netExp": 10.65
+     }
+    },
+    "train": {
+     "cash": 0,
+     "buyAndHold": {
+      "net": 16067.87,
+      "gross": 16732.41,
+      "funding": -652.36,
+      "maxDrawdownMarked": 15889.45
+     },
+     "emaAlwaysIn1h_50_200": {
+      "trades": 108,
+      "net": 2084.89,
+      "netExp": 19.3
+     }
+    },
+    "validation": {
+     "cash": 0,
+     "buyAndHold": {
+      "net": -499.94,
+      "gross": -497.14,
+      "funding": -1.82,
+      "maxDrawdownMarked": 700.64
+     },
+     "emaAlwaysIn1h_50_200": {
+      "trades": 44,
+      "net": 385.26,
+      "netExp": 8.76
+     }
+    },
+    "test": {
+     "cash": 0,
+     "buyAndHold": {
+      "net": 50.26,
+      "gross": 93.6,
+      "funding": -41.98,
+      "maxDrawdownMarked": 367.26
+     },
+     "emaAlwaysIn1h_50_200": {
+      "trades": 39,
+      "net": -239.94,
+      "netExp": -6.15
+     }
+    },
+    "contaminated": {
+     "cash": 0,
+     "buyAndHold": {
+      "net": -330.4,
+      "gross": 4.54,
+      "funding": -333.64,
+      "maxDrawdownMarked": 1667.24
+     },
+     "emaAlwaysIn1h_50_200": {
+      "trades": 170,
+      "net": 99.33,
+      "netExp": 0.58
+     }
+    },
+    "forward": {
+     "cash": 0,
+     "buyAndHold": {
+      "net": -24.32,
+      "gross": -22.98,
+      "funding": -0.05,
+      "maxDrawdownMarked": 27.81
+     },
+     "emaAlwaysIn1h_50_200": {
+      "trades": 1,
+      "net": 21.75,
+      "netExp": 21.75
+     }
+    }
+   },
+   "verdict": {
+    "verdict": "NO TRADE",
+    "status": "RESEARCH_ONLY",
+    "rules": {
+     "R1": {
+      "pass": false,
+      "detail": "47 trades, net exp 50.07, t 0.97"
+     },
+     "R2": {
+      "pass": false,
+      "detail": "net train 2743.73 / validation -159.48 (10) / test -341.32 (13)"
+     },
+     "R3": {
+      "pass": false,
+      "detail": "8/15 traded windows positive"
+     },
+     "R4": {
+      "pass": true,
+      "detail": "profit factor 1.88"
+     },
+     "R5": {
+      "pass": true,
+      "detail": "net exp at 2x costs 48.71"
+     },
+     "R6": {
+      "pass": false,
+      "detail": "1 forward trades (need 30)"
+     }
+    }
+   }
+  }
+ }
+}
