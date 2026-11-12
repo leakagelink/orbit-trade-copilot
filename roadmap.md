@@ -264,3 +264,5 @@ See the specification: engine integration, paper/live trading, backtesting, risk
 
 ## Workspace move (12 Nov 05:54 UTC)
 - [ ] Connect AI Prime Tech in the new workspace — blocked: connection card declined
+
+- [ ] Reconnect AI Prime Tech in this workspace and verify the app can use it (waiting on owner approval card)
