@@ -6,7 +6,7 @@
 - [ ] Fresh real Binance testnet failure lifecycle for the new recovery code — requires owner approval and test credentials; not run
 - [x] Freshly connect AI Prime Tech after the 03:42 UTC workspace move; prior links no longer apply — model check HTTP 200
 - [x] Freshly connect AI Prime Tech after the 04:25 UTC workspace move; prior links no longer apply — read-only model check run
-- [ ] Freshly connect AI Prime Tech after the 04:35 UTC workspace move; prior links no longer apply
+- [x] Freshly connect AI Prime Tech after the 04:35 UTC workspace move; new workspace-shared connection linked; read-only models check HTTP 200; no inference or trading action
 
 
 ## Workspace move 12 Nov 2026
