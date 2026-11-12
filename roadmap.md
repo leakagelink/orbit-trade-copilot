@@ -2,7 +2,10 @@
 
 ## Engine A Phase 1 — Orbit AI Command Center — 12 November 2026
 - [x] Decision records, 12-agent envelopes, bull/bear/manager/portfolio views, source statuses, read-only risk evaluation, token/call/time limits, cancellation, overview/history/cost dashboard; 514 tests pass; signed-in screens checked; no orders
-- [ ] Apply draft migration 0043 (permanent records, frozen finished runs, risk evaluation history, admin limits) — waiting on owner review
+- [x] Final corrections (12 Nov 13:25 UTC): rollback keeps browser write/TRUNCATE lockout; atomic spending reservations with multi-session race tests; fail-closed cancellation, single worker per run, no appends after a run closes; read-only Risk Engine split from order code with import-graph test; draft retention policy; 0043 + rollback tested on the restored 06:52 export (0039 replayed); no orders, no migration applied
+- [ ] Apply draft migration 0043 (permanent records, frozen finished runs, risk evaluation history, admin limits, atomic spending ledger) — waiting on owner approval
+- [ ] Re-run the restore test on a fresh export taken after 0039 — waiting on the owner to create a new database export
+- [ ] Research data retention / account-deletion policy — draft written; waiting on owner decisions (periods, pseudonymize vs delete, jurisdiction)
 - [ ] Fresh signed-in research run on the new screens — not run to save AI allowance; waiting on owner request
 - [ ] Engine B (Futures scalping AI) and Phases 2–4 — not authorized
 
