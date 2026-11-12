@@ -59,3 +59,27 @@ prompt versions, token counts, outcomes and the fact that an evaluation was NOT_
 6. Should existing orphaned rows from already-deleted accounts be pseudonymized once this is approved?
 
 Nothing above is implemented until these are answered and the implementation is separately approved.
+
+## 5. Recommendations for the owner (12 Nov 2026 review — still not implemented)
+
+Not legal advice. Users may be in India (Digital Personal Data Protection Act 2023) and the business is a US seller;
+a short legal review is advised before these become final.
+
+| Class | Recommended retention | On account deletion |
+|---|---|---|
+| A — runs, agent outputs, reports, proposals, decision records, risk evaluations | 24 months after the run while the account exists | Within 30 days: replace owner ID with a tombstone ID; redact account figures (risk limits, open exposure, available budget, daily result) and keep the original SHA-256 next to the redacted copy. Keep the pseudonymized research (public-symbol analysis, model/prompt versions, outcomes, NOT_EXECUTABLE flag) for up to 5 years for model evaluation, then delete through the erasure function |
+| B — usage, stage timings, spending reservations | 13 months (one full annual billing cycle), then roll up to monthly totals and delete rows | Pseudonymize the owner ID only |
+| C — spending-limit change history | For the life of the platform | Pseudonymize `changed_by` if an admin account is deleted |
+| D — cancel requests; provisional records kept on pre-0043 runs | Treat provisional records as Class A once 0043 is applied | Delete cancel-request events; provisional records follow Class A |
+
+- **Redaction of account-specific risk figures:** yes, always on deletion (they describe the person's account, not
+  the market).
+- **Historical records from deleted accounts:** currently **0** research runs belong to a missing account (checked by
+  counts only: 2 accounts have research history, all still present). Apply the same pseudonymization to any future
+  orphans in the first erasure run.
+- **User research-history export:** yes. Offer an owner-only, paginated JSON download of all their runs, decision
+  records and risk evaluations (same rules as the existing exports), and show it before account deletion. Each run
+  already has a single-record "Download record" button.
+- **Append-only protections stay intact:** the only path past them is the single service-only erasure function, which
+  first writes its own append-only erasure event. No deletion or anonymization is built until the owner approves this
+  section and the implementation separately.
