@@ -36,6 +36,7 @@ import { Route as AuthenticatedLearnRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedMailboxRouteImport } from './routes/_authenticated/mailbox'
 import { Route as AuthenticatedMarketplaceRouteImport } from './routes/_authenticated/marketplace'
 import { Route as AuthenticatedNotificationsRouteImport } from './routes/_authenticated/notifications'
+import { Route as AuthenticatedPaperRouteImport } from './routes/_authenticated/paper'
 import { Route as AuthenticatedPlansRouteImport } from './routes/_authenticated/plans'
 import { Route as AuthenticatedReferralsRouteImport } from './routes/_authenticated/referrals'
 import { Route as AuthenticatedResearchRouteImport } from './routes/_authenticated/research'
@@ -195,6 +196,11 @@ const AuthenticatedNotificationsRoute =
     path: '/notifications',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedPaperRoute = AuthenticatedPaperRouteImport.update({
+  id: '/paper',
+  path: '/paper',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedPlansRoute = AuthenticatedPlansRouteImport.update({
   id: '/plans',
   path: '/plans',
@@ -325,6 +331,7 @@ export interface FileRoutesByFullPath {
   '/mailbox': typeof AuthenticatedMailboxRoute
   '/marketplace': typeof AuthenticatedMarketplaceRoute
   '/notifications': typeof AuthenticatedNotificationsRoute
+  '/paper': typeof AuthenticatedPaperRoute
   '/plans': typeof AuthenticatedPlansRoute
   '/referrals': typeof AuthenticatedReferralsRoute
   '/research': typeof AuthenticatedResearchRoute
@@ -373,6 +380,7 @@ export interface FileRoutesByTo {
   '/mailbox': typeof AuthenticatedMailboxRoute
   '/marketplace': typeof AuthenticatedMarketplaceRoute
   '/notifications': typeof AuthenticatedNotificationsRoute
+  '/paper': typeof AuthenticatedPaperRoute
   '/plans': typeof AuthenticatedPlansRoute
   '/referrals': typeof AuthenticatedReferralsRoute
   '/research': typeof AuthenticatedResearchRoute
@@ -423,6 +431,7 @@ export interface FileRoutesById {
   '/_authenticated/mailbox': typeof AuthenticatedMailboxRoute
   '/_authenticated/marketplace': typeof AuthenticatedMarketplaceRoute
   '/_authenticated/notifications': typeof AuthenticatedNotificationsRoute
+  '/_authenticated/paper': typeof AuthenticatedPaperRoute
   '/_authenticated/plans': typeof AuthenticatedPlansRoute
   '/_authenticated/referrals': typeof AuthenticatedReferralsRoute
   '/_authenticated/research': typeof AuthenticatedResearchRoute
@@ -473,6 +482,7 @@ export interface FileRouteTypes {
     | '/mailbox'
     | '/marketplace'
     | '/notifications'
+    | '/paper'
     | '/plans'
     | '/referrals'
     | '/research'
@@ -521,6 +531,7 @@ export interface FileRouteTypes {
     | '/mailbox'
     | '/marketplace'
     | '/notifications'
+    | '/paper'
     | '/plans'
     | '/referrals'
     | '/research'
@@ -570,6 +581,7 @@ export interface FileRouteTypes {
     | '/_authenticated/mailbox'
     | '/_authenticated/marketplace'
     | '/_authenticated/notifications'
+    | '/_authenticated/paper'
     | '/_authenticated/plans'
     | '/_authenticated/referrals'
     | '/_authenticated/research'
@@ -802,6 +814,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedNotificationsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/paper': {
+      id: '/_authenticated/paper'
+      path: '/paper'
+      fullPath: '/paper'
+      preLoaderRoute: typeof AuthenticatedPaperRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/plans': {
       id: '/_authenticated/plans'
       path: '/plans'
@@ -964,6 +983,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedMailboxRoute: typeof AuthenticatedMailboxRoute
   AuthenticatedMarketplaceRoute: typeof AuthenticatedMarketplaceRoute
   AuthenticatedNotificationsRoute: typeof AuthenticatedNotificationsRoute
+  AuthenticatedPaperRoute: typeof AuthenticatedPaperRoute
   AuthenticatedPlansRoute: typeof AuthenticatedPlansRoute
   AuthenticatedReferralsRoute: typeof AuthenticatedReferralsRoute
   AuthenticatedResearchRoute: typeof AuthenticatedResearchRoute
@@ -998,6 +1018,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedMailboxRoute: AuthenticatedMailboxRoute,
   AuthenticatedMarketplaceRoute: AuthenticatedMarketplaceRoute,
   AuthenticatedNotificationsRoute: AuthenticatedNotificationsRoute,
+  AuthenticatedPaperRoute: AuthenticatedPaperRoute,
   AuthenticatedPlansRoute: AuthenticatedPlansRoute,
   AuthenticatedReferralsRoute: AuthenticatedReferralsRoute,
   AuthenticatedResearchRoute: AuthenticatedResearchRoute,

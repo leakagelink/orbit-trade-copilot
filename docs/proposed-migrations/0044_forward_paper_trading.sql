@@ -240,7 +240,8 @@ BEGIN
     IF v_other_exp + (b->>'open_exposure')::numeric > a.max_exposure + 0.000001 THEN RAISE EXCEPTION 'paper_risk_conflict: account exposure'; END IF;
     IF v_other_pos + (b->>'open_positions')::integer > a.max_open_positions THEN RAISE EXCEPTION 'paper_risk_conflict: open positions'; END IF;
     IF (b->>'open_exposure')::numeric > a.max_position_notional + 0.000001 THEN RAISE EXCEPTION 'paper_risk_conflict: position size'; END IF;
-    IF v_other_day + CASE WHEN s.day_utc = v_day THEN s.day_net ELSE 0 END <= -a.max_daily_loss THEN RAISE EXCEPTION 'paper_risk_conflict: daily loss'; END IF;
+    IF s.day_utc = v_day THEN v_other_day := v_other_day + s.day_net; END IF;
+    IF v_other_day <= -a.max_daily_loss THEN RAISE EXCEPTION 'paper_risk_conflict: daily loss'; END IF;
   END IF;
 
   INSERT INTO public.paper_bars (paper_strategy_id, user_id, bar_t, candle, signal, decision, cash, equity, position_qty, unrealized, data_source, data_fetched_at)

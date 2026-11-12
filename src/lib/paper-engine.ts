@@ -4,8 +4,9 @@
 // credential or wallet code (enforced by an import-graph test).
 //
 // Order of events inside a candle (documented assumption):
-//   1. Emergency paper stop: pending entries are cancelled; an open position gets a market exit at this candle's open
-//      when the stop was switched on before the candle opened.
+//   1. Emergency paper stop: pending entries are cancelled (conservative); an open position gets a market exit at this
+//      candle's open when the stop was switched on before the candle opened, otherwise at the open after the first candle
+//      that closed after the stop — a catch-up never exits at a time before the stop existed.
 //   2. Working orders fill against the candle: market orders at the open (plus half-spread and slippage), limit orders
 //      only when price trades THROUGH the limit (touching is not enough). Each fill takes at most the configured share
 //      of the candle's volume; the rest keeps working (partial fills).
@@ -190,7 +191,7 @@ export function stepPaperBar(i: PaperStepInput): PaperStepResult {
     const idx = i.history.length - 1;
     decision["indicators"] = Object.fromEntries(Object.entries(series).map(([k, v]) => [k, v[idx] ?? null]));
     if (s.position) {
-      if (halted && !exitPending()) { s.orders.push(newOrder({ intent: "exit", kind: "market", side: "sell", qty: s.position.qty, limitPrice: null, maxNotional: null, expiresBarT: null, reason: "emergency_stop" })); signal = "halted"; }
+      if (halted && !exitPending() && bar.t + i.tfMs >= i.haltedAt!) { s.orders.push(newOrder({ intent: "exit", kind: "market", side: "sell", qty: s.position.qty, limitPrice: null, maxNotional: null, expiresBarT: null, reason: "emergency_stop" })); signal = "halted"; }
       else if (!exitPending() && evalRules(i.cfg.exit, series, idx)) { s.orders.push(newOrder({ intent: "exit", kind: "market", side: "sell", qty: s.position.qty, limitPrice: null, maxNotional: null, expiresBarT: null, reason: "exit_signal" })); signal = "exit"; }
     } else if (!s.orders.some((o) => o.intent === "entry") && evalRules(i.cfg.entry, series, idx)) {
       if (halted) { signal = "halted"; decision["reason"] = "Entry signal ignored: emergency paper stop is on"; }

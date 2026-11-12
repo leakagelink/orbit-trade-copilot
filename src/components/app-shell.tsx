@@ -29,6 +29,7 @@ const NAV = [
   { to: "/intelligence", label: "Strategy Intelligence", icon: ShieldCheck },
   { to: "/strategies", label: "Strategies", icon: Blocks },
   { to: "/bots", label: "Trading Bots", icon: Bot },
+  { to: "/paper", label: "Paper trading", icon: FlaskConical },
   { to: "/scalping", label: "Scalping", icon: Zap },
   { to: "/arbitrage", label: "Arbitrage", icon: ArrowLeftRight },
   { to: "/backtests", label: "Backtests", icon: FlaskConical },

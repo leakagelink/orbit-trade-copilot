@@ -21,11 +21,12 @@ const POLICY: PaperRiskPolicy = { riskPerTradePct: 1, positionSizePct: 50, maxPo
 const ACCOUNT: PaperAccountContext = { maxExposure: 1000, maxDailyLoss: 50, maxOpenPositions: 3, maxPositionNotional: 500, otherExposure: 0, otherOpenPositions: 0, otherDayNet: 0 };
 
 /** Feeds candles one at a time (each step sees only closed candles up to that point). */
-function run(candles: Candle[], o: Partial<PaperStepInput> & { from?: number; state?: PaperState } = {}) {
-  let state = o.state ?? initialPaperState(1000);
+function run(candles: Candle[], opts: Partial<PaperStepInput> & { from?: number; state?: PaperState } = {}) {
+  const { from, state: initial, ...o } = opts;
+  let state = initial ?? initialPaperState(1000);
   const events: PaperEvent[] = [], trades: PaperTrade[] = [], records = [];
-  for (let k = o.from ?? 59; k < candles.length; k++) {
-    const r = stepPaperBar({ strategyKey: "S", state, history: candles.slice(0, k + 1), tfMs: TF, cfg: cfg(), costs: COSTS, policy: POLICY, entriesAllowed: true, haltedAt: null, account: ACCOUNT, ...o, ...(o.state ? {} : {}) } as PaperStepInput);
+  for (let k = from ?? 59; k < candles.length; k++) {
+    const r = stepPaperBar({ strategyKey: "S", history: candles.slice(0, k + 1), tfMs: TF, cfg: cfg(), costs: COSTS, policy: POLICY, entriesAllowed: true, haltedAt: null, account: ACCOUNT, ...o, state } as PaperStepInput);
     state = r.state; events.push(...r.events); trades.push(...r.trades); records.push(r.record);
   }
   return { state, events, trades, records };
@@ -198,8 +199,9 @@ describe("paper Risk Engine", () => {
     const cs = [...Array.from({ length: 60 }, (_, k) => mk(k, 100, 100, 100, 100)), mk(60, 100, 100, 100, 100), mk(61, 100, 100, 97, 99), mk(62, 99, 99, 99, 99), mk(63, 99, 99, 99, 99)];
     const r = run(cs, { policy });
     expect(r.trades).toHaveLength(1);
-    expect(r.records[1]!.decision["reason"]).toMatch(/daily loss stop/);
-    expect(r.records[2]!.signal).toBe("enter_long"); // 00:00 UTC candle closes: new day
+    expect(r.records[2]!.signal).toBe("rejected"); // 23:00 candle: stopped out, same UTC day
+    expect(r.records[2]!.decision["reason"]).toMatch(/daily loss stop/);
+    expect(r.records[3]!.signal).toBe("enter_long"); // 00:00 UTC candle: new day
   });
 });
 
@@ -220,6 +222,7 @@ describe("emergency paper stop", () => {
     const st = run([...flat(60), bar(60, 100, 100, 100, 100)]).state;
     const r = run([...flat(60), bar(60, 100, 100, 100, 100), bar(61, 100, 100, 97, 99), bar(62, 99, 99, 99, 99)], { from: 61, state: st, entriesAllowed: false });
     expect(r.trades).toHaveLength(1);
-    expect(r.records[1]!.signal).toBe("rejected");
+    expect(r.records[0]!.signal).toBe("rejected");
+    expect(r.events.some((e) => e.intent === "entry")).toBe(false);
   });
 });
