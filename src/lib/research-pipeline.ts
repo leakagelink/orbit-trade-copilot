@@ -1,5 +1,6 @@
 import type { z } from "zod";
 import { analystReport, unavailableReport } from "./research";
+import { ResearchBudgetStop } from "./research-budget";
 
 export const RESEARCH_AGENTS = ["market","fundamentals","news","sentiment","bull","bear","manager","trader","risk_aggressive","risk_conservative","risk_neutral","portfolio"] as const;
 export type ResearchAgent = (typeof RESEARCH_AGENTS)[number];
@@ -18,7 +19,7 @@ export async function runResearchStages(
     if (missing) result = { agent, status: "unavailable", report: unavailableReport(missing) };
     else {
       try { result = { agent, status: "completed", report: analystReport.parse(await analyze(agent,evidence)) }; }
-      catch { result = { agent, status: "failed", report: unavailableReport("This report could not finish. No automatic retry was made; AI credits may have been consumed.") }; }
+      catch (e) { result = e instanceof ResearchBudgetStop ? { agent, status: "unavailable", report: unavailableReport(e.message) } : { agent, status: "failed", report: unavailableReport("This report could not finish. No automatic retry was made; AI credits may have been consumed.") }; }
     }
     await save(result);
     return result;
@@ -45,7 +46,7 @@ export async function runDecisionStages(previous: AgentResult[], snapshot: unkno
     if (missing) result = { agent, status: "unavailable", report: unavailableReport(missing) };
     else {
       try { result = { agent, status: "completed", report: analystReport.parse(await analyze(agent, evidence)) }; }
-      catch { result = { agent, status: "failed", report: unavailableReport("Assessment failed; dependent decisions are paused. No automatic retry or order was made.") }; }
+      catch (e) { result = e instanceof ResearchBudgetStop ? { agent, status: "unavailable", report: unavailableReport(e.message) } : { agent, status: "failed", report: unavailableReport("Assessment failed; dependent decisions are paused. No automatic retry or order was made.") }; }
     }
     await save(result);
     return result;
