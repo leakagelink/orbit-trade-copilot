@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { futuresScore, netPnl } from "@/lib/futures-score";
 import { Bot } from "lucide-react";
 
-const D = "Every AI Futures trade with entry, exit, fees, net result and performance score.";
+const D = "Every recorded Futures trade with entry, exit, funding, fees and net result.";
 export const Route = createFileRoute("/_authenticated/ai-trades")({
   head: () => ({ meta: [{ title: "AI Trades — AlgoVirt" }, { name: "description", content: D }, { property: "og:title", content: "AI Trades — AlgoVirt" }, { property: "og:description", content: D }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: AiTrades,
@@ -64,7 +64,7 @@ function AiTrades() {
         <Card><CardHeader><CardTitle className="text-base">Trade history</CardTitle></CardHeader><CardContent className="overflow-x-auto">
           {trades.length ? <table className="w-full min-w-[720px] text-sm"><thead className="text-left text-muted-foreground"><tr><th>Closed</th><th>Pair</th><th>Side</th><th>Qty</th><th>Entry</th><th>Exit</th><th>Gross</th><th>Funding</th><th>Fees</th><th>Net</th><th>Reason</th></tr></thead><tbody>
             {trades.map((t) => { const n = netPnl(t); return <tr key={t.id} className="border-t"><td>{t.closed_at ? new Date(t.closed_at).toLocaleString() : "—"}</td><td>{t.trading_pair}</td><td>{t.side === "buy" ? "Long" : "Short"}</td><td>{t.quantity}</td><td>{t.entry_price}</td><td>{t.exit_price ?? "—"}</td><td className="font-mono">{usd(t.realized_pnl)}</td><td className="font-mono">{usd(t.funding_pnl??0)}</td><td className="font-mono">{usd(t.fees)}</td><td className={`font-mono ${tone(n)}`}>{usd(n)}</td><td>{t.close_reason ?? "—"}</td></tr>; })}
-          </tbody></table> : <EmptyState icon={Bot} title="No trades yet" body="AI Futures trades will appear here." />}
+          </tbody></table> : <EmptyState icon={Bot} title="No trades yet" body="Futures trades will appear here." />}
         </CardContent></Card>
       </div>}
     </div>

@@ -16,9 +16,9 @@ export function validateOrder(o: FillOrder, symbol: string, client: string, side
   if (!activeOrder(o.status) && !terminalOrder(o.status)) throw new Error('Unknown broker order status; original intent retained');
 }
 /** Cancels only the original order. A timeout or unknown status never leads to another submit. */
-export async function settleOriginal(ports: {
-  lookup(): Promise<FillOrder>; cancel(): Promise<unknown>;
-}, validate: (o: FillOrder) => void): Promise<FillOrder> {
+export async function settleOriginal<T extends FillOrder>(ports: {
+  lookup(): Promise<T>; cancel(): Promise<unknown>;
+}, validate: (o: T) => void): Promise<T> {
   let o = await ports.lookup(); validate(o);
   if (activeOrder(o.status)) {
     try { await ports.cancel(); } catch { /* cancellation ack is not authoritative */ }

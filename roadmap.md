@@ -1,9 +1,11 @@
 # Roadmap
 
 ## Phase 1 authorization and workspace move — 12 November 2026
-- [ ] Harden Futures accounting, partial fills, protection, risk ordering, attribution, fencing and immutable environments; offline failure tests only, no live orders
+- [x] Harden Futures accounting, partial fills, protection, risk ordering, attribution, fencing and immutable environments; 271 tests pass and signed-in real/testnet trade views checked; no live orders
+- [ ] Phase 2 — waiting for owner approval
+- [ ] Fresh real Binance testnet failure lifecycle for the new recovery code — requires owner approval and test credentials; not run
 - [x] Freshly connect AI Prime Tech after the 03:42 UTC workspace move; prior links no longer apply — model check HTTP 200
-- [ ] Freshly connect AI Prime Tech after the 04:25 UTC workspace move; prior links no longer apply
+- [x] Freshly connect AI Prime Tech after the 04:25 UTC workspace move; prior links no longer apply — read-only model check run
 
 
 ## Workspace move 12 Nov 2026

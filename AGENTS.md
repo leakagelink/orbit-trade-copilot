@@ -28,7 +28,7 @@
 - Strategy validation lives in `src/lib/strategy.ts` and is shared by UI and server — one source of truth for deploy eligibility.
 - AI chat streams through `/api/chat` (server route, bearer-verified) and persists to `ai_sessions` — keeps the AI key and prompts server-side.
 - Bots execute only in `src/lib/engine.server.ts` (cron `/api/public/engine/tick`, plus `emergencyStop`); live mode is entered only via `enableLiveTrading` (typed confirmation, verified connection) and every order first claims a unique `orders.idempotency_key` row — no duplicate or browser-originated orders.
-- `trades.realized_pnl` is gross; fees are stored separately and every report subtracts them — avoids double-counting.
+- Trade net is gross + funding - fees via `trade-accounting.ts`/generated `net_pnl`; gross excludes funding — one contract for risk and reports.
 - Account-wide `risk_settings` cap every entry; USD-M Futures also require separate bounded opt-in and service-only testnet certification — UI/AI cannot bypass them.
 - Charts use `lightweight-charts` via dynamic import inside `src/components/tv-chart.tsx` behind ClientOnly — theme tokens are oklch and must be converted (canvas probe with hex fallback) before passing to the chart.
 - Trade's production Binance chart reads the credential-free public feed in the browser with server fallback; order and AI pricing remain server-only — avoids hosted-region blocks without trusting display data for trading.

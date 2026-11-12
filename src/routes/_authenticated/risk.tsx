@@ -104,7 +104,7 @@ function Risk() {
 
         <form onSubmit={submit} className="space-y-4 rounded-lg border bg-card p-4">
           <div className="flex items-center gap-2 font-medium"><ShieldCheck className="h-4 w-4 text-primary" />Account limits</div>
-          <p className="text-sm text-muted-foreground">Leave a field empty for no limit. These apply on top of each bot's own limits, across paper and live.</p>
+          <p className="text-sm text-muted-foreground">Leave a field empty for no limit. These apply on top of each bot's own limits. Futures real-money and testnet results are counted separately.</p>
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="space-y-1.5"><Label className="text-xs">Max open exposure (USDT)</Label><Input name="exp" type="number" min={0.01} step="any" defaultValue={r?.max_open_exposure ?? ""} className="font-mono" /></div>
             <div className="space-y-1.5"><Label className="text-xs">Max daily loss (USDT)</Label><Input name="loss" type="number" min={0.01} step="any" defaultValue={r?.max_daily_loss ?? ""} className="font-mono" /></div>

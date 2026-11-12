@@ -10,8 +10,8 @@ export function csvCell(value: unknown): string {
 }
 
 export function tradeCsv(trades: Array<{ id: string; trading_pair: string; side: string; mode: string; opened_at: string; closed_at: string | null; entry_price: number; exit_price: number | null; quantity: number; realized_pnl: number; fees: number; funding_pnl?: number|null; execution_environment?: string; close_reason: string | null }>): string {
-  const headers = ["Trade ID", "Market", "Side", "Mode", "Opened UTC", "Closed UTC", "Entry", "Exit", "Quantity", "Gross P&L", "Fees", "Funding", "Environment", "Net P&L", "Close reason"];
-  return "\ufeff" + [headers, ...trades.map(t => [t.id,t.trading_pair,t.side,t.mode,t.opened_at,t.closed_at,t.entry_price,t.exit_price,t.quantity,t.realized_pnl,t.fees,t.funding_pnl??0,t.execution_environment??"legacy_unknown",tradeNet(t),t.close_reason])].map(row => row.map(csvCell).join(",")).join("\r\n");
+  const headers = ["Trade ID", "Market", "Side", "Mode", "Opened UTC", "Closed UTC", "Entry", "Exit", "Quantity", "Gross P&L", "Fees", "Net P&L", "Close reason", "Funding", "Environment"];
+  return "\ufeff" + [headers, ...trades.map(t => [t.id,t.trading_pair,t.side,t.mode,t.opened_at,t.closed_at,t.entry_price,t.exit_price,t.quantity,t.realized_pnl,t.fees,tradeNet(t),t.close_reason,t.funding_pnl??0,t.execution_environment??"legacy_unknown"])].map(row => row.map(csvCell).join(",")).join("\r\n");
 }
 
 export function downloadCsv(content: string, filename: string) {

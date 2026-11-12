@@ -1400,7 +1400,7 @@ export type Database = {
           exchange: string
           exchange_connection_id?: string | null
           exchange_order_id?: string | null
-          execution_environment: string
+          execution_environment?: string
           filled_quantity?: number
           id?: string
           idempotency_key: string
@@ -1537,7 +1537,7 @@ export type Database = {
           entry_price: number
           exchange: string
           exchange_connection_id?: string | null
-          execution_environment: string
+          execution_environment?: string
           external_ref?: string | null
           futures_details?: Json | null
           id?: string
@@ -2222,7 +2222,7 @@ export type Database = {
           entry_price: number
           exchange: string
           exchange_connection_id?: string | null
-          execution_environment: string
+          execution_environment?: string
           exit_price?: number | null
           fees?: number
           funding_pnl?: number | null

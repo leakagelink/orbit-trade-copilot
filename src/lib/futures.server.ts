@@ -56,10 +56,19 @@ async function confirmProtections(db:Admin,p:FPosition,a:FuturesAccount,tick:num
 async function cancelProtections(a:FuturesAccount,p:FPosition,lease:ExecutionLease){
  const d=detail(p),symbol=p.trading_pair.replace('/','');
  for(const key of ['slClient','tpClient']){const client=d[key];if(typeof client!=='string')continue;await lease.assert();try{await futuresCancelAlgo(a,client);}catch{/* confirm actual removal below */}}
- const open=await algos(a,symbol);if(open.some(o=>o.clientAlgoId===d.slClient||o.clientAlgoId===d.tpClient))throw new Error('Protection cancellation unconfirmed; account remains locked');
+ const open=await algos(a,symbol);if(open.some(o=>o.clientAlgoId===d['slClient']||o.clientAlgoId===d['tpClient']))throw new Error('Protection cancellation unconfirmed; account remains locked');
 }
-async function settle(a:FuturesAccount,symbol:string,client:string,side:string,lease:ExecutionLease){
- return settleOriginal({lookup:()=>futuresOrder(a,symbol,client),cancel:async()=>{await lease.assert();return futuresCancelOrder(a,symbol,client);}},o=>validateOrder(o,symbol,client,side));
+async function settle(a:FuturesAccount,symbol:string,client:string,side:string,lease:ExecutionLease):Promise<BrokerOrder>{
+ return settleOriginal<BrokerOrder>({lookup:()=>futuresOrder(a,symbol,client),cancel:async()=>{await lease.assert();return futuresCancelOrder(a,symbol,client);}},o=>validateOrder(o,symbol,client,side));
+}
+const missing=(e:unknown)=>String(e).includes('(-2013)');
+const emergencyClient=(id:string)=>`fe-${id.slice(0,28)}`;
+/** Database-independent last resort: one deterministic reduce-only close of exposure confirmed on the symbol. */
+async function emergencyContain(a:FuturesAccount,p:FPosition,cap:number){
+ const symbol=p.trading_pair.replace('/',''),broker=(await futuresPositions(a,symbol)).find(x=>x.positionSide==='BOTH'),amt=Number(broker?.positionAmt??NaN);
+ if(!Number.isFinite(amt)||amt===0||(amt>0)!==(p.side==='buy'))return false;
+ await futuresCall(a,'POST','/fapi/v1/order',{symbol,side:p.side==='buy'?'SELL':'BUY',positionSide:'BOTH',type:'MARKET',quantity:Math.min(Math.abs(amt),cap),reduceOnly:'true',newClientOrderId:emergencyClient(p.id),newOrderRespType:'RESULT'});
+ return true;
 }
 async function finalize(db:Admin,p:FPosition,lease:ExecutionLease,trade:Json|null){
  await lease.assert();const r=await db.rpc('futures_finalize_position',{_position:p.id,_holder:lease.holder,_fence:lease.fence,_trade:trade as Json});if(r.error)throw new Error('Atomic Futures trade ledger failed; broker outcome retained for recovery');return r.data;
@@ -104,12 +113,13 @@ export async function openFutures(db:Admin,userId:string,t:FuturesTicket){
   if(check?.marginType?.toLowerCase()!=='isolated'||Number(check.leverage)!==t.leverage)throw new Error('Isolated leverage not confirmed');
   await lease.position(t.requestId,{futures_details:{...details,state:'submit_started'}});
   await lease.assert(true);submitted=true;
-  await futuresCall<BrokerOrder>(a,'POST','/fapi/v1/order',{symbol:m.symbol,side:t.side==='buy'?'BUY':'SELL',positionSide:'BOTH',type:'MARKET',quantity:qty,newClientOrderId:client,newOrderRespType:'RESULT'});
+  // An acknowledgement/timeout is not proof either way: settle only by looking up this original client ID.
+  try{await futuresCall<BrokerOrder>(a,'POST','/fapi/v1/order',{symbol:m.symbol,side:t.side==='buy'?'BUY':'SELL',positionSide:'BOTH',type:'MARKET',quantity:qty,newClientOrderId:client,newOrderRespType:'RESULT'});}catch(e){console.error('Futures entry submit outcome uncertain; lookup only',String(e).slice(0,200));}
   const fill=await settle(a,m.symbol,client,t.side==='buy'?'BUY':'SELL',lease);await saveOrder(db,lease,id,fill);
   const filled=confirmedQuantity(fill);if(filled!==qty||fill.status!=='FILLED'||!(Number(fill.avgPrice)>0))throw new Error('Partial entry: immediate containment required');
   const stops=futuresPrices(t.side,Number(fill.avgPrice),t.slPct,t.tpPct,m.tick);
   await lease.position(t.requestId,{entry_price:Number(fill.avgPrice),quantity:filled,stop_loss:stops.sl,take_profit:stops.tp,futures_details:{...details,state:'protecting'}});
-  for(const [type,triggerPrice,clientAlgoId] of [['STOP_MARKET',stops.sl,details.slClient],['TAKE_PROFIT_MARKET',stops.tp,details.tpClient]] as const){await lease.assert();await futuresCall(a,'POST','/fapi/v1/algoOrder',{algoType:'CONDITIONAL',symbol:m.symbol,side:t.side==='buy'?'SELL':'BUY',positionSide:'BOTH',type,triggerPrice,closePosition:'true',workingType:'MARK_PRICE',clientAlgoId});}
+  for(const [type,triggerPrice,clientAlgoId] of [['STOP_MARKET',stops.sl,details.slClient],['TAKE_PROFIT_MARKET',stops.tp,details.tpClient]] as const){await lease.assert();try{await futuresCall(a,'POST','/fapi/v1/algoOrder',{algoType:'CONDITIONAL',symbol:m.symbol,side:t.side==='buy'?'SELL':'BUY',positionSide:'BOTH',type,triggerPrice,closePosition:'true',workingType:'MARK_PRICE',clientAlgoId});}catch(e){console.error('Futures protection acknowledgement unavailable; verifying actual broker order',String(e).slice(0,200));}}
   const p=await reload(db,t.requestId);await confirmProtections(db,p,a,m.tick);
   await lease.position(p.id,{futures_details:{...details,state:'protected',protection:'confirmed'}});
   return {positionId:p.id,price:Number(fill.avgPrice),qty:filled,sl:stops.sl,tp:stops.tp};
@@ -119,6 +129,7 @@ export async function openFutures(db:Admin,userId:string,t:FuturesTicket){
    if(submitted){
     // Containment must not depend on a successful diagnostic database write.
     try{await closeLocked(db,await reload(db,positionId),a,'entry_containment',lease);}catch(recovery){
+     try{const p=await reload(db,positionId).catch(()=>({id:positionId,side:t.side,trading_pair:t.symbol} as FPosition));if(await emergencyContain(a,p,qty))console.error('Futures emergency reduce-only containment submitted; ledger recovery remains locked');}catch{console.error('Futures emergency containment unconfirmed; entries remain blocked');}
      try{const p=await reload(db,positionId);await lease.position(positionId,{futures_details:{...detail(p),protection:'unverified',state:'recovery',recovery:`${message}; ${String(recovery)}`.slice(0,800)}});}catch{console.error('Futures recovery state write failed; original intent remains locked');}
     }
    }else{
@@ -132,15 +143,21 @@ export async function openFutures(db:Admin,userId:string,t:FuturesTicket){
 /** Fenced close/recovery, also used immediately on an entry/protection failure. */
 async function closeLocked(db:Admin,p:FPosition,a:FuturesAccount,reason:string,lease:ExecutionLease){
  if(!sameEnvironment(p.execution_environment,a.testnet))throw new Error('Immutable Futures environment does not match original account');
- const symbol=p.trading_pair.replace('/',''),d=detail(p),client=d.entryClient;
+ const symbol=p.trading_pair.replace('/',''),d=detail(p),client=d['entryClient'];
  if(typeof client!=='string'||!p.entry_order_id)throw new Error('Original entry intent unavailable');
- const original=await settle(a,symbol,client,p.side==='buy'?'BUY':'SELL',lease);
+ let original:BrokerOrder;
+ try{original=await settle(a,symbol,client,p.side==='buy'?'BUY':'SELL',lease);}catch(e){
+  // Only a durable pre-submit/submit-started intent older than the settlement window may prove "never accepted".
+  if(!missing(e)||!['claimed','submit_started'].includes(String(d['state']))||Date.now()-Date.parse(p.opened_at)<120000)throw e;
+  original={orderId:0,clientOrderId:client,symbol,side:p.side==='buy'?'BUY':'SELL',positionSide:'BOTH',status:'EXPIRED',executedQty:'0',avgPrice:'0'};
+ }
  const entryQty=confirmedQuantity(original);
  // Read exact original exit/protective identities, never every opposite-side fill.
  const exits=await db.from('orders').select('*').eq('exchange_connection_id',a.connectionId).like('idempotency_key',`futures:exit:${p.id}%`).order('created_at');if(exits.error)throw new Error('Exit intents unavailable');
  const known:BrokerOrder[]=[],exitIds:string[]=[];
  for(const o of exits.data??[]){if(!o.client_order_id)throw new Error('Durable exit client ID missing');const fill=await settle(a,symbol,o.client_order_id,p.side==='buy'?'SELL':'BUY',lease);known.push(fill);exitIds.push(String(fill.orderId));await saveOrder(db,lease,o.id,fill);}
  for(const key of ['slClient','tpClient']){const c=d[key];if(typeof c!=='string')continue;try{const algo=await futuresAlgo(a,c);if(algo.symbol!==symbol||algo.positionSide!=='BOTH')throw new Error('Protection identity mismatch');if(algo.actualOrderId){const o=await futuresCall<BrokerOrder>(a,'GET','/fapi/v1/order',{symbol,orderId:algo.actualOrderId});validateOrder(o,symbol,o.clientOrderId,p.side==='buy'?'SELL':'BUY');if(!terminalOrder(o.status))throw new Error('Triggered protection not settled');known.push(o);exitIds.push(String(o.orderId));}}catch(e){if(!String(e).includes('-2013')&&!String(e).includes('-2011'))throw e;}}
+ try{const o=await futuresOrder(a,symbol,emergencyClient(p.id));validateOrder(o,symbol,emergencyClient(p.id),p.side==='buy'?'SELL':'BUY');if(!terminalOrder(o.status))throw new Error('Emergency containment not settled');known.push(o);exitIds.push(String(o.orderId));}catch(e){if(!missing(e))throw e;}
  let broker=(await futuresPositions(a,symbol)).find(x=>x.positionSide==='BOTH');if(!broker)throw new Error('Broker position unavailable');
  const remaining=remainderQuantity(entryQty,Number(broker.positionAmt),p.side,known);
  if(remaining>1e-8){
@@ -149,7 +166,7 @@ async function closeLocked(db:Admin,p:FPosition,a:FuturesAccount,reason:string,l
   const r=await db.from('orders').insert({id,user_id:p.user_id,exchange:'binance',exchange_connection_id:a.connectionId,trading_pair:p.trading_pair,side:p.side==='buy'?'sell':'buy',order_type:'market',quantity:remaining,status:'pending',mode:'live',market_type:'usd_m_futures',execution_environment:a.testnet?'testnet':'production',client_order_id:exitClient,idempotency_key:key});if(r.error)throw new Error('Exit claim failed; no second order sent');
   await lease.assert();
   // Once claimed, even a timeout is lookup-only on later invocations.
-  await futuresCall(a,'POST','/fapi/v1/order',{symbol,side:p.side==='buy'?'SELL':'BUY',positionSide:'BOTH',type:'MARKET',quantity:remaining,reduceOnly:'true',newClientOrderId:exitClient,newOrderRespType:'RESULT'});
+  try{await futuresCall(a,'POST','/fapi/v1/order',{symbol,side:p.side==='buy'?'SELL':'BUY',positionSide:'BOTH',type:'MARKET',quantity:remaining,reduceOnly:'true',newClientOrderId:exitClient,newOrderRespType:'RESULT'});}catch(e){console.error('Futures exit submit outcome uncertain; lookup only',String(e).slice(0,200));}
   const fill=await settle(a,symbol,exitClient,p.side==='buy'?'SELL':'BUY',lease);known.push(fill);exitIds.push(String(fill.orderId));await saveOrder(db,lease,id,fill);
   broker=(await futuresPositions(a,symbol)).find(x=>x.positionSide==='BOTH');if(!broker)throw new Error('Broker close read-back unavailable');
   if(Math.abs(Number(broker.positionAmt))>1e-8)throw new Error('Partial exit terminal; remainder requires the next fenced recovery step');
@@ -157,7 +174,8 @@ async function closeLocked(db:Admin,p:FPosition,a:FuturesAccount,reason:string,l
  // Containment succeeded before any cost/ledger writes, even if those writes fail.
  if((await futuresPositions(a,symbol)).some(x=>Number(x.positionAmt)!==0))throw new Error('Broker exposure remains unresolved');
  await cancelProtections(a,p,lease);
- await saveOrder(db,lease,p.entry_order_id,original);
+ if(original.orderId)await saveOrder(db,lease,p.entry_order_id,original);
+ else{await lease.assert();const r=await db.from('orders').update({status:'cancelled',reject_reason:'Broker has no record after settlement window; never resubmitted'}).eq('id',p.entry_order_id);if(r.error)throw new Error('Entry intent reconciliation unavailable');}
  if(entryQty===0){await finalize(db,p,lease,null);return {exit:p.entry_price,pnl:0};}
  const start=Number(original.time??Date.parse(p.opened_at)),end=known.reduce((s,o)=>Math.max(s,Number(o.updateTime??0)),0);
  if(!Number.isFinite(start)||end<start)throw new Error('Exact holding interval unavailable');
@@ -172,7 +190,10 @@ async function closeLocked(db:Admin,p:FPosition,a:FuturesAccount,reason:string,l
 }
 export async function closeFutures(db:Admin,input:FPosition,reason:string){
  if(!input.exchange_connection_id)throw new Error('Futures account reference missing');
- const a=await loadFuturesAccount(db,input.user_id,input.exchange_connection_id),lease=await acquireExecution(db,input.user_id,a.connectionId,'close');
+ const a=await loadFuturesAccount(db,input.user_id,input.exchange_connection_id);let lease:ExecutionLease|null=null;
+ // Kill switch waits briefly for the current single writer; it never bypasses its fence.
+ for(let i=0;i<(reason==='emergency_stop'?8:1)&&!lease;i++){try{lease=await acquireExecution(db,input.user_id,a.connectionId,'close');}catch(e){if(i===(reason==='emergency_stop'?7:0))throw e;await new Promise(r=>setTimeout(r,1000));}}
+ if(!lease)throw new Error('Futures account writer unavailable');
  try{return await closeLocked(db,await reload(db,input.id),a,reason,lease);}finally{await lease.release();}
 }
 export async function checkFutures(db:Admin,input:FPosition){
@@ -185,7 +206,7 @@ export async function checkFutures(db:Admin,input:FPosition){
   let reason:string|null=null;
   if(Number(broker.positionAmt)===0)reason='broker_closed';
   else if(risk.data.trading_halted)reason='emergency_stop';
-  else if(d.protection!=='confirmed')reason='protection_failure';
+  else if(d['protection']!=='confirmed')reason='protection_failure';
   else if(p.max_hold_until&&Date.now()>=Date.parse(p.max_hold_until))reason='time_stop';
   else{try{const m=await futuresSymbol(a,p.trading_pair);await confirmProtections(db,p,a,m.tick);}catch{reason='protection_missing';}}
   if(reason){await closeLocked(db,p,a,reason,lease);return reason;}
