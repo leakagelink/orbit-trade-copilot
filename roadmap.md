@@ -261,3 +261,6 @@ See the specification: engine integration, paper/live trading, backtesting, risk
 - [ ] Read-only verification of test account — after owner says ready
 - [ ] Start Phase 1.6 — blocked on explicit owner approval
 - [ ] Owner decision: production certified flag + live Autopilot still on while Phase 1.5 is FAIL
+
+## Workspace move (12 Nov 05:54 UTC)
+- [ ] Connect AI Prime Tech in the new workspace
