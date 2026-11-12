@@ -14,7 +14,25 @@ export interface IsolationFacts {
   autopilot: { enabled: boolean; live_enabled: boolean } | null;
   elite: boolean;
   limits: { max_margin: number | null; max_leverage: number | null; max_loss: number | null; live_enabled: boolean } | null;
-  risk: { max_daily_loss: number | null; max_open_exposure: number | null; trading_halted: boolean } | null;
+  risk: { max_daily_loss: number | null; max_open_exposure: number | null; max_total_positions?: number | null; trading_halted: boolean } | null;
+}
+/** Owner-stated limits for the dedicated Testnet account (USDT). Leverage is a ceiling; the rest must match exactly. */
+export const TEST_ACCOUNT_LIMITS = { max_margin: 5, max_loss: 2, max_daily_loss: 2, max_open_exposure: 10, max_total_positions: 1, max_leverage: 10 } as const;
+export function limitProblems(f: Pick<IsolationFacts, 'limits' | 'risk'>): string[] {
+  const p: string[] = []; const L = TEST_ACCOUNT_LIMITS;
+  const eq = (v: number | null | undefined, want: number, what: string) => { if (v == null || Number(v) !== want) p.push(`${what} must be ${want} (found ${v ?? 'unset'})`); };
+  if (f.limits) {
+    eq(f.limits.max_margin, L.max_margin, 'Margin per trade (USDT)');
+    eq(f.limits.max_loss, L.max_loss, 'Per-trade loss reserve (USDT)');
+    const lev = f.limits.max_leverage;
+    if (lev == null || !(Number(lev) >= 1 && Number(lev) <= L.max_leverage)) p.push(`Leverage must be between 1x and ${L.max_leverage}x (found ${lev ?? 'unset'})`);
+  }
+  if (f.risk) {
+    eq(f.risk.max_daily_loss, L.max_daily_loss, 'Daily loss limit (USDT)');
+    eq(f.risk.max_open_exposure, L.max_open_exposure, 'Maximum exposure (USDT)');
+    eq(f.risk.max_total_positions, L.max_total_positions, 'Open positions');
+  }
+  return p;
 }
 /** Every reason the harness must refuse to touch an exchange. Empty = isolated. */
 export function isolationProblems(f: IsolationFacts): string[] {
@@ -36,6 +54,7 @@ export function isolationProblems(f: IsolationFacts): string[] {
   else if (f.limits.live_enabled) p.push('Test account Live Futures must stay OFF');
   if (!f.risk || f.risk.max_daily_loss == null || f.risk.max_open_exposure == null) p.push('Test account daily-loss and exposure limits are missing');
   else if (f.risk.trading_halted) p.push('Test account is halted; clear its own halt before running');
+  p.push(...limitProblems(f));
   return p;
 }
 

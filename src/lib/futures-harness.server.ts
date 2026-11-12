@@ -36,7 +36,7 @@ export async function isolationFacts(db: Admin, cfg: HarnessConfig): Promise<Iso
     db.from('autopilot_settings').select('enabled,live_enabled').eq('user_id', cfg.testUserId).maybeSingle(),
     db.rpc('has_elite_access', { _uid: cfg.testUserId }),
     db.from('futures_settings').select('max_margin,max_leverage,max_loss,live_enabled').eq('user_id', cfg.testUserId).maybeSingle(),
-    db.from('risk_settings').select('max_daily_loss,max_open_exposure,trading_halted').eq('user_id', cfg.testUserId).maybeSingle(),
+    db.from('risk_settings').select('max_daily_loss,max_open_exposure,max_total_positions,trading_halted').eq('user_id', cfg.testUserId).maybeSingle(),
   ]);
   for (const r of [roles, conns, auto, elite, limits, risk]) if (r.error) throw new Error('Isolation evidence unavailable');
   return { testUserId: cfg.testUserId, ownerUserId: cfg.ownerUserId, connectionId: cfg.connectionId,

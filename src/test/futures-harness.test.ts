@@ -50,8 +50,19 @@ const good: IsolationFacts = {
   testConnections: [{ id: 'c', exchange: 'binance', is_testnet: true, status: 'connected', account_type: 'futures' }],
   autopilot: { enabled: false, live_enabled: false }, elite: true,
   limits: { max_margin: 5, max_leverage: 2, max_loss: 2, live_enabled: false },
-  risk: { max_daily_loss: 2, max_open_exposure: 10, trading_halted: false },
+  risk: { max_daily_loss: 2, max_open_exposure: 10, max_total_positions: 1, trading_halted: false },
 };
+describe('owner-stated test-account limits', () => {
+  it('requires 5 USDT margin', () => expect(isolationProblems({ ...good, limits: { ...good.limits!, max_margin: 6 } })).toContain('Margin per trade (USDT) must be 5 (found 6)'));
+  it('requires a 2 USDT per-trade loss reserve', () => expect(isolationProblems({ ...good, limits: { ...good.limits!, max_loss: 3 } })).toContain('Per-trade loss reserve (USDT) must be 2 (found 3)'));
+  it('requires a 2 USDT daily loss limit', () => expect(isolationProblems({ ...good, risk: { ...good.risk!, max_daily_loss: 5 } })).toContain('Daily loss limit (USDT) must be 2 (found 5)'));
+  it('requires 10 USDT maximum exposure', () => expect(isolationProblems({ ...good, risk: { ...good.risk!, max_open_exposure: 20 } })).toContain('Maximum exposure (USDT) must be 10 (found 20)'));
+  it('requires exactly one open position', () => expect(isolationProblems({ ...good, risk: { ...good.risk!, max_total_positions: 2 } })).toContain('Open positions must be 1 (found 2)'));
+  it('allows up to 10x leverage and refuses 11x', () => {
+    expect(isolationProblems({ ...good, limits: { ...good.limits!, max_leverage: 10 } })).toEqual([]);
+    expect(isolationProblems({ ...good, limits: { ...good.limits!, max_leverage: 11 } })).toContain('Leverage must be between 1x and 10x (found 11)');
+  });
+});
 describe('harness isolation', () => {
   it('accepts a dedicated, Testnet-only, limited test account', () => expect(isolationProblems(good)).toEqual([]));
   it('refuses the production owner as the test account', () => expect(isolationProblems({ ...good, testUserId: 'o' })).toContain('Dedicated test account must differ from the production owner'));
