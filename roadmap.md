@@ -1,5 +1,15 @@
 # Roadmap
 
+## Phase 3 — Forward paper trading — 12 November 2026
+- [ ] Audit existing paper trading (bot paper path, research paper observations)
+- [ ] Pure forward paper engine: closed candles only, market/limit, spread/slippage/fees, partial fills, stop-first SL/TP, reconciliation
+- [ ] Deterministic paper Risk Engine sizing + exposure/daily-loss/positions/size/strategy budget/emergency paper stop
+- [ ] Draft migration 0044 (separate paper ledger, append-only, atomic commit RPC) + rollback, PGlite tests — NOT applied
+- [ ] Server tick (public price data only, no exchange order code) + owner functions + cron route (not scheduled)
+- [ ] Paper trading dashboard (per-strategy metrics, equity, daily/weekly, freshness, assumptions)
+- [ ] Tests: duplicates, outages, stale candles, restart/recovery, partial fills, SL/TP, fees, risk rejections, daily loss, isolation, no exchange calls; full suite, typecheck, build
+- [ ] Evidence report; stop for approval
+
 ## Phase 2 — Historical evaluation — 12 November 2026
 - [x] next-bar-v3 simulator (v2 preserved and replayable), data checks + provenance, costs/volume cap/funding, reconciliation, time-ordered periods with purge/embargo, walk-forward, frozen selection, benchmarks, forward-only research outcomes, Historical evaluation page; 614 tests pass; real 90-day and 1-year runs checked; no AI calls, orders, migrations
 - [ ] Longer history than 5,000 candles per run — needs paged history fetch (not requested)

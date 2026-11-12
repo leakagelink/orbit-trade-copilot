@@ -55,6 +55,7 @@ import { Route as ApiPublicAlertsTickRouteImport } from './routes/api/public/ale
 import { Route as ApiPublicAutopilotTickRouteImport } from './routes/api/public/autopilot/tick'
 import { Route as ApiPublicEngineTickRouteImport } from './routes/api/public/engine/tick'
 import { Route as ApiPublicNowpaymentsIpnRouteImport } from './routes/api/public/nowpayments/ipn'
+import { Route as ApiPublicPaperTickRouteImport } from './routes/api/public/paper/tick'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -291,6 +292,11 @@ const ApiPublicNowpaymentsIpnRoute = ApiPublicNowpaymentsIpnRouteImport.update({
   path: '/api/public/nowpayments/ipn',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicPaperTickRoute = ApiPublicPaperTickRouteImport.update({
+  id: '/api/public/paper/tick',
+  path: '/api/public/paper/tick',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -338,6 +344,7 @@ export interface FileRoutesByFullPath {
   '/api/public/autopilot/tick': typeof ApiPublicAutopilotTickRoute
   '/api/public/engine/tick': typeof ApiPublicEngineTickRoute
   '/api/public/nowpayments/ipn': typeof ApiPublicNowpaymentsIpnRoute
+  '/api/public/paper/tick': typeof ApiPublicPaperTickRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -385,6 +392,7 @@ export interface FileRoutesByTo {
   '/api/public/autopilot/tick': typeof ApiPublicAutopilotTickRoute
   '/api/public/engine/tick': typeof ApiPublicEngineTickRoute
   '/api/public/nowpayments/ipn': typeof ApiPublicNowpaymentsIpnRoute
+  '/api/public/paper/tick': typeof ApiPublicPaperTickRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -434,6 +442,7 @@ export interface FileRoutesById {
   '/api/public/autopilot/tick': typeof ApiPublicAutopilotTickRoute
   '/api/public/engine/tick': typeof ApiPublicEngineTickRoute
   '/api/public/nowpayments/ipn': typeof ApiPublicNowpaymentsIpnRoute
+  '/api/public/paper/tick': typeof ApiPublicPaperTickRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -483,6 +492,7 @@ export interface FileRouteTypes {
     | '/api/public/autopilot/tick'
     | '/api/public/engine/tick'
     | '/api/public/nowpayments/ipn'
+    | '/api/public/paper/tick'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -530,6 +540,7 @@ export interface FileRouteTypes {
     | '/api/public/autopilot/tick'
     | '/api/public/engine/tick'
     | '/api/public/nowpayments/ipn'
+    | '/api/public/paper/tick'
   id:
     | '__root__'
     | '/'
@@ -578,6 +589,7 @@ export interface FileRouteTypes {
     | '/api/public/autopilot/tick'
     | '/api/public/engine/tick'
     | '/api/public/nowpayments/ipn'
+    | '/api/public/paper/tick'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -596,6 +608,7 @@ export interface RootRouteChildren {
   ApiPublicAutopilotTickRoute: typeof ApiPublicAutopilotTickRoute
   ApiPublicEngineTickRoute: typeof ApiPublicEngineTickRoute
   ApiPublicNowpaymentsIpnRoute: typeof ApiPublicNowpaymentsIpnRoute
+  ApiPublicPaperTickRoute: typeof ApiPublicPaperTickRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -922,6 +935,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicNowpaymentsIpnRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/paper/tick': {
+      id: '/api/public/paper/tick'
+      path: '/api/public/paper/tick'
+      fullPath: '/api/public/paper/tick'
+      preLoaderRoute: typeof ApiPublicPaperTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -1012,6 +1032,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicAutopilotTickRoute: ApiPublicAutopilotTickRoute,
   ApiPublicEngineTickRoute: ApiPublicEngineTickRoute,
   ApiPublicNowpaymentsIpnRoute: ApiPublicNowpaymentsIpnRoute,
+  ApiPublicPaperTickRoute: ApiPublicPaperTickRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
