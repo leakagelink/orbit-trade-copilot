@@ -1,5 +1,8 @@
 # Roadmap
 
+## Workspace move 12 Nov 2026
+- [ ] Freshly connect AI Prime Tech in the new workspace; previous-workspace connection references no longer apply
+
 ## Binance Futures scalping and scoring — 11 November 2026
 - [x] Add separate USD-M Futures execution, broker-side algo protection, reduce-only recovery and UI/AI controls; market_type dispatch prevents Spot confusion; live entries remain certification-gated
 - [x] Run scoring/governance/strategy-rule tests — 40 passed; not independent live certification
