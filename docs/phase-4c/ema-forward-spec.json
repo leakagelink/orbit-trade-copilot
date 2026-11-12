@@ -1,0 +1,130 @@
+{
+ "frozenAtUtc": "2026-11-12T18:14:41.665Z",
+ "specSha256": "fef1112b6bf333e22996ab37ac2fb0232a2dfd3dadcf335a6b95c67e9aa666de",
+ "note": "Frozen before any HISTORY_UNSEEN or FORWARD candle was fetched or scored. Hash = SHA-256 of the canonical JSON (sorted keys) of EMA_FORWARD_SPEC in src/lib/ema-forward-research.ts.",
+ "spec": {
+  "version": "ema-forward-v1",
+  "candidate": {
+   "id": "4h-ema-50-200-always-in",
+   "origin": "Phase 4B benchmark emaAlwaysIn(c4, funding, from, to, COSTS, 50, 200, 1000, 4h); noticed on the Phase 4B locked test, so the Phase 4B window cannot count as evidence",
+   "timeframe": "4h (UTC-aligned aggregation of 1h candles; incomplete buckets dropped, never filled)",
+   "emaFast": 50,
+   "emaSlow": 200,
+   "emaSeed": "SMA of the first N closes of the fetched series (indicators.ema)",
+   "longShort": "both: LONG when EMA50 > EMA200 at the previous 4h close, otherwise SHORT (always in the market once both EMAs exist)",
+   "entry": "at the open of the first bar of the segment, and at the next 4h open after the previous close changes direction",
+   "exit": "reverse at the next 4h open on a direction change; the open position is closed at the segment's last close",
+   "positionSizing": "fixed 1000 USDT notional per position (no compounding, no leverage modelled; quantity = 1000 / entry price)",
+   "stopLoss": "none",
+   "takeProfit": "none",
+   "maxHoldingPeriod": "none (always-in)",
+   "fees": "taker 0.05 % per side (Binance USD-M regular tier list fee; NOT verified against an account)",
+   "spreadSlippage": "spread 0.01 % (half per side) + slippage 0.01 % per side — assumptions, no historical bid/ask data",
+   "funding": "actual historical funding rates charged for events strictly inside (entry, exit); at the funding mark price, or the entry price when the exchange supplies no mark",
+   "dataSource": "Binance USD-M public GET /fapi/v1/klines (1h) and /fapi/v1/fundingRate; credential-free"
+  },
+  "costs": {
+   "takerFeePct": 0.05,
+   "makerFeePct": 0.02,
+   "spreadPct": 0.01,
+   "slippagePct": 0.01
+  },
+  "stressCostMultiplier": 2,
+  "notional": 1000,
+  "symbols": [
+   "BTCUSDT",
+   "ETHUSDT"
+  ],
+  "windows": {
+   "historyRequestStart": 1567296000000,
+   "historyWarmupDays": 60,
+   "embargoDays": 14,
+   "historyUnseenEnd": 1698624000000,
+   "contaminatedFrom": 1699833600000,
+   "contaminatedTo": 1794441600000,
+   "forwardFrom": 1794441600000,
+   "splitFractions": [
+    0.6,
+    0.2,
+    0.2
+   ],
+   "walkForwardWindowDays": 90
+  },
+  "sensitivity": {
+   "note": "reported on HISTORY_UNSEEN only; never used to change the candidate",
+   "pairs4h": [
+    [
+     20,
+     100
+    ],
+    [
+     30,
+     150
+    ],
+    [
+     40,
+     200
+    ],
+    [
+     50,
+     150
+    ],
+    [
+     50,
+     250
+    ],
+    [
+     60,
+     200
+    ],
+    [
+     100,
+     200
+    ]
+   ],
+   "include1h50_200": true
+  },
+  "baselines": [
+   "cash (0)",
+   "buy-and-hold (taker costs both sides + funding)",
+   "existing Phase 4B 1h EMA 50/200 always-in benchmark"
+  ],
+  "metrics": [
+   "trades",
+   "grossExpectancy",
+   "netExpectancy",
+   "totalNetReturnPct",
+   "profitFactor",
+   "maxDrawdownRealized",
+   "maxDrawdownMarked",
+   "winRate",
+   "avgWin",
+   "avgLoss",
+   "exposurePct",
+   "avgHoldHours",
+   "fees",
+   "spread",
+   "slippage",
+   "funding",
+   "tStat",
+   "dailySharpe"
+  ],
+  "rule": {
+   "R1": "HISTORY_UNSEEN full: >= 30 trades, net expectancy > 0 and t-stat >= 2",
+   "R2": "HISTORY_UNSEEN train, validation and test each: net > 0 (beats cash); validation and test each >= 8 trades",
+   "R3": "Walk-forward: >= 60 % of 90-day windows with at least one trade are net positive",
+   "R4": "HISTORY_UNSEEN full profit factor >= 1.2",
+   "R5": "At 2x costs, HISTORY_UNSEEN full net expectancy > 0",
+   "R6": "FORWARD: >= 30 closed trades with net expectancy > 0 (required for anything beyond historical evidence)",
+   "verdict": "any of R1-R5 fails -> NO TRADE; R1-R5 pass but R6 fails -> INSUFFICIENT EVIDENCE; all pass -> CANDIDATE FOR FORWARD-PAPER REVIEW. Every outcome stays RESEARCH_ONLY; none authorizes paper or live trading.",
+   "thresholds": {
+    "minTradesFull": 30,
+    "minTStat": 2,
+    "minTradesValTest": 8,
+    "minPositiveWindowShare": 0.6,
+    "minProfitFactor": 1.2,
+    "minForwardTrades": 30
+   }
+  }
+ }
+}

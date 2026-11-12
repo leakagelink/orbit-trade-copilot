@@ -1,5 +1,12 @@
 # Roadmap
 
+## Phase 4C — shadow design, 0045 successor, risk-data contracts, EMA forward research — 12 November 2026
+- [ ] A. Central Risk shadow design docs (design, input contract, safety invariants, source matrix, dependencies, approval checklist) — design only
+- [ ] B. 0045 successor draft + rollback (not applied), focused PGlite + multi-session tests, local-only restore verifier + tests
+- [ ] C. Risk-data contracts, source approval matrix, strategy attribution design (+ pure contract validators, not wired)
+- [ ] D. EMA 4h forward evaluation: spec frozen and committed before new data is scored; BTC/ETH separately
+- [ ] Protected-file fingerprint test, isolation tests, full suite/typecheck/build, Phase 4C final report
+
 ## Phase 4B — Central Risk shadow mode + Futures paper readiness — 12 November 2026
 - [x] Shadow evaluator (ticket → proposal adapter, SELECT-only context, versioned in-memory record), never called by any order path
 - [x] Shadow non-interference + isolation tests; source-readiness matrix
