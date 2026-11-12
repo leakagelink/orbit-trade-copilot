@@ -263,6 +263,6 @@ See the specification: engine integration, paper/live trading, backtesting, risk
 - [ ] Owner decision: production certified flag + live Autopilot still on while Phase 1.5 is FAIL
 
 ## Workspace move (12 Nov 05:54 UTC)
-- [ ] Connect AI Prime Tech in the new workspace — blocked: connection card declined
+- [x] Connect AI Prime Tech in the new workspace (done 12 Nov)
 
-- [ ] Reconnect AI Prime Tech in this workspace and verify the app can use it (waiting on owner approval card)
+- [x] Reconnect AI Prime Tech in this workspace and verify (done 12 Nov)
