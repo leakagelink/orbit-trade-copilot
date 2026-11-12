@@ -67,9 +67,11 @@ export function dayTokens(db: Admin, userId: string, now = Date.now()) {
 }
 /** True once the owner has asked this run to stop (append-only audit event). */
 export async function cancelRequested(db: Admin, userId: string, runId: string) {
-  const r = await db.from("audit_logs").select("id").eq("user_id", userId).eq("action", RESEARCH_CANCEL_ACTION).eq("entity_id", runId).limit(1);
-  if (r.error) { console.error("Research cancel check failed", r.error.message); return false; }
-  return (r.data?.length ?? 0) > 0;
+  try {
+    const r = await db.from("audit_logs").select("id").eq("user_id", userId).eq("action", RESEARCH_CANCEL_ACTION).eq("entity_id", runId).limit(1);
+    if (r.error) { console.error("Research cancel check failed", r.error.message); return false; }
+    return (r.data?.length ?? 0) > 0;
+  } catch (e) { console.error("Research cancel check failed", e instanceof Error ? e.message : e); return false; }
 }
 
 /** Read-only account inputs for the preview, then the existing Risk Engine check on the resulting cost. */

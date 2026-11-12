@@ -111,12 +111,12 @@ export function DataQualityPanel({ run }: { run: ResearchRun }) {
   const c = q.dimensions.completeness;
   return <div className="space-y-5">
     <Section title="Sources" icon={Database}>
-      <div className="divide-y rounded-lg border">{q.sources.map((s) => <div key={s.key} className="flex flex-col gap-1 p-3 sm:flex-row sm:items-start sm:gap-3"><div className="flex min-w-0 items-center gap-2 sm:w-56 sm:shrink-0"><StatusPill status={s.status} label={s.status.replaceAll("_", " ")} /><span className="truncate text-sm font-medium">{s.label}</span></div><p className="min-w-0 text-xs leading-5 text-muted-foreground">{s.detail}{s.asOf ? ` · as of ${when(s.asOf)}` : ""}</p></div>)}</div>
+      <div className="divide-y rounded-lg border">{q.sources.map((s) => <div key={s.key} className="flex flex-col gap-1 p-3 sm:flex-row sm:items-start sm:gap-3"><div className="flex min-w-0 items-center gap-2 sm:w-72 sm:shrink-0"><StatusPill status={s.status} label={s.status.replaceAll("_", " ")} /><span className="min-w-0 break-words text-sm font-medium">{s.label}</span></div><p className="min-w-0 text-xs leading-5 text-muted-foreground">{s.detail}{s.asOf ? ` · as of ${when(s.asOf)}` : ""}</p></div>)}</div>
     </Section>
     <Section title="Uncertainty, kept separate">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <Dim title="Source completeness" value={`${c.available} available · ${c.partial} partial · ${c.stale} stale · ${c.unavailable} unavailable`} note={`Out of ${c.applicable} applicable sources${c.notApplicable ? `; ${c.notApplicable} not applicable` : ""}.`} />
-        <Dim title="Data freshness" value={q.dimensions.freshness.ageHours === null ? "Unknown" : `${q.dimensions.freshness.ageHours} h old at decision`} note={`Market data status: ${q.dimensions.freshness.status.replaceAll("_", " ")}.`} />
+        <Dim title="Data freshness" value={q.dimensions.freshness.ageHours === null ? "Unknown" : `${q.dimensions.freshness.ageHours} hours old at decision`} note={`Market data status: ${q.dimensions.freshness.status.replaceAll("_", " ")}.`} />
         <Dim title="Agent disagreement" value={q.dimensions.disagreement.level} note={`${q.dimensions.disagreement.conflicts.length} conflict(s) among completed agents.`} />
         <Dim title="Model uncertainty" value="Not assessed" note={q.dimensions.modelUncertainty.note} />
         <Dim title="Historical performance" value="No evidence" note={q.dimensions.historicalPerformance.note} />
@@ -125,7 +125,7 @@ export function DataQualityPanel({ run }: { run: ResearchRun }) {
     </Section>
   </div>;
 }
-const Dim = ({ title, value, note }: { title: string; value: string; note: string }) => <div className="min-w-0 rounded-lg border bg-card p-3"><p className="text-xs text-muted-foreground">{title}</p><p className="mt-1 text-sm font-semibold capitalize">{value}</p><p className="mt-1 text-[11px] leading-4 text-muted-foreground">{note}</p></div>;
+const Dim = ({ title, value, note }: { title: string; value: string; note: string }) => <div className="min-w-0 rounded-lg border bg-card p-3"><p className="text-xs text-muted-foreground">{title}</p><p className="mt-1 text-sm font-semibold first-letter:uppercase">{value}</p><p className="mt-1 text-[11px] leading-4 text-muted-foreground">{note}</p></div>;
 
 export function RiskEvaluationCard({ title, ev, note }: { title: string; ev: RiskEvaluation | null; note: string }) {
   return <div className="min-w-0 space-y-3 rounded-lg border bg-card p-4">

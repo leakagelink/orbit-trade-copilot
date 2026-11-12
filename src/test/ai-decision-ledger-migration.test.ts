@@ -16,7 +16,7 @@ CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT nullif(
 CREATE FUNCTION public.account_mfa_allowed() RETURNS boolean LANGUAGE sql AS $$ SELECT true $$;
 CREATE TABLE public.user_roles (user_id uuid, role text);
 CREATE FUNCTION public.has_role(_user_id uuid, _role text) RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER AS $$ SELECT EXISTS(SELECT 1 FROM public.user_roles WHERE user_id=_user_id AND role=_role) $$;
-CREATE TABLE public.ai_research_runs (id uuid PRIMARY KEY, user_id uuid NOT NULL, symbol text NOT NULL);
+CREATE TABLE public.ai_research_runs (id uuid PRIMARY KEY, user_id uuid NOT NULL, symbol text NOT NULL, status text NOT NULL DEFAULT 'running' CONSTRAINT ai_research_runs_status_check CHECK (status IN ('running','completed','partial','failed')), error text, snapshot jsonb, created_at timestamptz NOT NULL DEFAULT now(), completed_at timestamptz);
 CREATE TABLE public.ai_agent_outputs (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), run_id uuid, user_id uuid, agent text, status text, report jsonb);
 CREATE TABLE public.ai_research_reports (LIKE public.ai_agent_outputs INCLUDING DEFAULTS);
 CREATE TABLE public.ai_research_decisions (LIKE public.ai_agent_outputs INCLUDING DEFAULTS);
@@ -109,7 +109,7 @@ describe("existing research outputs become append-only", () => {
 });
 
 describe("research spending limits", () => {
-  const call = "SELECT public.set_ai_research_budget(100000, 1000000, 5000000, NULL, NULL)";
+  const call = "SELECT public.set_ai_research_budget(100000, 600000, 1000000, 5000000, 16, 3, 1200, NULL, NULL)";
   it("a non-admin cannot change limits", async () => {
     await expect(as("authenticated", A, call)).rejects.toThrow(/Only an admin/);
   });
@@ -125,7 +125,65 @@ describe("research spending limits", () => {
     await expect(db.exec("DELETE FROM public.ai_research_budget_events")).rejects.toThrow(/append-only/);
   });
   it("out-of-range limits are refused", async () => {
-    await expect(as("authenticated", ADMIN, "SELECT public.set_ai_research_budget(5, 1000000, 5000000, NULL, NULL)")).rejects.toThrow(/check constraint/);
+    await expect(as("authenticated", ADMIN, "SELECT public.set_ai_research_budget(5, 600000, 1000000, 5000000, 16, 3, 1200, NULL, NULL)")).rejects.toThrow(/check constraint/);
+  });
+});
+
+describe("research run lifecycle", () => {
+  const R = "00000000-0000-4000-8000-0000000000d1";
+  it("a running run can finish with the new statuses, then is frozen", async () => {
+    await db.exec(`INSERT INTO public.ai_research_runs(id,user_id,symbol) VALUES ('${R}','${A}','AAPL')`);
+    await as("service_role", null, `UPDATE public.ai_research_runs SET snapshot='{}'::jsonb WHERE id='${R}'`);
+    await as("service_role", null, `UPDATE public.ai_research_runs SET status='budget_exceeded', error='limit' WHERE id='${R}'`);
+    const r = await db.query<{ completed_at: string | null }>(`SELECT completed_at FROM public.ai_research_runs WHERE id='${R}'`);
+    expect(r.rows[0]!.completed_at).not.toBeNull();
+    await expect(as("service_role", null, `UPDATE public.ai_research_runs SET status='completed' WHERE id='${R}'`)).rejects.toThrow(/finished research run cannot be changed/);
+  });
+  it("runs can never be deleted or truncated, even by the owner role", async () => {
+    await expect(db.exec(`DELETE FROM public.ai_research_runs WHERE id='${R}'`)).rejects.toThrow(/append-only/);
+    await expect(db.exec(`TRUNCATE public.ai_research_runs CASCADE`)).rejects.toThrow(/append-only/);
+  });
+  it("a running run's owner or symbol cannot be changed", async () => {
+    const R2 = "00000000-0000-4000-8000-0000000000d2";
+    await db.exec(`INSERT INTO public.ai_research_runs(id,user_id,symbol) VALUES ('${R2}','${A}','AAPL')`);
+    await expect(db.exec(`UPDATE public.ai_research_runs SET user_id='${B}' WHERE id='${R2}'`)).rejects.toThrow(/identity/);
+    await db.exec(`UPDATE public.ai_research_runs SET status='cancelled' WHERE id='${R2}'`);
+  });
+  it("unknown statuses are refused", async () => {
+    await expect(db.exec(`INSERT INTO public.ai_research_runs(id,user_id,symbol,status) VALUES (gen_random_uuid(),'${A}','AAPL','executed')`)).rejects.toThrow(/check constraint/);
+  });
+});
+
+describe("schema 2 decision records", () => {
+  it("refuses a record whose risk evaluation claims execution authority", async () => {
+    const R = "00000000-0000-4000-8000-0000000000e1";
+    await db.exec(`INSERT INTO public.ai_research_runs(id,user_id,symbol) VALUES ('${R}','${A}','AAPL')`);
+    const bad = rec(R, A, "AAPL", { schemaVersion: 2, riskEvaluation: { evaluation: { status: "PREVIEW_ONLY", executionAuthorized: true } } });
+    await expect(as("service_role", null, insertSql(R, A, "AAPL", bad).replace(",1,'", ",2,'"))).rejects.toThrow(/non-executable/);
+    const ok = rec(R, A, "AAPL", { schemaVersion: 2, riskEvaluation: { evaluation: { status: "NOT_EXECUTABLE", executionAuthorized: false } } });
+    await expect(as("service_role", null, insertSql(R, A, "AAPL", ok).replace(",1,'", ",2,'"))).resolves.toBeTruthy();
+  });
+});
+
+describe("risk evaluation history", () => {
+  const ins = (run: string, user: string, symbol: string, ev: Record<string, unknown>, authorized = false) => `INSERT INTO public.ai_risk_evaluations(run_id,user_id,symbol,market_type,proposed_direction,decision,execution_authorized,evaluation) VALUES ('${run}','${user}','${symbol}','equity','LONG','PREVIEW_ONLY',${authorized},'${JSON.stringify(ev)}'::jsonb)`;
+  const good = { status: "NOT_EXECUTABLE", executionAuthorized: false, decision: "PREVIEW_ONLY" };
+  it("the backend can append a non-executable evaluation for the owner's run", async () => {
+    await expect(as("service_role", null, ins(RA, A, "AAPL", good))).resolves.toBeTruthy();
+  });
+  it("an evaluation can never authorize execution", async () => {
+    await expect(as("service_role", null, ins(RA, A, "AAPL", good, true))).rejects.toThrow(/check constraint/);
+    await expect(as("service_role", null, ins(RA, A, "AAPL", { ...good, executionAuthorized: true }))).rejects.toThrow(/never authorize/);
+  });
+  it("refuses an evaluation for someone else's run", async () => {
+    await expect(as("service_role", null, ins(RB, A, "BTC-USD", good))).rejects.toThrow(/existing research run/);
+  });
+  it("users read only their own, and nobody can change or delete them", async () => {
+    expect((await as("authenticated", B, "SELECT id FROM public.ai_risk_evaluations")).rows).toEqual([]);
+    expect((await as("authenticated", A, "SELECT id FROM public.ai_risk_evaluations")).rows).toHaveLength(1);
+    await expect(as("authenticated", A, ins(RA, A, "AAPL", good))).rejects.toThrow(/permission denied/);
+    await expect(as("service_role", null, "UPDATE public.ai_risk_evaluations SET decision='REJECTED'")).rejects.toThrow(/permission denied/);
+    await expect(db.exec("DELETE FROM public.ai_risk_evaluations")).rejects.toThrow(/append-only/);
   });
 });
 
@@ -135,5 +193,14 @@ describe("rollback", () => {
     const t = await d.query<{ n: number }>("SELECT count(*)::int n FROM pg_tables WHERE tablename IN ('ai_decision_records','ai_research_budget_config','ai_research_budget_events')");
     expect(t.rows[0]!.n).toBe(0);
     await expect(d.exec(`UPDATE public.ai_agent_outputs SET status='completed'`)).resolves.toBeTruthy();
+    expect((await d.query<{ n: number }>("SELECT count(*)::int n FROM pg_tables WHERE tablename='ai_risk_evaluations'")).rows[0]!.n).toBe(0);
+    await expect(d.exec(`DELETE FROM public.ai_research_runs WHERE id='${RB}'`)).resolves.toBeTruthy();
+  }, 60_000);
+  it("relabels runs with statuses the original list does not allow", async () => {
+    const d = new PGlite(); await d.exec(STUB); await d.exec(MIGRATION);
+    await d.exec(`UPDATE public.ai_research_runs SET status='cancelled' WHERE id='${RA}'`);
+    await d.exec(ROLLBACK);
+    const r = await d.query<{ status: string; error: string }>(`SELECT status, error FROM public.ai_research_runs WHERE id='${RA}'`);
+    expect(r.rows[0]).toEqual({ status: "partial", error: "Cancelled: no reason recorded" });
   }, 60_000);
 });

@@ -52,7 +52,7 @@ export function CostPanel({ o, isAdmin }: { o: Overview; isAdmin: boolean }) {
       <Stat label="Avg cost per completed run" value={costText(o.avgCostPerCompletedRun)} />
     </div>
     <div className="grid gap-3 sm:grid-cols-3">
-      <Stat label="Reported actual cost" value={o.totals.cost.reportedPartUsd === null ? "$0" : `$${num(o.totals.cost.reportedPartUsd, 4)}`} hint="Only amounts the provider reports" />
+      <Stat label="Reported actual cost" value={o.totals.cost.reportedPartUsd === null ? "None reported" : `$${num(o.totals.cost.reportedPartUsd, 4)}`} hint="Only amounts the provider reports" />
       <Stat label="Estimated cost" value="Not estimated" hint="No verified rates are configured" />
       <Stat label="Unknown cost" value={`${o.totals.calls} calls`} hint={o.totals.cost.status === "UNKNOWN_COST" ? o.totals.cost.note : "All calls reported a cost"} />
     </div>

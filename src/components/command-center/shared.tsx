@@ -25,7 +25,7 @@ const STATUS_TONE: Record<string, keyof typeof TONE> = {
   running: "info", queued: "info", NOT_EXECUTABLE: "bad",
 };
 export const statusLabel = (s: string) => s.replaceAll("_", " ").toLowerCase().replace(/^\w/, (c) => c.toUpperCase());
-export function StatusPill({ status, label, className }: { status: string; label?: string; className?: string }) {
+export function StatusPill({ status, label, className }: { status: string; label?: string | undefined; className?: string }) {
   return <span className={cn("inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[11px] font-medium leading-4", TONE[STATUS_TONE[status] ?? "muted"], className)}>{label ?? statusLabel(status)}</span>;
 }
 export function Stat({ label, value, hint }: { label: string; value: ReactNode; hint?: ReactNode }) {

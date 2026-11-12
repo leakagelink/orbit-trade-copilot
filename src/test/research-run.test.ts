@@ -8,20 +8,21 @@ import type { ResearchAgent } from "@/lib/research-pipeline";
 
 const U = "00000000-0000-4000-8000-000000000001", RUN = "00000000-0000-4000-8000-0000000000aa";
 type Op = { table: string; op: string; row?: unknown };
-interface Opts { budgetRow?: Record<string, unknown> | null; ledgerMissing?: boolean; usageError?: boolean; halted?: boolean }
+interface Opts { budgetRow?: Record<string, unknown> | null; ledgerMissing?: boolean; usageError?: boolean; halted?: boolean; cancelled?: boolean }
 function fakeDb(o: Opts = {}) {
   const ops: Op[] = []; const rpc: string[] = [];
   const result = (table: string, op: string): unknown => {
     if (op === "insert") return { error: table === "ai_decision_records" && o.ledgerMissing ? { code: "PGRST205", message: "Could not find the table" } : null };
     if (op === "update") return { error: null };
     if (table === "ai_research_budget_config") return o.budgetRow === undefined ? { data: null, error: { code: "PGRST205", message: "Could not find the table" } } : { data: o.budgetRow, error: null };
+    if (table === "audit_logs") return { data: o.cancelled ? [{ id: "c" }] : [], error: null };
     if (table === "ai_research_usage") return o.usageError ? { data: null, error: { message: "down" } } : { data: [], error: null };
     if (table === "risk_settings") return { data: { max_open_exposure: 10, max_daily_loss: 2, max_total_positions: null, trading_halted: !!o.halted }, error: null };
     return { data: [], error: null };
   };
   const builder = (table: string, op: string) => {
     const b: Record<string, unknown> = {};
-    for (const m of ["eq", "gte", "order", "range", "in", "neq", "select"]) b[m] = () => b;
+    for (const m of ["eq", "gte", "order", "range", "in", "neq", "select", "limit"]) b[m] = () => b;
     b["maybeSingle"] = () => Promise.resolve(result(table, op));
     b["single"] = () => Promise.resolve(result(table, op));
     b["then"] = (res: (v: unknown) => unknown, rej: (e: unknown) => unknown) => Promise.resolve(result(table, op)).then(res, rej);
@@ -149,6 +150,17 @@ describe("spending limits stop further calls", () => {
   });
 });
 
+describe("owner cancellation", () => {
+  it("a cancelled run makes no further AI calls and is recorded as cancelled", async () => {
+    const { db, ops } = fakeDb({ cancelled: true }); const a = analyst();
+    const out = await executeResearchRun(db, U, RUN, "AAPL", { loadResearchData: async () => data(), runAnalyst: a.fn, now: () => now });
+    expect(a.calls).toHaveLength(0);
+    expect(out.outcome).toBe("cancelled");
+    expect(out.status).toBe("cancelled");
+    expect(recordOf(ops)).toBeTruthy();
+  });
+});
+
 describe("storage before migration 0043", () => {
   it("keeps a provisional record with the run when the ledger table is missing", async () => {
     const { db, ops } = fakeDb({ ledgerMissing: true }); const a = analyst();
@@ -170,7 +182,7 @@ describe("execution isolation", () => {
     expect(rpc).toEqual([]);
   });
   it("research code never references order or settings mutations", () => {
-    for (const f of ["research-run.server.ts", "research.server.ts", "research-pipeline.ts", "research-record.ts", "research-risk-preview.ts", "research-budget.ts", "research-transparency.ts", "research-insights.functions.ts"]) {
+    for (const f of ["research-run.server.ts", "research.server.ts", "research-pipeline.ts", "research-record.ts", "research-risk-preview.ts", "research-budget.ts", "research-transparency.ts", "research-insights.functions.ts", "research.functions.ts", "research-risk-evaluation.ts", "research-data-quality.ts", "research-decisions.ts"]) {
       const src = readFileSync(`src/lib/${f}`, "utf8");
       expect(src, f).not.toMatch(/placeMarketOrder|openFutures|openManualPosition|emergencyCloseAll|enableLiveTrading|wallet_apply|from\("(orders|positions|risk_settings|futures_settings|autopilot_settings|trading_bots)"\)\.(insert|update|upsert|delete)/);
     }

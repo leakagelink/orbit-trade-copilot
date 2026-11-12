@@ -1,5 +1,11 @@
 # Roadmap
 
+## Engine A Phase 1 — Orbit AI Command Center — 12 November 2026
+- [x] Decision records, 12-agent envelopes, bull/bear/manager/portfolio views, source statuses, read-only risk evaluation, token/call/time limits, cancellation, overview/history/cost dashboard; 514 tests pass; signed-in screens checked; no orders
+- [ ] Apply draft migration 0043 (permanent records, frozen finished runs, risk evaluation history, admin limits) — waiting on owner review
+- [ ] Fresh signed-in research run on the new screens — not run to save AI allowance; waiting on owner request
+- [ ] Engine B (Futures scalping AI) and Phases 2–4 — not authorized
+
 ## Phase 1.6 preparation only — 12 November 2026 09:04 UTC
 - [x] Read-only production check: Autopilot OFF, Live Futures OFF, 0 certification records, nothing open/pending
 - [x] Repeatable export practice-restore check; current 06:52 export readable but predates safety migration 0039 → not suitable

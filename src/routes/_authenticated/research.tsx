@@ -105,7 +105,7 @@ function RunView({ run, onRefresh }: { run: ResearchRun; onRefresh: () => Promis
   const rec = insights.data?.record;
   const histRows = useMemo(() => { try { return insights.data?.evaluations.rowsJson ? (JSON.parse(insights.data.evaluations.rowsJson) as { evaluation: unknown }[]) : []; } catch { return []; } }, [insights.data]);
   const stored = storedEvaluation(rec?.recordJson) ?? (histRows[0] ? storedEvaluation(JSON.stringify({ riskEvaluation: { evaluation: histRows[0].evaluation } })) : null);
-  const storedNote = insights.data?.evaluations.storage === "immutable" && histRows.length ? "Saved permanently when the run finished." : rec?.storage === "provisional" ? "Saved with the provisional record when the run finished." : stored ? "Saved with the run's decision record." : "This run finished before risk evaluations were recorded.";
+  const storedNote = !stored ? "This run finished before risk evaluations were recorded." : insights.data?.evaluations.storage === "immutable" && histRows.length ? "Saved permanently when the run finished." : rec?.storage === "provisional" ? "Saved with the provisional record when the run finished." : "Saved with the run's decision record.";
   async function stop() {
     setStopping(true);
     try { const r = await cancel({ data: { runId: run.id } }); toast.success(r.closed ? "Run closed as cancelled" : "Cancellation requested. The run stops before its next AI call."); await onRefresh(); }
