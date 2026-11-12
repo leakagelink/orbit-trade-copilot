@@ -81,3 +81,33 @@ describe("decodeReportInput", () => {
     expect(decodeReportInput({ risks: '[1,2]' })).toEqual({ risks: '[1,2]' });
   });
 });
+
+describe("streamed replies", () => {
+  it("rebuilds tool input, thinking signature and usage from events", async () => {
+    vi.stubEnv("LOVABLE_API_KEY", "test"); vi.stubEnv("UDC_AI_PRIME_TECH_API_KEY", "test");
+    const ev = (e: string, d: unknown) => `event: ${e}\ndata: ${JSON.stringify(d)}\n\n`;
+    const input = { summary: "s", outlook: "bearish", observations: ["o"], risks: [], limitations: [] };
+    const j = JSON.stringify(input);
+    const body = ev("message_start", { type: "message_start", message: { id: "msg_s", usage: { input_tokens: 40, cache_read_input_tokens: 3 } } })
+      + ev("content_block_start", { type: "content_block_start", index: 0, content_block: { type: "thinking", thinking: "" } })
+      + ev("content_block_delta", { type: "content_block_delta", index: 0, delta: { type: "thinking_delta", thinking: "hm" } })
+      + ev("content_block_delta", { type: "content_block_delta", index: 0, delta: { type: "signature_delta", signature: "sig" } })
+      + ev("content_block_stop", { type: "content_block_stop", index: 0 })
+      + ev("content_block_start", { type: "content_block_start", index: 1, content_block: { type: "tool_use", id: "t", name: "analyst_report", input: {} } })
+      + ev("content_block_delta", { type: "content_block_delta", index: 1, delta: { type: "input_json_delta", partial_json: j.slice(0, 10) } })
+      + ev("content_block_delta", { type: "content_block_delta", index: 1, delta: { type: "input_json_delta", partial_json: j.slice(10) } })
+      + ev("content_block_stop", { type: "content_block_stop", index: 1 })
+      + ev("message_delta", { type: "message_delta", delta: { stop_reason: "tool_use" }, usage: { output_tokens: 77 } })
+      + ev("message_stop", { type: "message_stop" });
+    const f = vi.fn(async (_u: unknown, init?: RequestInit) => { expect(JSON.parse(String(init?.body)).stream).toBe(true); return new Response(body, { status: 200, headers: { "content-type": "text/event-stream" } }); });
+    vi.stubGlobal("fetch", f);
+    const r = await runAnalyst("market", "AAPL", {});
+    expect(r.report).toEqual(input);
+    expect(r.reported).toMatchObject({ inputTokens: 40, outputTokens: 77, cacheReadTokens: 3, providerMessageId: "msg_s", stopReason: "tool_use", repairs: 0 });
+  });
+  it("treats a stream with no final stop as an error", async () => {
+    vi.stubEnv("LOVABLE_API_KEY", "test"); vi.stubEnv("UDC_AI_PRIME_TECH_API_KEY", "test");
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(`event: message_start\ndata: {"type":"message_start","message":{"id":"m"}}\n\n`, { status: 200, headers: { "content-type": "text/event-stream" } })));
+    await expect(runAnalyst("market", "AAPL", {})).rejects.toThrow(/ended the reply early/);
+  });
+});

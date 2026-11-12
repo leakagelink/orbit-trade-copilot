@@ -49,6 +49,57 @@ export async function aiPrimeMessage(body: Record<string, unknown>, timeoutMs = 
   return JSON.parse(text) as ClaudeMessage;
 }
 
+/** Rebuilds a Messages response from Server-Sent Events, keeping thinking signatures and tool inputs intact. */
+export function assembleClaudeStream(events: { event: string; data: unknown }[]): ClaudeMessage {
+  let message: Record<string, unknown> = {}; const blocks: Record<string, unknown>[] = []; const json: string[] = [];
+  let usage: Record<string, unknown> = {}; let stop: string | null = null;
+  for (const { event, data } of events) {
+    const d = (data ?? {}) as Record<string, any>;
+    if (event === "error" || d.type === "error") throw new Error(aiErrorMessage(529, JSON.stringify(d)));
+    if (d.type === "message_start") { message = { ...d.message }; usage = { ...(d.message?.usage ?? {}) }; }
+    else if (d.type === "content_block_start") { blocks[d.index] = { ...d.content_block }; json[d.index] = ""; }
+    else if (d.type === "content_block_delta") {
+      const b = blocks[d.index]; const x = d.delta ?? {};
+      if (!b) continue;
+      if (x.type === "text_delta") b.text = String(b.text ?? "") + x.text;
+      else if (x.type === "input_json_delta") json[d.index] += x.partial_json ?? "";
+      else if (x.type === "thinking_delta") b.thinking = String(b.thinking ?? "") + x.thinking;
+      else if (x.type === "signature_delta") b.signature = String(b.signature ?? "") + x.signature;
+    } else if (d.type === "content_block_stop") {
+      const b = blocks[d.index];
+      if (b?.type === "tool_use" && json[d.index]) { try { b.input = JSON.parse(json[d.index]!); } catch { b.input = json[d.index]; } }
+    } else if (d.type === "message_delta") { stop = d.delta?.stop_reason ?? stop; usage = { ...usage, ...(d.usage ?? {}) }; }
+  }
+  return { ...message, content: blocks.filter(Boolean) as ClaudeBlock[], stop_reason: stop, usage: usage as ClaudeMessage["usage"] };
+}
+
+/**
+ * One streamed Messages call, returned as a complete message. Streaming keeps long reasoning replies alive past the
+ * connector's response timeout; a non-streamed JSON reply is also accepted.
+ */
+export async function aiPrimeMessageStreamed(body: Record<string, unknown>, timeoutMs = 300_000): Promise<ClaudeMessage> {
+  const headers = aiPrimeHeaders();
+  if (!headers) throw new Error(AI_NOT_CONNECTED);
+  const r = await fetch(AI_PRIME_MESSAGES_URL, { method: "POST", headers, body: JSON.stringify({ ...body, stream: true }), signal: AbortSignal.timeout(timeoutMs) });
+  if (!r.ok) {
+    const text = await r.text();
+    console.error(`AI Prime Tech request failed [${r.status}]: ${text.slice(0, 500)}`);
+    throw new Error(aiErrorMessage(r.status, text));
+  }
+  const text = await r.text();
+  if (!(r.headers.get("content-type") ?? "").includes("event-stream")) return JSON.parse(text) as ClaudeMessage;
+  const events = text.split(/\r?\n\r?\n/).flatMap((chunk) => {
+    const lines = chunk.split(/\r?\n/);
+    const event = lines.find((l) => l.startsWith("event:"))?.slice(6).trim() ?? "";
+    const data = lines.filter((l) => l.startsWith("data:")).map((l) => l.slice(5).trimStart()).join("\n");
+    if (!data) return [];
+    try { return [{ event, data: JSON.parse(data) as unknown }]; } catch { return []; }
+  });
+  const m = assembleClaudeStream(events);
+  if (!m.stop_reason) throw new Error("AI Prime Tech ended the reply early — try again shortly.");
+  return m;
+}
+
 export function messageText(m: ClaudeMessage) {
   return m.content.flatMap((b) => (b.type === "text" && typeof b.text === "string" ? [b.text] : [])).join("\n").trim();
 }

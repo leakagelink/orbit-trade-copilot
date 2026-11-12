@@ -5,7 +5,7 @@ import { agentDisagreement, bullBearArguments, decisionOutcome, leakageWarnings,
 
 export const DECISION_RECORD_SCHEMA = 1;
 /** Bump when any analyst system prompt or role text in research.server.ts changes. */
-export const RESEARCH_PROMPT_VERSION = "research-prompts-v11";
+export const RESEARCH_PROMPT_VERSION = "research-prompts-v12";
 
 export interface AgentCall {
   agent: string; status: "completed" | "failed"; startedAt: string; durationMs: number;

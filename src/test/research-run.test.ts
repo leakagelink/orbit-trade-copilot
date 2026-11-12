@@ -78,7 +78,7 @@ describe("research run audit record", () => {
     expect(r["conclusions"].researchManager.status).toBe("completed");
     expect(r["conclusions"].portfolioManager.status).toBe("completed");
     expect(r["execution"].model).toBeTruthy();
-    expect(r["execution"].promptVersion).toBe("research-prompts-v11");
+    expect(r["execution"].promptVersion).toBe("research-prompts-v12");
     expect(r["execution"].calls).toHaveLength(11);
     expect(r["execution"].totals.inputTokens).toBe(11_000);
     expect(r["execution"].totals.costUsd).toBeNull();
