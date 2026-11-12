@@ -23,6 +23,8 @@ export const DEFAULT_RESEARCH_BUDGET: Readonly<ResearchBudget> = Object.freeze({
 
 /** Analyst calls request at most this many output tokens. */
 export const ANALYST_MAX_OUTPUT_TOKENS = 4000;
+/** Output cap for the single correction call after a reply ran out of output allowance. */
+export const ANALYST_REPAIR_MAX_OUTPUT_TOKENS = 8000;
 /** Conservative pre-call estimate: about 3 characters per input token, plus the full output allowance. */
 export function projectCallTokens(inputChars: number, maxOutputTokens = ANALYST_MAX_OUTPUT_TOKENS) {
   if (!Number.isFinite(inputChars) || inputChars < 0) throw new Error("Invalid research input size");

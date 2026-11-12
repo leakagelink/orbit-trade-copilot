@@ -13,11 +13,11 @@ type Admin = Awaited<typeof import("@/integrations/supabase/client.server")>["su
 type ResearchData = Awaited<ReturnType<typeof import("./research.server").loadResearchData>>;
 export interface AnalystCallResult {
   report: ResearchReport; inputTokens: number; outputTokens: number;
-  reported: { inputTokens: number | null; outputTokens: number | null; cacheReadTokens: number | null; cacheWriteTokens: number | null; costUsd: number | null; providerMessageId: string | null; stopReason: string | null };
+  reported: { inputTokens: number | null; outputTokens: number | null; cacheReadTokens: number | null; cacheWriteTokens: number | null; costUsd: number | null; providerMessageId: string | null; stopReason: string | null; repairs?: number };
 }
 export interface ResearchRunDeps {
   loadResearchData: (symbol: string) => Promise<ResearchData>;
-  runAnalyst: (agent: ResearchAgent, symbol: string, evidence: unknown) => Promise<AnalystCallResult>;
+  runAnalyst: (agent: ResearchAgent, symbol: string, evidence: unknown, beforeRepair?: (projectedTokens: number) => void) => Promise<AnalystCallResult>;
   now?: () => number;
 }
 /** Tables the research pipeline may write. Anything else is a bug (tests assert this). */
@@ -96,13 +96,15 @@ export async function executeResearchRun(db: Admin, userId: string, runId: strin
     const snapshotWrite = await db.from("ai_research_runs").update({ snapshot: ev.snapshot, research_evidence: { version: 3, news: ev.news, sentiment: ev.sentiment } }).eq("id", runId).eq("user_id", userId);
     if (snapshotWrite.error) throw snapshotWrite.error;
     const analyze = async (agent: ResearchAgent, input: unknown) => {
-      const handle = m.reserve(projectCallTokens(JSON.stringify({ symbol, evidence: input }).length + SYSTEM_OVERHEAD_CHARS));
+      let handle = m.reserve(projectCallTokens(JSON.stringify({ symbol, evidence: input }).length + SYSTEM_OVERHEAD_CHARS));
       const started = now(); const at = new Date(started).toISOString();
       let result: AnalystCallResult;
-      try { result = await deps.runAnalyst(agent, symbol, input); }
+      try { result = await deps.runAnalyst(agent, symbol, input, (projected) => { handle += m.reserve(projected); }); }
       catch (error) {
         m.settleFailed(handle);
-        calls.push({ agent, status: "failed", startedAt: at, durationMs: now() - started, inputTokens: null, outputTokens: null, cacheReadTokens: null, cacheWriteTokens: null, costUsd: null, providerMessageId: null, stopReason: null });
+        const reason = (error instanceof Error ? error.message : String(error)).slice(0, 300);
+        console.error(`Research agent ${agent} failed: ${reason}`);
+        calls.push({ agent, status: "failed", startedAt: at, durationMs: now() - started, inputTokens: null, outputTokens: null, cacheReadTokens: null, cacheWriteTokens: null, costUsd: null, providerMessageId: null, stopReason: null, error: reason });
         const metric = await db.from("ai_research_stage_metrics").insert({ user_id: userId, run_id: runId, agent, duration_ms: now() - started, status: "failed" });
         if (metric.error) throw new Error("Research monitoring unavailable");
         throw error;

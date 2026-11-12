@@ -5,12 +5,15 @@ import { agentDisagreement, bullBearArguments, decisionOutcome, leakageWarnings,
 
 export const DECISION_RECORD_SCHEMA = 1;
 /** Bump when any analyst system prompt or role text in research.server.ts changes. */
-export const RESEARCH_PROMPT_VERSION = "research-prompts-v3";
+export const RESEARCH_PROMPT_VERSION = "research-prompts-v11";
 
 export interface AgentCall {
   agent: string; status: "completed" | "failed"; startedAt: string; durationMs: number;
   inputTokens: number | null; outputTokens: number | null; cacheReadTokens: number | null; cacheWriteTokens: number | null;
   costUsd: number | null; providerMessageId: string | null; stopReason: string | null;
+  error?: string | null;
+  /** Format-correction calls made after an invalid first reply (0 or 1). */
+  repairs?: number;
 }
 export interface DecisionRecordInput {
   runId: string; userId: string; symbol: string; timeframe: "1d"; startedAt: string; decidedAt: string;

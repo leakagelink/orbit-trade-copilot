@@ -3,12 +3,14 @@ import { ema, rsi, type Candle } from "./indicators";
 
 export const RESEARCH_SYMBOLS = ["BTC-USD", "ETH-USD", "SOL-USD", "AAPL", "MSFT", "RELIANCE.NS", "TCS.NS"] as const;
 export const researchInput = z.object({ requestId: z.string().uuid(), symbol: z.enum(RESEARCH_SYMBOLS) });
+// Prompts ask for at most 6 entries of 500 characters and a 1800-character summary; validation accepts roughly
+// double because the model does not reliably honour length limits (observed 2026-11-12). Display-only bounds.
 export const analystReport = z.object({
-  summary: z.string().min(1).max(1800),
+  summary: z.string().min(1).max(4000),
   outlook: z.enum(["bullish", "neutral", "bearish", "insufficient_data"]),
-  observations: z.array(z.string().max(500)).max(6),
-  risks: z.array(z.string().max(500)).max(6),
-  limitations: z.array(z.string().max(500)).max(6),
+  observations: z.array(z.string().max(1000)).max(10),
+  risks: z.array(z.string().max(1000)).max(10),
+  limitations: z.array(z.string().max(1000)).max(10),
 });
 export function researchSnapshot(candles: Candle[], now = Date.now()) {
   const closed = candles.filter(c => c.t + 86400000 <= now && [c.o,c.h,c.l,c.c,c.v].every(Number.isFinite) && c.c > 0).sort((a,b) => a.t-b.t);
