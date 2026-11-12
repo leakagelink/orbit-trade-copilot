@@ -6,7 +6,7 @@ export const RESEARCH_AGENTS = ["market","fundamentals","news","sentiment","bull
 export type ResearchAgent = (typeof RESEARCH_AGENTS)[number];
 export type ResearchReport = z.infer<typeof analystReport>;
 export type AgentResult = { agent: ResearchAgent; status: "completed" | "unavailable" | "failed"; report: ResearchReport };
-export const AGENT_LABELS: Record<ResearchAgent,string> = { market: "Market Analyst", fundamentals: "Fundamentals Analyst", news: "News Analyst", sentiment: "Social Sentiment Analyst", bull: "Bull Researcher", bear: "Bear Researcher", manager: "Research Manager", trader: "Trader", risk_aggressive: "Growth Risk Analyst", risk_conservative: "Conservative Risk Analyst", risk_neutral: "Balanced Risk Analyst", portfolio: "Portfolio Manager" };
+export const AGENT_LABELS: Record<ResearchAgent,string> = { market: "Market Analyst", fundamentals: "Fundamentals Analyst", news: "News Analyst", sentiment: "Sentiment Analyst", bull: "Bull Researcher", bear: "Bear Researcher", manager: "Research Manager", trader: "Trader", risk_aggressive: "Aggressive Risk Analyst", risk_conservative: "Conservative Risk Analyst", risk_neutral: "Neutral Risk Analyst", portfolio: "Portfolio Manager" };
 
 /** Ordered dependency stages; missing evidence never initiates paid inference. */
 export async function runResearchStages(

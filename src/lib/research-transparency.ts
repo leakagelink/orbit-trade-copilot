@@ -63,10 +63,14 @@ export function leakageWarnings(asOf: string | null, model: string, now = Date.n
   return w;
 }
 
-export type ResearchOutcome = "complete" | "partial" | "failed" | "stopped_by_budget";
-/** "complete" means every agent that had evidence finished; analysts may be unavailable only because a source is missing. */
-export function decisionOutcome(agents: AgentRecord[], budgetStopped: boolean): ResearchOutcome {
-  if (budgetStopped) return "stopped_by_budget";
+export type ResearchOutcome = "complete" | "partial" | "failed" | "stopped_by_budget" | "cancelled";
+/**
+ * "complete" means every agent that had evidence finished; analysts may be unavailable only because a source is missing.
+ * `stoppedBy` is the meter's stop reason: "cancelled" (owner request) or any spending/limit stop.
+ */
+export function decisionOutcome(agents: AgentRecord[], stoppedBy: boolean | string | null): ResearchOutcome {
+  if (stoppedBy === "cancelled") return "cancelled";
+  if (stoppedBy) return "stopped_by_budget";
   if (!agents.some((a) => a.status === "completed")) return "failed";
   const market = agents.find((a) => a.agent === "market");
   const analystsOk = agents.filter((a) => ANALYSTS.includes(a.agent)).every((a) => a.status === "completed" || a.status === "unavailable");
@@ -74,3 +78,8 @@ export function decisionOutcome(agents: AgentRecord[], budgetStopped: boolean): 
   return market?.status === "completed" && analystsOk && rest ? "complete" : "partial";
 }
 export const DECISION_AGENTS = DECISION;
+
+/** Run status stored on ai_research_runs for each decision outcome. */
+export const RUN_STATUS_FOR_OUTCOME: Record<ResearchOutcome, "completed" | "partial" | "failed" | "budget_exceeded" | "cancelled"> = {
+  complete: "completed", partial: "partial", failed: "failed", stopped_by_budget: "budget_exceeded", cancelled: "cancelled",
+};

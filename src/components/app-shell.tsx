@@ -25,7 +25,7 @@ const NAV = [
   { to: "/autopilot", label: "AI Autopilot", icon: Bot },
   { to: "/ai-trades", label: "AI Trades", icon: ChartColumn },
   { to: "/assistant", label: "AI Assistant", icon: MessageSquareText },
-  { to: "/research", label: "AI Research", icon: FlaskConical },
+  { to: "/research", label: "AI Command Center", icon: FlaskConical },
   { to: "/intelligence", label: "Strategy Intelligence", icon: ShieldCheck },
   { to: "/strategies", label: "Strategies", icon: Blocks },
   { to: "/bots", label: "Trading Bots", icon: Bot },

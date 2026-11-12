@@ -45,7 +45,7 @@ export function decodeReportInput(raw: unknown): unknown {
   return out;
 }
 /** Before a format-correction call; may throw (e.g. ResearchBudgetStop) to refuse it. */
-export type BeforeRepair = (projectedTokens: number) => void;
+export type BeforeRepair = (projectedTokens: number) => void | Promise<void>;
 export async function runAnalyst(agent: ResearchAgent, symbol: string, evidence: unknown, beforeRepair?: BeforeRepair) {
   const decisionRoles: Partial<Record<ResearchAgent, string>> = {
     trader: "Evaluate the manager's thesis and directional outlook against original historical evidence. Explain invalidation conditions, not executable trades. Missing live prices or account holdings prohibit execution, not historical discussion.",
@@ -88,7 +88,7 @@ export async function runAnalyst(agent: ResearchAgent, symbol: string, evidence:
     // This model always reasons before answering; when that used the whole output allowance, the correction gets
     // twice the allowance (still a fixed cap, and checked against the spending limit like any call).
     const repairMax = replies[0]!.stop_reason === "max_tokens" ? ANALYST_REPAIR_MAX_OUTPUT_TOKENS : ANALYST_MAX_OUTPUT_TOKENS;
-    beforeRepair?.(projectCallTokens(userContent.length + JSON.stringify(replies[0]!.content).length + 2400, repairMax));
+    await beforeRepair?.(projectCallTokens(userContent.length + JSON.stringify(replies[0]!.content).length + 2400, repairMax));
     const note = `Rejected: ${outcome.reason}. Call analyst_report again with a corrected, complete report.`;
     const correction = outcome.toolUseId ? [{ type: "tool_result", tool_use_id: outcome.toolUseId, is_error: true, content: note }] : note;
     replies.push(await request([...first, { role: "assistant", content: replies[0]!.content }, { role: "user", content: correction }], repairMax));
