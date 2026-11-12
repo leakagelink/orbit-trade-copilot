@@ -2,7 +2,8 @@
 
 ## Phase 1 authorization and workspace move — 12 November 2026
 - [ ] Harden Futures accounting, partial fills, protection, risk ordering, attribution, fencing and immutable environments; offline failure tests only, no live orders
-- [ ] Freshly connect AI Prime Tech after the 03:42 UTC workspace move; prior links no longer apply
+- [x] Freshly connect AI Prime Tech after the 03:42 UTC workspace move; prior links no longer apply — model check HTTP 200
+- [ ] Freshly connect AI Prime Tech after the 04:25 UTC workspace move; prior links no longer apply
 
 
 ## Workspace move 12 Nov 2026
