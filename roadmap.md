@@ -1,5 +1,17 @@
 # Roadmap
 
+## Parallel sprint — scalping AI, central risk, live readiness — 12 November 2026
+- [x] Audits (Futures/Testnet, runtime/ML/data, research/paper/risk)
+- [x] Central Risk Engine (pure) + engine adapters + tests
+- [x] 1–5m scalping module + 60-day real-data evaluation (negative after costs)
+- [x] Ultrafast microstructure features + real aggTrades markout study (edge far below costs)
+- [x] Walk-forward logistic model with calibration and NO TRADE thresholds (no edge; 0 trades)
+- [x] Paper pause notices; six certification checklists; sprint report
+- [ ] Wire Central Risk Engine into live Futures submit — waits on owner approval
+- [ ] Persistent market-data runtime for ultrafast — waits on owner infrastructure decision
+- [ ] Draft risk-decision ledger / strategy budget migrations — waits on owner approval
+- [ ] Testnet certification run — waits on dedicated account, 0040–0042, Testnet order approval
+
 ## Phase 3 — Forward paper trading — 12 November 2026
 - [x] Audit existing paper trading (bot paper path unchanged; research paper observations unchanged)
 - [x] Pure forward paper engine, paper Risk Engine, worker, owner functions, cron route, Paper trading page; 48 new tests (engine, draft ledger in PGlite, isolation); full suite, typecheck, build

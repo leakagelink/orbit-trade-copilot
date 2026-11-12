@@ -1,0 +1,83 @@
+{
+  "generatedAt": "2026-11-12T16:47:12.931Z",
+  "source": "https://data.binance.vision/data/futures/um/daily/aggTrades/BTCUSDT/BTCUSDT-aggTrades-2026-11-10.zip",
+  "symbol": "BTCUSDT",
+  "day": "2026-11-10",
+  "trades": 1521662,
+  "roundTripTakerCostBps": 12,
+  "note": "Mean signed move after the signal in the signal's direction (bps), last-trade prices; positive = edge before costs. Taker round trip ≈ 2×5 bps fee + spread/slippage ≈ 12 bps (assumption).",
+  "results": [
+    {
+      "flowImbalanceThreshold": 0.5,
+      "signals": 10120,
+      "markout_1s": {
+        "n": 10120,
+        "meanBps": 0.07599257515623802,
+        "stderrBps": 0.007079027652982562
+      },
+      "markout_5s": {
+        "n": 10120,
+        "meanBps": 0.1579037325871085,
+        "stderrBps": 0.017844254846107913
+      },
+      "markout_30s": {
+        "n": 10120,
+        "meanBps": 0.15584848919700575,
+        "stderrBps": 0.046740030122699235
+      },
+      "markout_60s": {
+        "n": 10120,
+        "meanBps": 0.1244640539749898,
+        "stderrBps": 0.06482796375354932
+      }
+    },
+    {
+      "flowImbalanceThreshold": 0.7,
+      "signals": 7914,
+      "markout_1s": {
+        "n": 7914,
+        "meanBps": 0.08976238501188158,
+        "stderrBps": 0.007474258805488067
+      },
+      "markout_5s": {
+        "n": 7914,
+        "meanBps": 0.1712598199522954,
+        "stderrBps": 0.018402566248425064
+      },
+      "markout_30s": {
+        "n": 7914,
+        "meanBps": 0.1763936930903935,
+        "stderrBps": 0.04893517018734324
+      },
+      "markout_60s": {
+        "n": 7914,
+        "meanBps": 0.1391494950502395,
+        "stderrBps": 0.06741699952949654
+      }
+    },
+    {
+      "flowImbalanceThreshold": 0.9,
+      "signals": 4221,
+      "markout_1s": {
+        "n": 4221,
+        "meanBps": 0.10588501509677041,
+        "stderrBps": 0.008586839460416454
+      },
+      "markout_5s": {
+        "n": 4221,
+        "meanBps": 0.22945617944111688,
+        "stderrBps": 0.020804443897324793
+      },
+      "markout_30s": {
+        "n": 4221,
+        "meanBps": 0.2905062450576419,
+        "stderrBps": 0.05584990023257908
+      },
+      "markout_60s": {
+        "n": 4221,
+        "meanBps": 0.30741865554276065,
+        "stderrBps": 0.08375275335271029
+      }
+    }
+  ]
+}

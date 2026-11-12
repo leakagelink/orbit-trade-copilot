@@ -26,6 +26,8 @@ export interface PaperStore {
   hasPro(userId: string): Promise<boolean>;
   commit(strategyId: string, expectedCursor: number, payload: PaperCommitPayload): Promise<void>;
   mark(strategyId: string, fields: { data_status: string; status?: "paused"; status_reason?: string }): Promise<void>;
+  /** Owner inbox notice when the worker pauses a strategy; deduplicated per strategy and candle. Optional. */
+  notifyPaused?(userId: string, strategyId: string, eventKey: string, reason: string): Promise<void>;
 }
 export type PaperCandleSource = (pair: string, timeframe: string) => Promise<{ candles: Candle[]; fetchedAt: number }>;
 export type PaperOutcome = "committed" | "up_to_date" | "stale" | "data_outage" | "data_gap" | "invalid_data" | "cursor_conflict" | "risk_recheck" | "commit_failed" | "deferred";
@@ -48,6 +50,12 @@ function contiguousHistory(closed: Candle[], idx: number, tfMs: number) {
   let start = idx;
   while (start > 0 && idx - start + 1 < PAPER_HISTORY_WINDOW && closed[start]!.t - closed[start - 1]!.t === tfMs) start--;
   return closed.slice(start, idx + 1);
+}
+
+/** A failed notice never blocks or changes paper processing; the pause itself is already recorded on the strategy. */
+async function notify(store: PaperStore, s: PaperStrategyRow, key: string, reason: string) {
+  if (s.status !== "active" || !store.notifyPaused) return; // only on the transition into "paused"
+  try { await store.notifyPaused(s.user_id, s.id, `paper-paused:${s.id}:${key}`, reason); } catch { /* logged by the tick summary */ }
 }
 
 export async function processPaperStrategy(store: PaperStore, s: PaperStrategyRow, load: () => Promise<{ candles: Candle[]; fetchedAt: number }>, now: number): Promise<{ outcome: PaperOutcome; committed: number; detail?: string }> {
@@ -76,9 +84,11 @@ export async function processPaperStrategy(store: PaperStore, s: PaperStrategyRo
   if (pending[0]!.t !== cursor + tf) {
     const missing = new Date(cursor + tf).toISOString();
     const behind = closed[0]!.t > cursor + tf;
-    await store.mark(s.id, { data_status: "Market data gap", status: "paused", status_reason: behind
+    const reason = behind
       ? `The worker fell behind: candle ${missing} is older than the available market data; paused for review — nothing was filled across the gap`
-      : `Candle ${missing} is missing from the market data; paused for review — nothing was filled across the gap` });
+      : `Candle ${missing} is missing from the market data; paused for review — nothing was filled across the gap`;
+    await store.mark(s.id, { data_status: "Market data gap", status: "paused", status_reason: reason });
+    await notify(store, s, `gap:${cursor + tf}`, reason);
     return { outcome: "data_gap", committed: 0, detail: missing };
   }
   const { account, peers } = await store.account(s.user_id);
@@ -98,6 +108,7 @@ export async function processPaperStrategy(store: PaperStore, s: PaperStrategyRo
     } catch (e) {
       if (!(e instanceof PaperDataError)) throw e;
       await store.mark(s.id, { data_status: "Market data rejected", status: "paused", status_reason: `${e.message}; paused for review — nothing was filled` });
+      await notify(store, s, `invalid:${bar.t}`, `${e.message}; paused for review — nothing was filled`);
       return { outcome: "invalid_data", committed, detail: e.message };
     }
     try {
@@ -163,6 +174,11 @@ export async function supabasePaperStore(): Promise<PaperStore> {
     async hasPro(userId) { const { data, error } = await db.rpc("has_pro_access", { _uid: userId }); if (error) throw new Error(error.message); return data === true; },
     async commit(id, expected, payload) { const { error } = await db.rpc("paper_commit_bar", { p_strategy: id, p_expected_cursor: expected, p_payload: payload }); if (error) throw new Error(error.message); },
     async mark(id, fields) { await db.from("paper_strategies").update({ ...fields, last_checked_at: new Date().toISOString() }).eq("id", id).neq("status", "stopped"); },
+    async notifyPaused(userId, _strategyId, eventKey, reason) {
+      // Existing owner inbox; the unique (user_id, event_key) index makes a repeated tick a no-op. No order, no wallet.
+      const { error } = await db.from("notifications").insert({ user_id: userId, kind: "system", event_key: eventKey, title: "Paper strategy paused", body: `${reason}. Simulated only — no real order is affected. Review it on the Paper trading page.`.slice(0, 500) });
+      if (error && error.code !== "23505") throw new Error(error.message);
+    },
   };
 }
 

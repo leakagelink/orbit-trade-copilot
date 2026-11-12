@@ -23,3 +23,26 @@ describe("paper tick budget", () => {
     expect(out.every((r) => r.outcome === "data_outage" && r.committed === 0)).toBe(true);
   });
 });
+
+describe("paused-strategy notices", () => {
+  it("a data gap pauses the strategy once and sends one deduplicated owner notice; nothing is filled", async () => {
+    const notices: string[] = [], marks: { status?: string }[] = [];
+    const s = { id: "s1", user_id: "u1", tf_ms: 60_000, cursor_t: 0, status: "active" } as unknown as PaperStrategyRow;
+    const store: PaperStore = { ...fakeStore([s], []), async mark(_id, f) { marks.push(f); }, async notifyPaused(u, _sid, key) { notices.push(`${u}|${key}`); } };
+    const candles = [{ t: 180_000, o: 1, h: 1, l: 1, c: 1, v: 1 }]; // candle 60_000 is missing
+    const r = await runPaperTick(store, async () => ({ candles, fetchedAt: 0 }), 10_000_000);
+    expect(r[0]!.outcome).toBe("data_gap");
+    expect(marks[0]!.status).toBe("paused");
+    expect(notices).toEqual(["u1|paper-paused:s1:gap:60000"]);
+    // Already paused: no second notice on the next tick.
+    const again = await runPaperTick({ ...store, async listRunnable() { return [{ ...s, status: "paused" } as PaperStrategyRow]; } }, async () => ({ candles, fetchedAt: 0 }), 10_000_000);
+    expect(again[0]!.outcome).toBe("data_gap");
+    expect(notices).toHaveLength(1);
+  });
+  it("a failing notice never blocks processing", async () => {
+    const s = { id: "s1", user_id: "u1", tf_ms: 60_000, cursor_t: 0, status: "active" } as unknown as PaperStrategyRow;
+    const store: PaperStore = { ...fakeStore([s], []), async notifyPaused() { throw new Error("inbox down"); } };
+    const r = await runPaperTick(store, async () => ({ candles: [{ t: 180_000, o: 1, h: 1, l: 1, c: 1, v: 1 }], fetchedAt: 0 }), 10_000_000);
+    expect(r[0]!.outcome).toBe("data_gap");
+  });
+});
