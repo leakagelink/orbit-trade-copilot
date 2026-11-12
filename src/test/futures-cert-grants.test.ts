@@ -72,3 +72,22 @@ describe("certification table privileges after 0040", () => {
     await expect(as("service_role", INSERT.replace(`'${PROD}','${TEST}'`, `'${TEST}','${TEST}'`))).rejects.toThrow(/production Binance account/);
   });
 });
+
+const M0041 = readFileSync("docs/proposed-migrations/0041_futures_harness_evidence.sql", "utf8");
+describe("proposed harness evidence table (0041)", () => {
+  const row = (conn: string) => `INSERT INTO public.futures_harness_runs(user_id,connection_id,scenario,status,revision,started_at,ended_at)
+    VALUES ('${U}','${conn}','partial_fill','fail','futures-exec-2026-11-r1',now(),now())`;
+  beforeAll(async () => { await db.exec(M0041); });
+  it("gives browser roles no write access and anon no access", async () => {
+    for (const sql of [row(TEST), "UPDATE public.futures_harness_runs SET status='pass'", "DELETE FROM public.futures_harness_runs", "TRUNCATE public.futures_harness_runs"]) {
+      await expect(as("authenticated", sql)).rejects.toThrow(/permission denied/);
+      await expect(as("anon", sql)).rejects.toThrow(/permission denied/);
+    }
+  });
+  it("accepts backend evidence only for the owner's Testnet account and keeps it append-only", async () => {
+    await expect(as("service_role", row(PROD))).rejects.toThrow(/Testnet account/);
+    await expect(as("service_role", row(TEST))).resolves.toBeTruthy();
+    await expect(as("service_role", "UPDATE public.futures_harness_runs SET status='pass'")).rejects.toThrow(/append-only/);
+    await expect(as("service_role", "TRUNCATE public.futures_harness_runs")).rejects.toThrow(/append-only/);
+  });
+});

@@ -1,8 +1,11 @@
 // Binance USD-M only; never fall back to Spot hosts or change account-wide position mode.
 import type { Creds } from './exchange-adapters.server';
-export type FuturesAccount={connectionId:string;testnet:boolean;creds:Creds};
+import { prepareCall, finishCall, type FaultPlan } from './futures-faults.server';
+// `faults` is attached only by the Testnet certification harness; production accounts refuse it.
+export type FuturesAccount={connectionId:string;testnet:boolean;creds:Creds;faults?:FaultPlan};
 export function futuresHost(testnet:boolean){return testnet?'https://testnet.binancefuture.com':'https://fapi.binance.com';}
-export async function futuresCall<T>(a:Pick<FuturesAccount,'testnet'|'creds'>,method:'GET'|'POST'|'DELETE',path:string,params:Record<string,string|number>={},signed=true):Promise<T>{
+export async function futuresCall<T>(a:Pick<FuturesAccount,'testnet'|'creds'|'faults'>,method:'GET'|'POST'|'DELETE',path:string,params:Record<string,string|number>={},signed=true):Promise<T>{
+ const fault=a.faults?prepareCall(a.faults,a.testnet,method,path,params):null;if(fault)params=fault.params;
  const qs=new URLSearchParams(Object.entries(params).map(([k,v])=>[k,String(v)]));
  if(signed){
   qs.set('timestamp',String(Date.now()));qs.set('recvWindow','10000');
@@ -12,7 +15,8 @@ export async function futuresCall<T>(a:Pick<FuturesAccount,'testnet'|'creds'>,me
  }
  const r=await fetch(`${futuresHost(a.testnet)}${path}?${qs}`,{method,headers:signed?{'X-MBX-APIKEY':a.creds.apiKey}:{},signal:AbortSignal.timeout(12000)});
  if(!r.ok){let j:{code?:number;msg?:string}={};try{j=await r.json();}catch{};throw new Error(`Binance Futures ${r.status}${j.code?` (${j.code})`:''}: ${j.msg??'request unavailable'}`);}
- return await r.json() as T;
+ const body=await r.json();
+ return (fault?finishCall(fault.rule,body):body) as T;
 }
 export type BrokerPosition={symbol:string;positionAmt:string;entryPrice:string;markPrice:string;unRealizedProfit:string;positionSide:string;leverage?:string;marginType?:string};
 export type BrokerOrder=import('./futures-execution').FillOrder & {time?:number;updateTime?:number};
