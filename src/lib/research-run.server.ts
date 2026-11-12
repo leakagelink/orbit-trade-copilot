@@ -1,5 +1,6 @@
 // Research run orchestration (advisory only). Writes only research and audit tables; it never creates orders,
-// order intents, positions or settings, and never calls execution code. AI output is never an input to sizing.
+// order intents, positions or settings. The only trading-module call is the read-only `accountRiskBlock` check
+// (selects only). AI output is never an input to sizing.
 import { AI_MODEL, AI_PROVIDER_NAME } from "./ai-provider";
 import { runResearchStages, runDecisionStages, type ResearchAgent, type AgentResult, type ResearchReport } from "./research-pipeline";
 import { buildResearchProposal } from "./research-proposal";

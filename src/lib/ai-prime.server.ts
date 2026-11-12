@@ -55,7 +55,7 @@ export function assembleClaudeStream(events: { event: string; data: unknown }[])
   let usage: Record<string, unknown> = {}; let stop: string | null = null;
   for (const { event, data } of events) {
     const d = (data ?? {}) as Record<string, any>;
-    if (event === "error" || d.type === "error") throw new Error(aiErrorMessage(529, JSON.stringify(d)));
+    if (event === "error" || d.type === "error") { console.error(`AI Prime Tech stream error: ${JSON.stringify(d).slice(0, 500)}`); throw new Error(aiErrorMessage(529, JSON.stringify(d))); }
     if (d.type === "message_start") { message = { ...d.message }; usage = { ...(d.message?.usage ?? {}) }; }
     else if (d.type === "content_block_start") { blocks[d.index] = { ...d.content_block }; json[d.index] = ""; }
     else if (d.type === "content_block_delta") {
