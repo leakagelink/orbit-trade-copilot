@@ -9,6 +9,8 @@ const input = z.object({
   capital: z.number().positive().max(1e9),
   feePct: z.number().min(0).max(2),
   slippagePct: z.number().min(0).max(2),
+  spreadPct: z.number().min(0).max(2).optional(),
+  maxParticipationPct: z.number().gt(0).max(100).nullable().optional(),
 });
 
 export const runBacktestFn = createServerFn({ method: "POST" })

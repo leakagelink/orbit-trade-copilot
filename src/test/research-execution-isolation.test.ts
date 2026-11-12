@@ -32,6 +32,7 @@ function reachable(entries: string[]) {
 const RESEARCH_ENTRIES = [
   "src/routes/_authenticated/research.tsx", "src/lib/research.functions.ts", "src/lib/research-insights.functions.ts",
   "src/lib/research-paper.functions.ts", "src/lib/research-run.server.ts", "src/lib/research.server.ts", "src/lib/research-risk.server.ts",
+  "src/lib/research-outcomes.ts",
 ];
 // Modules that can submit orders, change positions/bots/settings, read exchange credentials or run trading flows.
 const EXECUTION = /src\/lib\/(engine|exchange-adapters|manual|futures[\w-]*|binance-futures[\w-]*|deriv-trade|deriv|arbitrage[\w-]*|autopilot[\w-]*|credential-environment|crypto|scalp[\w-]*)\.server\.ts$|src\/lib\/(emergency-recovery|futures-execution|arbitrage-recovery)\.ts$|src\/lib\/(?!research)[\w-]+\.functions\.ts$|src\/routes\/api\//;
