@@ -217,8 +217,8 @@ describe("account limits re-checked at fill", () => {
   it("shrinks the entry to the exposure room left and completes it (no order keeps working for more)", () => {
     const r = at({ ...ACCOUNT, otherExposure: 800 });
     const f = r.events.find((e) => e.event === "filled")!;
-    expect(f.qty * f.price).toBeLessThanOrEqual(200 + 1e-6);
-    expect(f.qty * f.price).toBeGreaterThan(199);
+    expect(f.qty * f.price!).toBeLessThanOrEqual(200 + 1e-6);
+    expect(f.qty * f.price!).toBeGreaterThan(199);
     expect(r.record.open_exposure + 800).toBeLessThanOrEqual(1000 + 1e-6);
     expect(r.state.orders).toHaveLength(0);
   });

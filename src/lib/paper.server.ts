@@ -142,7 +142,8 @@ export async function supabasePaperStore(): Promise<PaperStore> {
   // The paper tables are not in the generated types until 0044 is applied.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = supabaseAdmin as any;
-  const probe = await db.from("paper_strategies").select("id", { head: true, count: "exact" }).limit(1);
+  // A plain GET (not HEAD): a HEAD reply has no body, so a missing table would not be recognised.
+  const probe = await db.from("paper_strategies").select("id").limit(1);
   if (missingTable(probe.error)) throw new PaperLedgerUnavailable("Paper ledger not enabled (draft migration 0044 awaits approval)");
   if (probe.error) throw new Error(probe.error.message);
   return {

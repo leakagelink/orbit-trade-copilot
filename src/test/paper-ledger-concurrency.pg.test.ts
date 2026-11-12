@@ -19,6 +19,7 @@ CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT nullif(
 CREATE FUNCTION public.account_mfa_allowed() RETURNS boolean LANGUAGE sql AS $$ SELECT true $$;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated, service_role;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO anon, authenticated, service_role;`;
+// jsonb parameters are passed as objects: postgres.js serializes them itself.
 // Test-only invariant monitor (not part of 0044): after every ledger change, record any account whose committed
 // paper exposure or open positions exceed its limits. The migration must never let one through.
 const MONITOR = `CREATE TABLE public.test_violations (user_id uuid, what text, at timestamptz DEFAULT clock_timestamp());
@@ -71,7 +72,7 @@ async function strategy(owner: Sql, url: string, user: string, sid: string, limi
   await b.unsafe(`INSERT INTO public.paper_accounts(user_id,${cols.join(",")}) VALUES ($1,${cols.map((_, i) => `$${i + 2}`).join(",")}) ON CONFLICT DO NOTHING`, [user, ...Object.values(limits)]);
   await b.unsafe(`INSERT INTO public.paper_strategies(id,user_id,strategy_id,strategy_name,config,engine_version,data_source,pair,timeframe,costs,risk,starting_capital,state)
     VALUES ($1,$2,gen_random_uuid(),'Wave test',$3::jsonb,$4,'binance-public-spot-klines','BTC/USDT','1h',$5::jsonb,$6::jsonb,1000,$7::jsonb)`,
-    [sid, user, JSON.stringify(CFG), PAPER_ENGINE_VERSION, JSON.stringify(COSTS), JSON.stringify(POLICY), JSON.stringify(initialPaperState(1000))]);
+    [sid, user, CFG, PAPER_ENGINE_VERSION, COSTS, POLICY, initialPaperState(1000)] as never[]);
   await owner.unsafe(`SELECT set_config('paper.commit','on',false)`);
   await owner.unsafe(`UPDATE public.paper_strategies SET cursor_t=${cursor} WHERE id='${sid}'`);
   await owner.unsafe(`SELECT set_config('paper.commit','off',false)`);
@@ -93,7 +94,7 @@ function store(s: Sql, o: { afterAccount?: () => Promise<void>; commit?: (id: st
     async hasPro() { return true; },
     async commit(id, expected, payload) {
       if (o.commit) return o.commit(id, expected, payload);
-      await s.unsafe(`SELECT public.paper_commit_bar($1,$2,$3::jsonb)`, [id, expected, JSON.stringify(payload)]);
+      await s.unsafe(`SELECT public.paper_commit_bar($1,$2,$3::jsonb)`, [id, expected, payload as never]);
     },
     async mark(id, f) { await s.unsafe(`UPDATE public.paper_strategies SET data_status=$2, status=coalesce($3,status), status_reason=coalesce($4,status_reason), last_checked_at=now() WHERE id=$1 AND status<>'stopped'`, [id, f.data_status, f.status ?? null, f.status_reason ?? null]); },
   };
@@ -154,7 +155,7 @@ function payload(barT: number, startCash: number, f: { intent: "entry" | "exit";
     trades: [], state: { ...initialPaperState(1000), cash }, data_fetched_at: Date.now(),
   } as unknown as PaperCommitPayload;
 }
-const commitSql = (sid: string, cursor: number, p: PaperCommitPayload) => [`SELECT public.paper_commit_bar($1,$2,$3::jsonb) AS r`, [sid, cursor, JSON.stringify(p)]] as const;
+const commitSql = (sid: string, cursor: number, p: PaperCommitPayload) => [`SELECT public.paper_commit_bar($1,$2,$3::jsonb) AS r`, [sid, cursor, p as never]] as const;
 const isWaitingOnLock = async (owner: Sql) => Number((await owner.unsafe(`SELECT count(*) n FROM pg_stat_activity WHERE datname=current_database() AND wait_event_type='Lock'`))[0]!["n"]) > 0;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -190,17 +191,21 @@ describe.skipIf(!URL)("draft 0044 under genuinely concurrent database sessions",
     const { url, owner } = await freshDb();
     const limits = { ...BIG, max_exposure: 400 };
     await strategy(owner, url, UA, S(4), limits); await strategy(owner, url, UA, S(5), limits);
+    // Flat prices: whichever strategy gets in holds its position, so the other one must fit the remaining room.
+    const flatFeed = async () => ({ candles: CANDLES.map((c) => ({ ...c, o: 100, h: 100, l: 100, c: 100, v: 1000 })), fetchedAt: Date.now() });
     const [w1, w2] = [await backend(url), await backend(url)];
     const both = barrier(2); // each worker reads the account before either commits: both size against 0 exposure
     const [r1, r2] = await Promise.all([
-      runPaperTick(store(w1, { afterAccount: both, only: [S(4)] }), feed), runPaperTick(store(w2, { afterAccount: both, only: [S(5)] }), feed),
+      runPaperTick(store(w1, { afterAccount: both, only: [S(4)] }), flatFeed), runPaperTick(store(w2, { afterAccount: both, only: [S(5)] }), flatFeed),
     ]);
     expect([...r1, ...r2].map((x) => x.outcome)).toContain("risk_recheck");
-    expect(Number((await owner.unsafe(`SELECT sum(open_exposure) e FROM public.paper_strategies`))[0]!["e"])).toBeLessThanOrEqual(400.000001);
-    // Recovery: the refused candle is recomputed with the fresh account view (resized or cancelled at fill), never stuck.
-    await untilUpToDate(async () => (await Promise.all([runPaperTick(store(w1, { only: [S(4)] }), feed), runPaperTick(store(w2, { only: [S(5)] }), feed)])).flat());
-    expect((await owner.unsafe(`SELECT cursor_t FROM public.paper_strategies`)).map((r) => Number(r["cursor_t"]))).toEqual([END, END]);
-    expect(Number((await owner.unsafe(`SELECT count(*) n FROM public.paper_order_events WHERE reason LIKE 'Account limits re-checked at fill%'`))[0]!["n"]) + Number((await owner.unsafe(`SELECT count(*) n FROM public.paper_bars WHERE decision->'risk'->>'binding'='account exposure'`))[0]!["n"])).toBeGreaterThan(0);
+    // Recovery: the refused candle is recomputed with the fresh account view and the entry is resized at fill — never stuck.
+    await untilUpToDate(async () => (await Promise.all([runPaperTick(store(w1, { only: [S(4)] }), flatFeed), runPaperTick(store(w2, { only: [S(5)] }), flatFeed)])).flat());
+    const rows = await owner.unsafe(`SELECT cursor_t, open_exposure FROM public.paper_strategies ORDER BY open_exposure DESC`);
+    expect(rows.map((r) => Number(r["cursor_t"]))).toEqual([END, END]);
+    expect(Number(rows[0]!["open_exposure"])).toBeCloseTo(300, 0);
+    expect(Number(rows[1]!["open_exposure"])).toBeGreaterThan(99);
+    expect(Number(rows[0]!["open_exposure"]) + Number(rows[1]!["open_exposure"])).toBeLessThanOrEqual(400.000001);
     await integrity(owner);
   }, 120_000);
 
@@ -208,7 +213,7 @@ describe.skipIf(!URL)("draft 0044 under genuinely concurrent database sessions",
     const { url, owner } = await freshDb();
     const limits = { ...BIG, max_daily_loss: 50 };
     const C = END - 10 * TF, bt = C + TF;
-    await strategy(owner, url, UA, S(6), limits, C); await strategy(owner, url, UA, S(7), limits, C); await strategy(owner, url, UA, S(8), limits, C);
+    await strategy(owner, url, UA, S(6), limits, C); await strategy(owner, url, UA, S(7), limits, C);
     const [a, b] = [await backend(url), await backend(url)];
     // Loss first: S6 realizes -60 inside an open transaction; S7's entry waits on the account lock, then sees the loss.
     const tx = await a.reserve(); await tx.unsafe("BEGIN"); await tx.unsafe("SET LOCAL ROLE service_role");
@@ -217,8 +222,7 @@ describe.skipIf(!URL)("draft 0044 under genuinely concurrent database sessions",
     await sleep(400); expect(await isWaitingOnLock(owner)).toBe(true);
     await tx.unsafe("COMMIT"); tx.release();
     expect(await entry).toMatch(/paper_risk_conflict: daily loss/);
-    // Entry first: S8's entry commits while... the account is already past the limit, so it is refused too; reset by
-    // a fresh account to show the opposite order: entry inside a transaction, the loss waits, both stand (serial order).
+    // Opposite order, on a fresh database: the entry holds the account lock, the loss waits; both stand (a valid serial order).
     const { url: url2, owner: owner2 } = await freshDb();
     await strategy(owner2, url2, UA, S(6), limits, C); await strategy(owner2, url2, UA, S(7), limits, C);
     const [c, d] = [await backend(url2), await backend(url2)];
@@ -271,9 +275,9 @@ describe.skipIf(!URL)("draft 0044 under genuinely concurrent database sessions",
     const pid = Number((await victim.unsafe(`SELECT pg_backend_pid() p`))[0]!["p"]);
     let commits = 0;
     const crashing = store(w, { commit: async (sid, expected, p) => {
-      if (commits++ < 7) { await w.unsafe(`SELECT public.paper_commit_bar($1,$2,$3::jsonb)`, [sid, expected, JSON.stringify(p)]); return; }
+      if (commits++ < 7) { await w.unsafe(`SELECT public.paper_commit_bar($1,$2,$3::jsonb)`, [sid, expected, p as never]); return; }
       await victim.unsafe("BEGIN"); await victim.unsafe("SET LOCAL ROLE service_role");
-      await victim.unsafe(`SELECT public.paper_commit_bar($1,$2,$3::jsonb)`, [sid, expected, JSON.stringify(p)]);
+      await victim.unsafe(`SELECT public.paper_commit_bar($1,$2,$3::jsonb)`, [sid, expected, p as never]);
       await owner.unsafe(`SELECT pg_terminate_backend(${pid})`); // the worker dies before COMMIT
       throw new Error("worker crashed");
     } });

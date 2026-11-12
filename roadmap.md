@@ -3,7 +3,9 @@
 ## Phase 3 — Forward paper trading — 12 November 2026
 - [x] Audit existing paper trading (bot paper path unchanged; research paper observations unchanged)
 - [x] Pure forward paper engine, paper Risk Engine, worker, owner functions, cron route, Paper trading page; 48 new tests (engine, draft ledger in PGlite, isolation); full suite, typecheck, build
-- [ ] Apply draft migration 0044 — waits on owner approval (and a fresh export + practice restore first)
+- [x] Final preflight: multi-session PostgreSQL tests (7), restore-test script for 0044 (dry run on older export passes), stuck-entry and endpoint defects fixed, guard hardened, tick budget
+- [ ] Fresh database export + `scripts/db-export/test-0044-on-restore.sh` — waits on owner creating the export
+- [ ] Apply draft migration 0044 — waits on owner approval after the fresh-export test
 - [ ] Schedule the paper tick every minute — waits on 0044
 - [ ] Collect 100 settled forward paper trades per strategy before any evaluation — waits on 0044 + time
 
