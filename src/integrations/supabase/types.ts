@@ -1094,6 +1094,69 @@ export type Database = {
         }
         Relationships: []
       }
+      futures_broker_events: {
+        Row: {
+          broker_event_id: string
+          connection_id: string
+          event_type: string
+          id: string
+          observed_at: string
+          payload: Json
+          position_id: string | null
+          user_id: string
+        }
+        Insert: {
+          broker_event_id: string
+          connection_id: string
+          event_type: string
+          id?: string
+          observed_at?: string
+          payload?: Json
+          position_id?: string | null
+          user_id: string
+        }
+        Update: {
+          broker_event_id?: string
+          connection_id?: string
+          event_type?: string
+          id?: string
+          observed_at?: string
+          payload?: Json
+          position_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      futures_execution_leases: {
+        Row: {
+          acquired_at: string
+          connection_id: string
+          expires_at: string
+          fence: number
+          holder: string
+          purpose: string
+          user_id: string
+        }
+        Insert: {
+          acquired_at?: string
+          connection_id: string
+          expires_at: string
+          fence: number
+          holder: string
+          purpose: string
+          user_id: string
+        }
+        Update: {
+          acquired_at?: string
+          connection_id?: string
+          expires_at?: string
+          fence?: number
+          holder?: string
+          purpose?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       futures_settings: {
         Row: {
           connection_id: string | null
@@ -1308,10 +1371,12 @@ export type Database = {
         Row: {
           avg_fill_price: number | null
           bot_id: string | null
+          client_order_id: string | null
           created_at: string
           exchange: string
           exchange_connection_id: string | null
           exchange_order_id: string | null
+          execution_environment: string
           filled_quantity: number
           id: string
           idempotency_key: string
@@ -1330,10 +1395,12 @@ export type Database = {
         Insert: {
           avg_fill_price?: number | null
           bot_id?: string | null
+          client_order_id?: string | null
           created_at?: string
           exchange: string
           exchange_connection_id?: string | null
           exchange_order_id?: string | null
+          execution_environment: string
           filled_quantity?: number
           id?: string
           idempotency_key: string
@@ -1352,10 +1419,12 @@ export type Database = {
         Update: {
           avg_fill_price?: number | null
           bot_id?: string | null
+          client_order_id?: string | null
           created_at?: string
           exchange?: string
           exchange_connection_id?: string | null
           exchange_order_id?: string | null
+          execution_environment?: string
           filled_quantity?: number
           id?: string
           idempotency_key?: string
@@ -1439,6 +1508,7 @@ export type Database = {
           entry_price: number
           exchange: string
           exchange_connection_id: string | null
+          execution_environment: string
           external_ref: string | null
           futures_details: Json | null
           id: string
@@ -1467,6 +1537,7 @@ export type Database = {
           entry_price: number
           exchange: string
           exchange_connection_id?: string | null
+          execution_environment: string
           external_ref?: string | null
           futures_details?: Json | null
           id?: string
@@ -1495,6 +1566,7 @@ export type Database = {
           entry_price?: number
           exchange?: string
           exchange_connection_id?: string | null
+          execution_environment?: string
           external_ref?: string | null
           futures_details?: Json | null
           id?: string
@@ -2121,6 +2193,7 @@ export type Database = {
           entry_price: number
           exchange: string
           exchange_connection_id: string | null
+          execution_environment: string
           exit_price: number | null
           fees: number
           funding_pnl: number | null
@@ -2128,8 +2201,10 @@ export type Database = {
           is_scalp: boolean
           market_type: string
           mode: Database["public"]["Enums"]["trading_mode"]
+          net_pnl: number | null
           opened_at: string
           order_id: string | null
+          position_id: string | null
           quantity: number
           realized_pnl: number
           side: Database["public"]["Enums"]["order_side"]
@@ -2147,6 +2222,7 @@ export type Database = {
           entry_price: number
           exchange: string
           exchange_connection_id?: string | null
+          execution_environment: string
           exit_price?: number | null
           fees?: number
           funding_pnl?: number | null
@@ -2154,8 +2230,10 @@ export type Database = {
           is_scalp?: boolean
           market_type?: string
           mode: Database["public"]["Enums"]["trading_mode"]
+          net_pnl?: number | null
           opened_at: string
           order_id?: string | null
+          position_id?: string | null
           quantity: number
           realized_pnl?: number
           side: Database["public"]["Enums"]["order_side"]
@@ -2173,6 +2251,7 @@ export type Database = {
           entry_price?: number
           exchange?: string
           exchange_connection_id?: string | null
+          execution_environment?: string
           exit_price?: number | null
           fees?: number
           funding_pnl?: number | null
@@ -2180,8 +2259,10 @@ export type Database = {
           is_scalp?: boolean
           market_type?: string
           mode?: Database["public"]["Enums"]["trading_mode"]
+          net_pnl?: number | null
           opened_at?: string
           order_id?: string | null
+          position_id?: string | null
           quantity?: number
           realized_pnl?: number
           side?: Database["public"]["Enums"]["order_side"]
@@ -2509,6 +2590,38 @@ export type Database = {
           trades: number
           win_rate: number
         }[]
+      }
+      futures_acquire_lease: {
+        Args: {
+          _connection: string
+          _holder: string
+          _purpose: string
+          _ttl_seconds: number
+          _user: string
+        }
+        Returns: number
+      }
+      futures_finalize_position: {
+        Args: {
+          _fence: number
+          _holder: string
+          _position: string
+          _trade: Json
+        }
+        Returns: string
+      }
+      futures_release_lease: {
+        Args: { _connection: string; _fence: number; _holder: string }
+        Returns: boolean
+      }
+      futures_renew_lease: {
+        Args: {
+          _connection: string
+          _fence: number
+          _holder: string
+          _ttl_seconds: number
+        }
+        Returns: boolean
       }
       has_elite_access: { Args: { _uid: string }; Returns: boolean }
       has_pro_access: { Args: { _uid: string }; Returns: boolean }

@@ -253,6 +253,13 @@
       "when": 1794412988360,
       "tag": "0035_binance_futures_scalping",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1794454867517,
+      "tag": "0036_futures_execution_hardening",
+      "breakpoints": true
     }
   ]
 }
