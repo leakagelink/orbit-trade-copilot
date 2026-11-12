@@ -96,3 +96,24 @@ export interface ScenarioResult {
 export function verdict(checks: ScenarioResult['checks'], productionChanged: string[]): ScenarioResult['status'] {
   return checks.length > 0 && checks.every(c => c.ok) && productionChanged.length === 0 ? 'pass' : 'fail';
 }
+
+/** Production state that must hold before and after any Phase 1.6 preparation or run. Empty = safe. */
+export interface ProductionSafetyFacts {
+  autopilotOn: number; futuresLiveOn: number; passCertifications: number;
+  productionPendingOrders: number; productionOpenFutures: number; activeLeases: number;
+}
+export function productionSafetyProblems(f: ProductionSafetyFacts): string[] {
+  const p: string[] = [];
+  if (f.autopilotOn) p.push(`${f.autopilotOn} account(s) have AI Autopilot ON`);
+  if (f.futuresLiveOn) p.push(`${f.futuresLiveOn} account(s) have Live Futures ON`);
+  if (f.passCertifications) p.push(`${f.passCertifications} PASS certification record(s) exist`);
+  if (f.productionPendingOrders) p.push(`${f.productionPendingOrders} production Futures order(s) pending`);
+  if (f.productionOpenFutures) p.push(`${f.productionOpenFutures} production Futures position(s) open`);
+  if (f.activeLeases) p.push(`${f.activeLeases} Futures execution lease(s) held`);
+  return p;
+}
+/** Only these Binance Futures reads are allowed during read-only verification. */
+export const READ_ONLY_FUTURES_PATHS = ['/fapi/v3/account', '/fapi/v1/accountConfig', '/fapi/v1/positionSide/dual', '/fapi/v1/multiAssetsMargin', '/fapi/v3/positionRisk', '/fapi/v1/openOrders', '/fapi/v1/openAlgoOrders'] as const;
+export function assertReadOnlyCall(method: string, path: string) {
+  if (method !== 'GET' || !(READ_ONLY_FUTURES_PATHS as readonly string[]).includes(path)) throw new Error(`Read-only verification refused ${method} ${path}`);
+}

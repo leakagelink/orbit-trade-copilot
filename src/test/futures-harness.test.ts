@@ -97,3 +97,23 @@ describe('harness verdicts', () => {
     expect(fundingMatches(null, [{ income: '-0.001' }])).toBe(false);
   });
 });
+
+describe('Phase 1.6 read-only preflight rules', () => {
+  const safe = { autopilotOn: 0, futuresLiveOn: 0, passCertifications: 0, productionPendingOrders: 0, productionOpenFutures: 0, activeLeases: 0 };
+  it('production is safe only with Autopilot OFF, Live Futures OFF, no PASS and nothing open', async () => {
+    const { productionSafetyProblems } = await import('@/lib/futures-harness');
+    expect(productionSafetyProblems(safe)).toEqual([]);
+    expect(productionSafetyProblems({ ...safe, autopilotOn: 1 })).toHaveLength(1);
+    expect(productionSafetyProblems({ ...safe, futuresLiveOn: 1 })).toHaveLength(1);
+    expect(productionSafetyProblems({ ...safe, passCertifications: 1 })).toHaveLength(1);
+    expect(productionSafetyProblems({ ...safe, productionOpenFutures: 1, productionPendingOrders: 1 })).toHaveLength(2);
+  });
+  it('allows only GET reads of account state, never order or settings endpoints', async () => {
+    const { assertReadOnlyCall } = await import('@/lib/futures-harness');
+    expect(() => assertReadOnlyCall('GET', '/fapi/v3/account')).not.toThrow();
+    expect(() => assertReadOnlyCall('POST', '/fapi/v1/order')).toThrow(/refused/);
+    expect(() => assertReadOnlyCall('GET', '/fapi/v1/order')).toThrow(/refused/);
+    expect(() => assertReadOnlyCall('POST', '/fapi/v1/leverage')).toThrow(/refused/);
+    expect(() => assertReadOnlyCall('DELETE', '/fapi/v1/allOpenOrders')).toThrow(/refused/);
+  });
+});

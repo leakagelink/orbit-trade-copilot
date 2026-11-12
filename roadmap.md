@@ -1,5 +1,13 @@
 # Roadmap
 
+## Phase 1.6 preparation only — 12 November 2026 09:04 UTC
+- [x] Read-only production check: Autopilot OFF, Live Futures OFF, 0 certification records, nothing open/pending
+- [x] Repeatable export practice-restore check; current 06:52 export readable but predates safety migration 0039 → not suitable
+- [x] Read-only test-account preflight (GET-only exchange reads); refuses on the production sign-in
+- [ ] Verify tomorrow's fresh export — waiting on the new export
+- [ ] Read-only verification of dedicated test account — waiting on owner's test sign-in and fresh Testnet key
+- [ ] Apply 0040/0041 and run Testnet scenarios — waiting on owner approval
+
 ## Phase 1.6 isolated fault-injection certification — 12 November 2026
 - [x] Inspect isolation prerequisites — only Testnet connection shares an owner with production; kill switch is account-wide; stopped per Section B
 - [ ] Dedicated test sign-in, separate Testnet API key, its Elite access and owner-stated limits — waiting on owner
