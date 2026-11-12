@@ -592,6 +592,7 @@ export type Database = {
           error: string | null
           finished_at: string | null
           id: string
+          lease_holder: string | null
           lease_until: string | null
           live: boolean
           messages: Json
@@ -610,6 +611,7 @@ export type Database = {
           error?: string | null
           finished_at?: string | null
           id?: string
+          lease_holder?: string | null
           lease_until?: string | null
           live?: boolean
           messages?: Json
@@ -628,6 +630,7 @@ export type Database = {
           error?: string | null
           finished_at?: string | null
           id?: string
+          lease_holder?: string | null
           lease_until?: string | null
           live?: boolean
           messages?: Json
@@ -1123,6 +1126,45 @@ export type Database = {
           observed_at?: string
           payload?: Json
           position_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      futures_certifications: {
+        Row: {
+          connection_id: string
+          created_at: string
+          environment: string
+          evidence: Json
+          id: string
+          recorded_by: string
+          result: string
+          revision: string
+          testnet_connection_id: string | null
+          user_id: string
+        }
+        Insert: {
+          connection_id: string
+          created_at?: string
+          environment?: string
+          evidence?: Json
+          id?: string
+          recorded_by: string
+          result: string
+          revision: string
+          testnet_connection_id?: string | null
+          user_id: string
+        }
+        Update: {
+          connection_id?: string
+          created_at?: string
+          environment?: string
+          evidence?: Json
+          id?: string
+          recorded_by?: string
+          result?: string
+          revision?: string
+          testnet_connection_id?: string | null
           user_id?: string
         }
         Relationships: []
@@ -2601,6 +2643,7 @@ export type Database = {
         }
         Returns: number
       }
+      futures_certification_revision: { Args: never; Returns: string }
       futures_finalize_position: {
         Args: {
           _fence: number
@@ -2609,6 +2652,10 @@ export type Database = {
           _trade: Json
         }
         Returns: string
+      }
+      futures_live_authorized: {
+        Args: { _connection: string; _user: string }
+        Returns: boolean
       }
       futures_release_lease: {
         Args: { _connection: string; _fence: number; _holder: string }

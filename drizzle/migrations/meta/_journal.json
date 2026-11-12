@@ -274,6 +274,13 @@
       "when": 1794457639702,
       "tag": "0038_execution_environment_insert_defaults",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1794466478200,
+      "tag": "0039_futures_pass_certification_and_autopilot_fencing",
+      "breakpoints": true
     }
   ]
 }
