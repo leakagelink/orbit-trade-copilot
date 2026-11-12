@@ -82,6 +82,7 @@ class Query {
   in(k: string, v: unknown[]) { this.filters.push((r) => v.includes(r[k])); return this; }
   like(k: string, v: string) { this.filters.push((r) => String(r[k]).startsWith(v.replace("%", ""))); return this; }
   order() { return this; }
+  limit() { return this; }
   insert(p: Row) { this.op = "insert"; this.payload = p; return this; }
   update(p: Row) { this.op = "update"; this.payload = p; return this; }
   single() { this.one = true; return this; }
@@ -250,5 +251,76 @@ describe("exit acknowledgement uncertainty", () => {
     const id = await protectedEntry();
     S.hooks.order = (p) => { brokerFill(String(p["newClientOrderId"]), String(p["side"]), Number(p["quantity"]), true); throw new Error("timeout"); };
     await F.closeFutures(db as never, asPosition(id), "manual"); expect(exitSubmits()).toBe(1); expect(db.tables["trades"]).toHaveLength(1);
+  });
+});
+
+describe("production Futures authorization in the execution path", () => {
+  const P = "00000000-0000-4000-8000-0000000000a1";
+  const prodTicket = () => ({ ...ticket(), connectionId: P, confirmation: "LIVE" as const });
+  const pass = (result = "PASS", revision = "futures-exec-2026-11-r1") => ({ id: crypto.randomUUID(), user_id: U, connection_id: P, environment: "production", result, revision, created_at: new Date(S.clock + db.tables["futures_certifications"]!.length).toISOString() });
+  beforeEach(() => {
+    db.tables["exchange_connections"]!.push({ id: P, user_id: U, exchange: "binance", status: "connected", is_testnet: false, account_type: "both" });
+    db.tables["connection_credentials"]!.push({ connection_id: P, user_id: U, ciphertext: "x", iv: "y" });
+    // Observed production state: Live ON, bound account, stale legacy timestamp, no certification record.
+    Object.assign(db.tables["futures_settings"]![0]!, { connection_id: P, live_enabled: true, testnet_certified_at: "2026-11-11T17:26:58Z" });
+    db.tables["futures_certifications"] = [];
+  });
+  const posts = () => S.calls.filter((c) => c.startsWith("POST"));
+  it("rejects a stale timestamp before any broker call or order claim", async () => {
+    await expect(F.openFutures(db as never, U, prodTicket())).rejects.toThrow(/Production Futures locked/);
+    expect(posts()).toHaveLength(0); expect(db.tables["orders"]).toHaveLength(0);
+  });
+  it("rejects a latest FAIL that supersedes an earlier PASS", async () => {
+    db.tables["futures_certifications"]!.push(pass("PASS")); S.clock += 10; db.tables["futures_certifications"]!.push(pass("FAIL"));
+    await expect(F.openFutures(db as never, U, prodTicket())).rejects.toThrow(/Latest certification is FAIL/); expect(posts()).toHaveLength(0);
+  });
+  it("rejects a PASS from an older revision", async () => {
+    db.tables["futures_certifications"]!.push(pass("PASS", "futures-exec-2026-10-r0"));
+    await expect(F.openFutures(db as never, U, prodTicket())).rejects.toThrow(/stale/); expect(posts()).toHaveLength(0);
+  });
+  it("rejects when Live Futures is disabled even with a current PASS", async () => {
+    db.tables["futures_certifications"]!.push(pass()); db.tables["futures_settings"]![0]!["live_enabled"] = false;
+    await expect(F.openFutures(db as never, U, prodTicket())).rejects.toThrow(/Live Futures is disabled/); expect(posts()).toHaveLength(0);
+  });
+  it("re-checks immediately before submission: a FAIL recorded mid-preflight sends no entry", async () => {
+    db.tables["futures_certifications"]!.push(pass());
+    S.hooks.symbolConfig = () => { S.clock += 10; if (!db.tables["futures_certifications"]!.some((c) => c["result"] === "FAIL")) db.tables["futures_certifications"]!.push(pass("FAIL")); };
+    await expect(F.openFutures(db as never, U, prodTicket())).rejects.toThrow(/Latest certification is FAIL/);
+    expect(entrySubmits()).toBe(0); expect(db.tables["orders"]![0]!["status"]).toBe("cancelled");
+  });
+  it("an Autopilot guard that fails before submission sends no entry", async () => {
+    db.tables["futures_certifications"]!.push(pass()); let n = 0;
+    await expect(F.openFutures(db as never, U, prodTicket(), { beforeSubmit: async () => { if (++n === 3) throw new Error("Autopilot switched off"); } })).rejects.toThrow(/switched off/);
+    expect(entrySubmits()).toBe(0);
+  });
+  it("a current PASS on the bound account allows exactly one entry, and the same Autopilot request ID never submits twice", async () => {
+    db.tables["futures_certifications"]!.push(pass());
+    const { autopilotRequestId } = await import("@/lib/autopilot-fence");
+    const t = { ...prodTicket(), requestId: await autopilotRequestId("run-1", "toolu_1") };
+    await F.openFutures(db as never, U, t); expect(entrySubmits()).toBe(1);
+    await expect(F.openFutures(db as never, U, { ...t })).rejects.toThrow(); expect(entrySubmits()).toBe(1);
+  });
+  it("Testnet entries need no production certification", async () => {
+    await F.openFutures(db as never, U, ticket()); expect(entrySubmits()).toBe(1);
+  });
+});
+
+describe("Disable Live Futures", () => {
+  it("sets only live_enabled=false, confirms it, audits it and needs no certification", async () => {
+    Object.assign(db.tables["futures_settings"]![0]!, { live_enabled: true, testnet_certified_at: "2026-11-11T17:26:58Z" });
+    const { disableLiveFutures } = await import("@/lib/futures-authorization.server");
+    const r = await disableLiveFutures(db as never, U);
+    const s = db.tables["futures_settings"]![0]!;
+    expect(r).toEqual({ liveEnabled: false, changed: true, audited: true });
+    expect(s).toMatchObject({ live_enabled: false, connection_id: C, max_margin: 10, max_leverage: 2, max_loss: 2, testnet_certified_at: "2026-11-11T17:26:58Z" });
+    expect(db.tables["trading_safety_events"]).toEqual([expect.objectContaining({ user_id: U, action: "futures.live_disabled" })]);
+    expect(db.tables["exchange_connections"]![0]).toMatchObject({ is_testnet: true, status: "connected" });
+    expect(S.calls).toHaveLength(0);
+  });
+  it("reports failure instead of claiming OFF when the update fails", async () => {
+    Object.assign(db.tables["futures_settings"]![0]!, { live_enabled: true });
+    db.fail.add("futures_settings.update");
+    const { disableLiveFutures } = await import("@/lib/futures-authorization.server");
+    await expect(disableLiveFutures(db as never, U)).rejects.toThrow(/could not be disabled/);
   });
 });
