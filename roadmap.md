@@ -254,3 +254,10 @@
 
 ## Phase 6
 See the specification: engine integration, paper/live trading, backtesting, risk engine, billing, admin.
+
+## Phase 1.6 (Option A approved: dedicated test account)
+- [x] Read-only setup checklist prepared (no harness, migrations, setting changes or orders)
+- [ ] Owner creates test sign-in, new Testnet key, Elite access, limits — blocked on owner
+- [ ] Read-only verification of test account — after owner says ready
+- [ ] Start Phase 1.6 — blocked on explicit owner approval
+- [ ] Owner decision: production certified flag + live Autopilot still on while Phase 1.5 is FAIL
