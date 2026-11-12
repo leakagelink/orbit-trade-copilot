@@ -1,8 +1,9 @@
-/** Pure Futures trade scoring. Net PnL = gross realized - fees + funding (fees stored separately). */
-export interface ScoredTrade { realized_pnl: number | null; fees: number | null; funding_pnl?: number | null; closed_at: string | null }
-export function netPnl(t: ScoredTrade) { return Number(t.realized_pnl ?? 0) - Number(t.fees ?? 0) + Number(t.funding_pnl ?? 0); }
+import { tradeNet, type AccountedTrade } from './trade-accounting';
+/** Descriptive closed-trade metrics, never independent trading qualification. */
+export interface ScoredTrade extends AccountedTrade { closed_at: string | null }
+export const netPnl = tradeNet;
 export function futuresScore(trades: ScoredTrade[]) {
-  const closed = trades.filter((t) => t.closed_at).sort((a, b) => Date.parse(a.closed_at!) - Date.parse(b.closed_at!));
+  const closed = trades.filter((t) => t.closed_at && Number.isFinite(Date.parse(t.closed_at))).sort((a, b) => Date.parse(a.closed_at ?? '') - Date.parse(b.closed_at ?? ''));
   const nets = closed.map(netPnl);
   const wins = nets.filter((n) => n > 0), losses = nets.filter((n) => n <= 0);
   const grossWin = wins.reduce((s, n) => s + n, 0), grossLoss = -losses.reduce((s, n) => s + n, 0);
@@ -16,7 +17,8 @@ export function futuresScore(trades: ScoredTrade[]) {
     avgPnl: count ? eq / count : null,
     profitFactor: grossLoss > 0 ? grossWin / grossLoss : null,
     maxDrawdown: maxDd,
-    /** Descriptive only; below 30 trades there is not enough evidence. Never authorizes trading. */
+    accountingComplete: nets.every(Number.isFinite),
+    /** Legacy descriptive sample-count badge; never authorizes trading. */
     enoughEvidence: count >= 30,
   };
 }

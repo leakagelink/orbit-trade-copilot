@@ -33,7 +33,7 @@ export const exportTrades = createServerFn({ method: "POST" }).middleware([requi
     const { requirePro } = await import("./plan.server"); await requirePro(context.supabase, context.userId);
     const rows = [];
     for (let offset = 0; ; offset += 500) {
-      const r = await context.supabase.from("trades").select("id,trading_pair,side,mode,opened_at,closed_at,entry_price,exit_price,quantity,realized_pnl,fees,close_reason").eq("user_id",context.userId).gte("opened_at",data.from).lte("opened_at",data.to).order("opened_at",{ascending:false}).order("id").range(offset,offset+499);
+      const r = await context.supabase.from("trades").select("id,trading_pair,side,mode,opened_at,closed_at,entry_price,exit_price,quantity,realized_pnl,fees,funding_pnl,execution_environment,close_reason").eq("user_id",context.userId).gte("opened_at",data.from).lte("opened_at",data.to).order("opened_at",{ascending:false}).order("id").range(offset,offset+499);
       if(r.error) throw new Error("Trade export unavailable"); rows.push(...r.data); if(r.data.length<500) break;
       if(rows.length>=50000) throw new Error("Choose a shorter date range (under 50,000 trades)");
     }

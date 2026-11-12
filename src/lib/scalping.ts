@@ -1,3 +1,4 @@
+import {tradeNet} from './trade-accounting';
 // Pure scalping rules (browser + server). Scalps are short manual trades with a tight, automatic stop, target and time limit.
 import { WALLET_FEE, WALLET_SLIP } from "./wallet-math";
 import { emptyStrategyConfig, type StrategyConfig } from "./strategy";
@@ -39,8 +40,8 @@ export function scalpExit(p: { side: "buy" | "sell"; stop_loss: number | null; t
 }
 
 /** Session stats from closed scalp trades (net of fees). */
-export function scalpStats(trades: { realized_pnl: number; fees: number }[]) {
-  const nets = trades.map((t) => Number(t.realized_pnl) - Number(t.fees));
+export function scalpStats(trades: { realized_pnl: number; fees: number; funding_pnl?: number|null }[]) {
+  const nets = trades.map((t) => tradeNet(t));
   const wins = nets.filter((n) => n > 0).length;
   return { count: nets.length, wins, winRate: nets.length ? (wins / nets.length) * 100 : 0, net: nets.reduce((a, b) => a + b, 0) };
 }

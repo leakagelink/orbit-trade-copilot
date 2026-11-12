@@ -15,8 +15,8 @@ export async function futuresCall<T>(a:Pick<FuturesAccount,'testnet'|'creds'>,me
  return await r.json() as T;
 }
 export type BrokerPosition={symbol:string;positionAmt:string;entryPrice:string;markPrice:string;unRealizedProfit:string;positionSide:string;leverage?:string;marginType?:string};
-export type BrokerOrder={orderId:number;clientOrderId:string;status:string;executedQty:string;avgPrice:string;side:string};
-export type AlgoOrder={algoId:number;clientAlgoId:string;algoStatus?:string;actualOrderId?:number;triggerPrice?:string};
+export type BrokerOrder=import('./futures-execution').FillOrder & {time?:number;updateTime?:number};
+export type AlgoOrder=import('./futures-execution').ProtectionOrder;
 export async function futuresAccountState(a:FuturesAccount){
  const [account,config,mode,multi]=await Promise.all([
  futuresCall<{availableBalance:string}>(a,'GET','/fapi/v3/account'),
@@ -40,3 +40,22 @@ export const futuresPositions=(a:FuturesAccount,symbol:string)=>futuresCall<Brok
 export const futuresOrder=(a:FuturesAccount,symbol:string,clientId:string)=>futuresCall<BrokerOrder>(a,'GET','/fapi/v1/order',{symbol,origClientOrderId:clientId});
 export const futuresAlgo=(a:FuturesAccount,clientId:string)=>futuresCall<AlgoOrder>(a,'GET','/fapi/v1/algoOrder',{clientAlgoId:clientId});
 export const futuresCancelAlgo=(a:FuturesAccount,clientId:string)=>futuresCall(a,'DELETE','/fapi/v1/algoOrder',{clientAlgoId:clientId});
+export const futuresCancelOrder=(a:FuturesAccount,symbol:string,clientId:string)=>futuresCall(a,'DELETE','/fapi/v1/order',{symbol,origClientOrderId:clientId});
+/** Bounded historical pagination. Exhaustion is unavailable evidence, never a fabricated total. */
+export async function futuresEvidence(a:FuturesAccount,symbol:string,start:number,end:number) {
+ const fills:import('./futures-execution').BrokerFill[]=[],income:import('./futures-execution').FundingEvent[]=[];
+ const window=7*86400000;
+ if(!Number.isFinite(start)||!Number.isFinite(end)||end<start||end-start>30*86400000)throw new Error('Historical evidence interval requires operator reconciliation');
+ for(let from=start;from<=end;from+=window){
+  const to=Math.min(end,from+window-1);
+  const trades=await futuresCall<import('./futures-execution').BrokerFill[]>(a,'GET','/fapi/v1/userTrades',{symbol,startTime:from,endTime:to,limit:1000});
+  if(trades.length>=1000)throw new Error('Fill history page saturated; reconciliation remains locked');
+  fills.push(...trades);
+  for(let page=1;page<=10;page++){
+   const rows=await futuresCall<import('./futures-execution').FundingEvent[]>(a,'GET','/fapi/v1/income',{symbol,incomeType:'FUNDING_FEE',startTime:from,endTime:to,limit:1000,page});
+   income.push(...rows);if(rows.length<1000)break;
+   if(page===10)throw new Error('Funding history pagination exhausted');
+  }
+ }
+ return {fills,income};
+}

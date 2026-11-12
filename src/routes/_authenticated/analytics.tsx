@@ -16,13 +16,13 @@ export const Route = createFileRoute("/_authenticated/analytics")({
 });
 
 function Analytics() {
-  const [mode, setMode] = useState<"paper" | "live">("paper");
+  const [mode, setMode] = useState<"paper" | "production" | "testnet">("paper");
   const [by, setBy] = useState<"bot" | "strategy" | "pair">("bot");
   const q = useQuery({
     queryKey: ["analytics", mode],
     queryFn: async () => {
       const [t, b, s] = await Promise.all([
-        supabase.from("trades").select("realized_pnl,fees,closed_at,bot_id,strategy_id,trading_pair").eq("mode", mode).not("closed_at", "is", null).limit(5000),
+        supabase.from("trades").select("realized_pnl,fees,funding_pnl,closed_at,bot_id,strategy_id,trading_pair").eq("execution_environment", mode).not("closed_at", "is", null).limit(5000),
         supabase.from("trading_bots").select("id,name"),
         supabase.from("strategies").select("id,name"),
       ]);
@@ -37,7 +37,7 @@ function Analytics() {
   return (
     <div>
       <PageHeader title="Analytics" description={D} actions={<>
-        <Select value={mode} onValueChange={(v) => setMode(v as "paper" | "live")}><SelectTrigger className="w-28"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="paper">Paper</SelectItem><SelectItem value="live">Live</SelectItem></SelectContent></Select>
+        <Select value={mode} onValueChange={(v) => setMode(v as "paper" | "production" | "testnet")}><SelectTrigger className="w-28"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="paper">Paper</SelectItem><SelectItem value="production">Real money</SelectItem><SelectItem value="testnet">Testnet</SelectItem></SelectContent></Select>
         <Select value={by} onValueChange={(v) => setBy(v as typeof by)}><SelectTrigger className="w-36"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="bot">By bot</SelectItem><SelectItem value="strategy">By strategy</SelectItem><SelectItem value="pair">By pair</SelectItem></SelectContent></Select>
       </>} />
       <div className="space-y-6 p-6">

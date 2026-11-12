@@ -24,7 +24,8 @@ export const verifyRecoveryOrder=createServerFn({method:"POST"}).middleware([req
   if(o.market_type === "usd_m_futures") {
     const {loadFuturesAccount}=await import("./futures.server");const {futuresOrder}=await import("./binance-futures.server");
     const a=await loadFuturesAccount(db,context.userId,o.exchange_connection_id);
-    const exit=o.idempotency_key.includes(":exit:");const clientId=`${exit?"fx":"fv"}-${o.id.slice(0,28)}`;
+    const exit=o.idempotency_key.includes(":exit:");const clientId=o.client_order_id??`${exit?"fx":"fv"}-${o.id.slice(0,28)}`;
+    if(o.execution_environment!==(a.testnet?"testnet":"production"))throw new Error("Original Futures environment mismatch");
     let evidence: { status:string;qty:number;price:number;orderId:string } | null=null;
     try { const r=await futuresOrder(a,o.trading_pair.replace("/",""),clientId);evidence={status:r.status,qty:Number(r.executedQty),price:Number(r.avgPrice),orderId:String(r.orderId)}; } catch {}
     const status=evidence?.status==="FILLED"?"needs_review":"unavailable";

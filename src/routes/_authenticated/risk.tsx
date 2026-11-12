@@ -1,3 +1,4 @@
+import {tradeNet} from '@/lib/trade-accounting';
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { emergencyStop } from "@/lib/bots.functions";
@@ -13,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fmtMoney } from "@/lib/metrics";
+import {Select,SelectContent,SelectItem,SelectTrigger,SelectValue} from "@/components/ui/select";
 import { RecoveryInventory } from "@/components/recovery-inventory";
 
 const D = "Account-wide limits that every bot must respect before opening a trade.";
@@ -24,6 +26,7 @@ export const Route = createFileRoute("/_authenticated/risk")({
 function Risk() {
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
+  const [environment,setEnvironment]=useState("production");
   const stopAll = useServerFn(emergencyStop);
   async function closeEverything() {
     setBusy(true);
@@ -36,20 +39,20 @@ function Risk() {
     qc.invalidateQueries();
   }
   const q = useQuery({
-    queryKey: ["risk"],
+    queryKey: ["risk",environment],
     queryFn: async () => {
       const { data: u } = await supabase.auth.getUser();
       const start = new Date(); start.setUTCHours(0, 0, 0, 0);
       const [r, p, t] = await Promise.all([
         supabase.from("risk_settings").select("*").eq("user_id", u.user!.id).maybeSingle(),
-        supabase.from("positions").select("entry_price,quantity").eq("is_open", true),
-        supabase.from("trades").select("realized_pnl,fees").gte("closed_at", start.toISOString()),
+        supabase.from("positions").select("entry_price,quantity").eq("is_open", true).eq("execution_environment",environment),
+        supabase.from("trades").select("realized_pnl,fees,funding_pnl").eq("execution_environment",environment).gte("closed_at", start.toISOString()),
       ]);
       return {
         uid: u.user!.id, r: r.data,
         exposure: (p.data ?? []).reduce((a, x) => a + Number(x.entry_price) * Number(x.quantity), 0),
         open: p.data?.length ?? 0,
-        today: (t.data ?? []).reduce((a, x) => a + Number(x.realized_pnl) - Number(x.fees), 0),
+        today: (t.data ?? []).reduce((a, x) => a + tradeNet(x), 0),
       };
     },
   });
@@ -60,7 +63,7 @@ function Risk() {
     setBusy(false);
     if (error) return void toast.error(error.message);
     toast.success("Risk settings saved");
-    qc.invalidateQueries({ queryKey: ["risk"] });
+    qc.invalidateQueries({ queryKey: ["risk",environment] });
   }
   function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -74,7 +77,7 @@ function Risk() {
   const halted = !!r?.trading_halted;
   return (
     <div>
-      <PageHeader title="Risk management" description={D} />
+      <PageHeader title="Risk management" description={D} actions={<Select value={environment} onValueChange={setEnvironment}><SelectTrigger className="w-40"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="production">Real money</SelectItem><SelectItem value="testnet">Testnet</SelectItem><SelectItem value="paper">Paper</SelectItem></SelectContent></Select>} />
       <div className="max-w-3xl space-y-6 p-6">
         <div className={`flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between ${halted ? "border-destructive bg-destructive/10" : "bg-card"}`}>
           <div className="flex items-start gap-3">

@@ -108,7 +108,7 @@ function ScalpingPage() {
   const history = useQuery({
     queryKey: ["scalp_history", startOfDay],
     queryFn: async () => {
-      const { data, error } = await supabase.from("trades").select("id,trading_pair,side,entry_price,exit_price,realized_pnl,fees,close_reason,closed_at").eq("is_scalp", true).gte("closed_at", startOfDay).order("closed_at", { ascending: false }).limit(200);
+      const { data, error } = await supabase.from("trades").select("id,trading_pair,side,entry_price,exit_price,realized_pnl,fees,funding_pnl,execution_environment,close_reason,closed_at").eq("is_scalp", true).gte("closed_at", startOfDay).order("closed_at", { ascending: false }).limit(200);
       if (error) throw new Error(error.message);
       return data;
     },
@@ -143,7 +143,7 @@ function ScalpingPage() {
   const costPct = isWallet ? WALLET_ROUND_TRIP_PCT : 0;
   const winUsd = (notional * (settings.tpPct - costPct)) / 100;
   const lossUsd = (notional * (settings.slPct + costPct)) / 100;
-  const stats = scalpStats((history.data ?? []).map((t) => ({ realized_pnl: Number(t.realized_pnl), fees: Number(t.fees) })));
+  const stats = scalpStats((history.data ?? []).filter(t=>t.execution_environment===(isWallet?"paper":chosen?.is_testnet?"testnet":"production")).map((t) => ({ realized_pnl: Number(t.realized_pnl), fees: Number(t.fees), funding_pnl:t.funding_pnl })));
 
   function pickCat(c: MarketCategory) {
     setCat(c);

@@ -1,3 +1,4 @@
+import {tradeNet} from './trade-accounting';
 // AI Autopilot tools. Every action is forced to the demo wallet / paper engine and goes through the same
 // server paths as the UI (risk gate, plan checks, idempotent order claims). No tool accepts an account or mode.
 import { tool, type ToolSet } from "ai";
@@ -49,12 +50,12 @@ function paperTools(ctx: Ctx): ToolSet {
           supabase.from("risk_settings").select("max_daily_loss,max_open_exposure,max_total_positions,trading_halted").eq("user_id", userId).maybeSingle(),
           supabase.from("positions").select("id,trading_pair,side,quantity,entry_price,current_price,unrealized_pnl,mode,bot_id,is_scalp,stop_loss,take_profit,opened_at").eq("user_id", userId).eq("is_open", true).limit(50),
           supabase.from("trading_bots").select("id,name,status,mode,trading_pair,timeframe,exchange,allocated_capital").eq("user_id", userId).order("created_at", { ascending: false }).limit(30),
-          supabase.from("trades").select("trading_pair,side,realized_pnl,fees,close_reason,closed_at,mode").eq("user_id", userId).order("closed_at", { ascending: false }).limit(30),
+          supabase.from("trades").select("trading_pair,side,realized_pnl,fees,funding_pnl,execution_environment,close_reason,closed_at,mode").eq("user_id", userId).order("closed_at", { ascending: false }).limit(30),
           supabase.rpc("has_pro_access", { _uid: userId }),
           supabase.rpc("has_elite_access", { _uid: userId }),
         ]);
         const recent = (trades.data ?? []).filter((t) => t.mode === "paper").slice(0, 20);
-        const liveRecent = (trades.data ?? []).filter((t) => t.mode === "live").slice(0, 20);
+        const liveRecent = (trades.data ?? []).filter((t) => t.execution_environment === "production").slice(0, 20);
         return {
           plan: elite.data ? "elite" : pro.data ? "pro" : "free",
           wallet: wallet.data ? { balance: Number(wallet.data.balance), currency: wallet.data.currency } : { balance: 0, currency: "USD", note: "No demo wallet yet — deposit on the Wallet page" },
@@ -62,8 +63,8 @@ function paperTools(ctx: Ctx): ToolSet {
           openPositions: positions.data ?? [],
           bots: bots.data ?? [],
           recentPaperTrades: recent,
-          recentPaperNetPnl: recent.reduce((s, t) => s + Number(t.realized_pnl ?? 0) - Number(t.fees ?? 0), 0),
-          ...(ctx.live ? { realMoneyAccounts: ctx.live, recentLiveTrades: liveRecent, recentLiveNetPnl: liveRecent.reduce((s, t) => s + Number(t.realized_pnl ?? 0) - Number(t.fees ?? 0), 0) } : { realMoney: "disabled" }),
+          recentPaperNetPnl: recent.reduce((s, t) => s + tradeNet(t), 0),
+          ...(ctx.live ? { realMoneyAccounts: ctx.live, recentLiveTrades: liveRecent, recentLiveNetPnl: liveRecent.reduce((s, t) => s + tradeNet(t), 0) } : { realMoney: "disabled" }),
         };
       }),
     }),

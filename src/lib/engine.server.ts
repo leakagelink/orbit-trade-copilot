@@ -1,3 +1,4 @@
+import {tradeNet,type ExecutionEnvironment} from './trade-accounting';
 // Scheduled trading engine (paper + live). Runs only from the cron endpoint / server functions, never from the browser.
 import { computeAll, evalRules } from "./indicators";
 import { fetchCandles, floorToStep, getStepSize, placeMarketOrder, timeframeMs, type Creds } from "./exchange-adapters.server";
@@ -120,7 +121,7 @@ async function tickBot(db: Admin, bot: Row, pro: boolean): Promise<string> {
 
   if (dll != null) {
     const start = new Date(); start.setUTCHours(0, 0, 0, 0);
-    const { data: today } = await db.from("trades").select("realized_pnl,fees").eq("bot_id", bot.id).gte("closed_at", start.toISOString());
+    const { data: today } = await db.from("trades").select("realized_pnl,fees,funding_pnl").eq("bot_id", bot.id).gte("closed_at", start.toISOString());
     const pnl = (today ?? []).reduce((a, t) => a + Number(t.realized_pnl) - Number(t.fees), 0);
     if (pnl <= -(capital * dll) / 100) return halt("paused", `Daily loss limit reached (${pnl.toFixed(2)})`);
   }
@@ -222,21 +223,26 @@ export async function emergencyCloseAll(userId: string) {
 }
 
 /** Account-wide limits from risk_settings. Returns a reason when a new entry must be blocked. */
-export async function accountRiskBlock(db: Admin, userId: string, newCost: number): Promise<string | null> {
+export async function accountRiskBlock(db: Admin, userId: string, newCost: number, environment?: ExecutionEnvironment): Promise<string | null> {
   if (!Number.isFinite(newCost) || newCost <= 0) return "invalid entry cost";
   const { data: r, error: riskError } = await db.from("risk_settings").select("*").eq("user_id", userId).maybeSingle();
   if (riskError || !r) return "account risk settings unavailable; save risk settings first";
   if (r.trading_halted) return "trading halted (emergency stop)";
-  const { data: pos, error: positionError } = await db.from("positions").select("entry_price,quantity,unrealized_pnl").eq("user_id", userId).eq("is_open", true);
+  let positionsQuery = db.from("positions").select("entry_price,quantity,unrealized_pnl").eq("user_id", userId).eq("is_open", true);
+  if(environment) positionsQuery=positionsQuery.eq("execution_environment",environment);
+  const { data: pos, error: positionError } = await positionsQuery;
   if (positionError || !pos) return "account exposure unavailable";
   if (r.max_total_positions != null && (pos?.length ?? 0) >= r.max_total_positions) return "account max open positions reached";
   const exposure = (pos ?? []).reduce((a, p) => a + Number(p.entry_price) * Number(p.quantity), 0);
   if (r.max_open_exposure != null && exposure + newCost > Number(r.max_open_exposure)) return "account max exposure reached";
   if (r.max_daily_loss != null) {
     const start = new Date(); start.setUTCHours(0, 0, 0, 0);
-    const { data: t, error: tradeError } = await db.from("trades").select("realized_pnl,fees").eq("user_id", userId).gte("closed_at", start.toISOString());
+    let tradesQuery = db.from("trades").select("realized_pnl,fees,funding_pnl,costs_verified").eq("user_id", userId).gte("closed_at", start.toISOString());
+    if(environment) tradesQuery=tradesQuery.eq("execution_environment",environment);
+    const { data: t, error: tradeError } = await tradesQuery;
     if (tradeError || !t) return "account loss evidence unavailable";
-    const pnl = t.reduce((a, x) => a + Number(x.realized_pnl) - Number(x.fees), 0) + pos.reduce((a,p) => a + Math.min(0,Number(p.unrealized_pnl)),0);
+    const pnl = t.reduce((a, x) => a + tradeNet(x), 0) + pos.reduce((a,p) => a + Math.min(0,Number(p.unrealized_pnl)),0);
+    if (!Number.isFinite(pnl)) return "account loss evidence unavailable";
     if (pnl <= -Number(r.max_daily_loss)) return "account daily loss limit reached";
   }
   return null;
@@ -247,12 +253,12 @@ async function snapshots(db: Admin, users: string[]) {
     for (const mode of ["paper", "live"] as const) {
       const [b, t, p] = await Promise.all([
         db.from("trading_bots").select("allocated_capital").eq("user_id", u).eq("mode", mode).neq("status", "draft"),
-        db.from("trades").select("realized_pnl,fees").eq("user_id", u).eq("mode", mode),
+        db.from("trades").select("realized_pnl,fees,funding_pnl").eq("user_id", u).eq("mode", mode),
         db.from("positions").select("unrealized_pnl,entry_price,quantity").eq("user_id", u).eq("mode", mode).eq("is_open", true),
       ]);
       if (!b.data?.length) continue;
       const cap = b.data.reduce((a, x) => a + Number(x.allocated_capital), 0);
-      const real = (t.data ?? []).reduce((a, x) => a + Number(x.realized_pnl) - Number(x.fees), 0);
+      const real = (t.data ?? []).reduce((a, x) => a + tradeNet(x), 0);
       const unreal = (p.data ?? []).reduce((a, x) => a + Number(x.unrealized_pnl), 0);
       const inUse = (p.data ?? []).reduce((a, x) => a + Number(x.entry_price) * Number(x.quantity), 0);
       await db.from("portfolio_snapshots").insert({ user_id: u, mode, total_value: cap + real + unreal, available_capital: cap + real - inUse, unrealized_pnl: unreal });

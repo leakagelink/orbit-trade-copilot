@@ -1,7 +1,8 @@
+import {tradeNet} from './trade-accounting';
 // Portfolio metrics computed strictly from stored trading records.
 export interface TradeRow {
   realized_pnl: number | string;
-  fees: number | string;
+  fees: number | string; funding_pnl?: number | string | null;
   closed_at: string | null;
 }
 export interface PositionRow {
@@ -23,9 +24,9 @@ export function computeMetrics(
   now: Date = new Date(),
 ) {
   const closed = trades.filter((t) => t.closed_at);
-  const net = (t: TradeRow) => n(t.realized_pnl) - n(t.fees);
+  const net = (t: TradeRow) => tradeNet(t);
   const since = (ms: number) =>
-    closed.filter((t) => now.getTime() - new Date(t.closed_at!).getTime() <= ms).reduce((s, t) => s + net(t), 0);
+    closed.filter((t) => now.getTime() - new Date(t.closed_at ?? "").getTime() <= ms).reduce((s, t) => s + net(t), 0);
   const DAY = 86_400_000;
   const wins = closed.filter((t) => net(t) > 0).length;
   const sorted = [...snapshots].sort((a, b) => a.captured_at.localeCompare(b.captured_at));
@@ -53,11 +54,11 @@ export function computeMetrics(
 }
 
 export function fmtMoney(v: number | null, ccy = "USDT") {
-  if (v == null) return "—";
+  if (v == null || !Number.isFinite(v)) return "—";
   return `${v < 0 ? "-" : ""}${Math.abs(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${ccy}`;
 }
 
-export interface AnalyticsTrade { realized_pnl: number | string; fees: number | string; closed_at: string | null; bot_id: string | null; strategy_id: string | null; trading_pair: string }
+export interface AnalyticsTrade { realized_pnl: number | string; fees: number | string; funding_pnl?: number | string | null; closed_at: string | null; bot_id: string | null; strategy_id: string | null; trading_pair: string }
 
 /** Per-group performance (by bot, strategy or pair) from closed trades; PnL is net of fees. */
 export function groupStats(trades: AnalyticsTrade[], key: (t: AnalyticsTrade) => string | null) {
@@ -65,7 +66,7 @@ export function groupStats(trades: AnalyticsTrade[], key: (t: AnalyticsTrade) =>
   for (const t of trades) {
     if (!t.closed_at) continue;
     const k = key(t) ?? "—";
-    (groups.get(k) ?? groups.set(k, []).get(k)!).push(n(t.realized_pnl) - n(t.fees));
+    const bucket=groups.get(k)??[];bucket.push(tradeNet(t));groups.set(k,bucket);
   }
   return [...groups.entries()].map(([k, xs]) => {
     const wins = xs.filter((x) => x > 0), losses = xs.filter((x) => x <= 0);
@@ -84,6 +85,6 @@ export function groupStats(trades: AnalyticsTrade[], key: (t: AnalyticsTrade) =>
 /** Net PnL per calendar month (UTC), oldest first. */
 export function monthlyPnl(trades: AnalyticsTrade[]) {
   const m = new Map<string, number>();
-  for (const t of trades) if (t.closed_at) { const k = t.closed_at.slice(0, 7); m.set(k, (m.get(k) ?? 0) + n(t.realized_pnl) - n(t.fees)); }
+  for (const t of trades) if (t.closed_at) { const k = t.closed_at.slice(0, 7); m.set(k, (m.get(k) ?? 0) + tradeNet(t)); }
   return [...m.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([month, pnl]) => ({ month, pnl }));
 }

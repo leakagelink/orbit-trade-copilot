@@ -2623,6 +2623,15 @@ export type Database = {
         }
         Returns: boolean
       }
+      futures_write_position: {
+        Args: {
+          _fence: number
+          _holder: string
+          _patch: Json
+          _position: string
+        }
+        Returns: boolean
+      }
       has_elite_access: { Args: { _uid: string }; Returns: boolean }
       has_pro_access: { Args: { _uid: string }; Returns: boolean }
       has_role: {

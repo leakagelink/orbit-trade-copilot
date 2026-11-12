@@ -1,3 +1,4 @@
+import {tradeNet} from '@/lib/trade-accounting';
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
@@ -27,7 +28,7 @@ async function fetchAll() {
     supabase.from("portfolio_snapshots").select("*").order("captured_at").limit(1000),
     supabase.from("trading_bots").select("id,status,name"),
     supabase.from("strategies").select("id,name,status"),
-    supabase.from("orders").select("id,status,trading_pair,side,quantity,price,mode,exchange,exchange_connection_id,bot_id,created_at").in("status", ["pending", "open", "partially_filled"]),
+    supabase.from("orders").select("id,status,trading_pair,side,quantity,price,mode,exchange,exchange_connection_id,bot_id,created_at,execution_environment").in("status", ["pending", "open", "partially_filled"]),
     supabase.from("exchange_connections").select("id,label,exchange"),
   ]);
   const err = [trades, positions, snaps, bots, strategies, orders, conns].find((r) => r.error)?.error;
@@ -48,7 +49,7 @@ const tone = (v: number | null) => (v == null || v === 0 ? undefined : v > 0 ? "
 function Dashboard() {
   const q = useQuery({ queryKey: ["dashboard"], queryFn: fetchAll });
   const [account, setAccount] = useState("all");
-  const [mode, setMode] = useState("all");
+  const [mode, setMode] = useState("production");
   const [pair, setPair] = useState("all");
   const [strategy, setStrategy] = useState("all");
   const [period, setPeriod] = useState<keyof typeof PERIODS>("30");
@@ -56,15 +57,15 @@ function Dashboard() {
   const view = useMemo(() => {
     if (!q.data) return null;
     const cutoff = period === "all" ? 0 : Date.now() - Number(period) * 86_400_000;
-    const match = (r: { exchange_connection_id: string | null; mode: string; trading_pair?: string; strategy_id?: string | null | undefined }) =>
-      (account === "all" || r.exchange_connection_id === account) && (mode === "all" || r.mode === mode) &&
+    const match = (r: { exchange_connection_id: string | null; mode: string; execution_environment?: string; trading_pair?: string; strategy_id?: string | null | undefined }) =>
+      (account === "all" || r.exchange_connection_id === account) && (mode === "all" || r.execution_environment === mode) &&
       (pair === "all" || r.trading_pair === pair) && (strategy === "all" || r.strategy_id === strategy);
     const trades = q.data.trades.filter((t) => match(t) && (!t.closed_at || new Date(t.closed_at).getTime() >= cutoff));
     const positions = q.data.positions.filter((p) => match({ ...p, strategy_id: undefined }) || (strategy !== "all" && match({ ...p, strategy_id: strategy })));
     const snaps = q.data.snaps.filter((s) => (account === "all" || s.exchange_connection_id === account) && (mode === "all" || s.mode === mode) && new Date(s.captured_at).getTime() >= cutoff);
     const orders = q.data.orders.filter((o) => match(o));
     const pairs = Array.from(new Set([...q.data.trades.map((t) => t.trading_pair), ...q.data.positions.map((p) => p.trading_pair)]));
-    return { m: computeMetrics(trades, positions, snaps), trades, positions, orders, pairs };
+    return { m: computeMetrics(trades, positions, mode === "all" || mode === "paper" ? snaps : []), trades, positions, orders, pairs };
   }, [q.data, account, mode, pair, strategy, period]);
 
   if (q.isError) return <div className="p-6 text-sm text-destructive">Couldn't load dashboard: {q.error.message}</div>;
@@ -72,7 +73,7 @@ function Dashboard() {
   const filters = q.data && view && (
     <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
       <F value={account} onChange={setAccount} items={[["all", "All accounts"], ...q.data.conns.map((c) => [c.id, `${c.label} · ${exchangeName(c.exchange)}`] as [string, string])]} />
-      <F value={mode} onChange={setMode} items={[["all", "All modes"], ["paper", "Paper"], ["live", "Live"]]} />
+      <F value={mode} onChange={setMode} items={[["all", "All modes"], ["paper", "Paper"], ["production", "Real money"], ["testnet", "Testnet"], ["legacy_unknown", "Legacy (unknown)"]]} />
       <F value={pair} onChange={setPair} items={[["all", "All pairs"], ...view.pairs.map((p) => [p, p] as [string, string])]} />
       <F value={strategy} onChange={setStrategy} items={[["all", "All strategies"], ...q.data.strategies.map((s) => [s.id, s.name] as [string, string])]} />
       <F value={period} onChange={(v) => setPeriod(v as keyof typeof PERIODS)} items={Object.entries(PERIODS)} />
@@ -124,8 +125,8 @@ function Dashboard() {
             </div>
 
             <div className="grid gap-6 lg:grid-cols-2">
-              <TableCard title="Open positions" empty="No open positions." rows={view.positions.map((p) => [p.trading_pair, p.side.toUpperCase(), Number(p.quantity).toString(), Number(p.entry_price).toString(), fmtMoney(Number(p.unrealized_pnl)), p.mode])} head={["Pair", "Side", "Qty", "Entry", "uPnL", "Mode"]} />
-              <TableCard title="Recent closed trades" empty="No closed trades yet." rows={view.trades.filter((t) => t.closed_at).slice(0, 10).map((t) => [t.trading_pair, t.side.toUpperCase(), Number(t.entry_price).toString(), t.exit_price ? Number(t.exit_price).toString() : "—", fmtMoney(Number(t.realized_pnl) - Number(t.fees)), t.mode])} head={["Pair", "Side", "Entry", "Exit", "Net PnL", "Mode"]} />
+              <TableCard title="Open positions" empty="No open positions." rows={view.positions.map((p) => [p.trading_pair, p.side.toUpperCase(), Number(p.quantity).toString(), Number(p.entry_price).toString(), fmtMoney(Number(p.unrealized_pnl)), p.execution_environment])} head={["Pair", "Side", "Qty", "Entry", "uPnL", "Mode"]} />
+              <TableCard title="Recent closed trades" empty="No closed trades yet." rows={view.trades.filter((t) => t.closed_at).slice(0, 10).map((t) => [t.trading_pair, t.side.toUpperCase(), Number(t.entry_price).toString(), t.exit_price ? Number(t.exit_price).toString() : "—", fmtMoney(tradeNet(t)), t.execution_environment])} head={["Pair", "Side", "Entry", "Exit", "Net PnL", "Mode"]} />
             </div>
           </>
         )}

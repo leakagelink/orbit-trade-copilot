@@ -15,7 +15,7 @@ export const Route = createFileRoute("/_authenticated/ai-trades")({
   head: () => ({ meta: [{ title: "AI Trades — AlgoVirt" }, { name: "description", content: D }, { property: "og:title", content: "AI Trades — AlgoVirt" }, { property: "og:description", content: D }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: AiTrades,
 });
-const usd = (n: number | null | undefined, d = 4) => (n == null ? "—" : `${n < 0 ? "-" : ""}$${Math.abs(n).toFixed(d)}`);
+const usd = (n: number | null | undefined, d = 4) => (n == null || !Number.isFinite(n) ? "—" : `${n < 0 ? "-" : ""}$${Math.abs(n).toFixed(d)}`);
 const tone = (n: number) => (n > 0 ? "text-success" : n < 0 ? "text-destructive" : "");
 
 function AiTrades() {
@@ -24,17 +24,17 @@ function AiTrades() {
     queryKey: ["ai-trades"],
     queryFn: async () => {
       const [t, c, p] = await Promise.all([
-        supabase.from("trades").select("id,trading_pair,side,quantity,entry_price,exit_price,realized_pnl,fees,funding_pnl,opened_at,closed_at,close_reason,exchange_connection_id").eq("market_type", "usd_m_futures").order("closed_at", { ascending: false }).limit(1000),
+        supabase.from("trades").select("id,trading_pair,side,quantity,entry_price,exit_price,realized_pnl,fees,funding_pnl,opened_at,closed_at,close_reason,exchange_connection_id,execution_environment,costs_verified").eq("market_type", "usd_m_futures").order("closed_at", { ascending: false }).limit(1000),
         supabase.from("exchange_connections").select("id,label,is_testnet,permissions").eq("exchange", "binance"),
-        supabase.from("positions").select("id,trading_pair,side,quantity,entry_price,stop_loss,take_profit,opened_at,exchange_connection_id").eq("market_type", "usd_m_futures").eq("is_open", true),
+        supabase.from("positions").select("id,trading_pair,side,quantity,entry_price,stop_loss,take_profit,opened_at,exchange_connection_id,execution_environment").eq("market_type", "usd_m_futures").eq("is_open", true),
       ]);
+      if(c.error||p.error)throw new Error("Futures accounts or exposure unavailable");
       if (t.error) throw new Error(t.error.message);
       return { trades: t.data ?? [], conns: c.data ?? [], open: p.data ?? [] };
     },
     refetchInterval: 15000,
   });
-  const testIds = new Set((q.data?.conns ?? []).filter((c) => c.is_testnet).map((c) => c.id));
-  const pick = <T extends { exchange_connection_id: string | null }>(rows: T[]) => rows.filter((r) => (acct === "testnet") === testIds.has(r.exchange_connection_id ?? ""));
+  const pick = <T extends { execution_environment: string }>(rows: T[]) => rows.filter(r=>r.execution_environment===(acct==='testnet'?'testnet':'production'));
   const trades = pick(q.data?.trades ?? []), open = pick(q.data?.open ?? []);
   const s = futuresScore(trades);
   const conn = (q.data?.conns ?? []).find((c) => !c.is_testnet === (acct === "live"));
@@ -50,8 +50,8 @@ function AiTrades() {
             <Card key={k}><CardContent className="p-4"><p className="text-xs text-muted-foreground">{k}</p><p className={`font-mono text-lg font-semibold ${c}`}>{v}</p></CardContent></Card>))}
         </div>
         <Card><CardContent className="flex flex-wrap items-center gap-2 p-4 text-sm">
-          <Badge variant={s.enoughEvidence ? "default" : "outline"}>{s.enoughEvidence ? "Enough trades to judge" : `Score is early: ${s.count}/30 trades`}</Badge>
-          <span className="text-muted-foreground">Results include fees. A score is only meaningful after many trades.</span>
+          <Badge variant="outline">{s.accountingComplete?"Descriptive results · not live qualification":"Accounting incomplete"}</Badge>
+          <span className="text-muted-foreground">Results include funding and fees. Realized drawdown is not account-equity drawdown.</span>
         </CardContent></Card>
         <Card><CardHeader><CardTitle className="text-base">Binance balance{conn ? ` · ${conn.label}` : ""}</CardTitle></CardHeader><CardContent className="font-mono text-sm">
           {bal.length ? bal.slice(0, 8).map((b) => <span key={b.asset} className="mr-4 inline-block">{b.asset} {(b.free + b.locked).toFixed(4)}</span>) : <span className="text-muted-foreground">No balance yet — click Verify on Exchanges.</span>}
@@ -62,8 +62,8 @@ function AiTrades() {
           </tbody></table> : <p className="text-sm text-muted-foreground">No open trades.</p>}
         </CardContent></Card>
         <Card><CardHeader><CardTitle className="text-base">Trade history</CardTitle></CardHeader><CardContent className="overflow-x-auto">
-          {trades.length ? <table className="w-full min-w-[720px] text-sm"><thead className="text-left text-muted-foreground"><tr><th>Closed</th><th>Pair</th><th>Side</th><th>Qty</th><th>Entry</th><th>Exit</th><th>Gross</th><th>Fees</th><th>Net</th><th>Reason</th></tr></thead><tbody>
-            {trades.map((t) => { const n = netPnl(t); return <tr key={t.id} className="border-t"><td>{t.closed_at ? new Date(t.closed_at).toLocaleString() : "—"}</td><td>{t.trading_pair}</td><td>{t.side === "buy" ? "Long" : "Short"}</td><td>{t.quantity}</td><td>{t.entry_price}</td><td>{t.exit_price ?? "—"}</td><td className="font-mono">{usd(t.realized_pnl)}</td><td className="font-mono">{usd(t.fees)}</td><td className={`font-mono ${tone(n)}`}>{usd(n)}</td><td>{t.close_reason ?? "—"}</td></tr>; })}
+          {trades.length ? <table className="w-full min-w-[720px] text-sm"><thead className="text-left text-muted-foreground"><tr><th>Closed</th><th>Pair</th><th>Side</th><th>Qty</th><th>Entry</th><th>Exit</th><th>Gross</th><th>Funding</th><th>Fees</th><th>Net</th><th>Reason</th></tr></thead><tbody>
+            {trades.map((t) => { const n = netPnl(t); return <tr key={t.id} className="border-t"><td>{t.closed_at ? new Date(t.closed_at).toLocaleString() : "—"}</td><td>{t.trading_pair}</td><td>{t.side === "buy" ? "Long" : "Short"}</td><td>{t.quantity}</td><td>{t.entry_price}</td><td>{t.exit_price ?? "—"}</td><td className="font-mono">{usd(t.realized_pnl)}</td><td className="font-mono">{usd(t.funding_pnl??0)}</td><td className="font-mono">{usd(t.fees)}</td><td className={`font-mono ${tone(n)}`}>{usd(n)}</td><td>{t.close_reason ?? "—"}</td></tr>; })}
           </tbody></table> : <EmptyState icon={Bot} title="No trades yet" body="AI Futures trades will appear here." />}
         </CardContent></Card>
       </div>}
