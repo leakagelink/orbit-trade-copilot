@@ -79,7 +79,7 @@ function Workspace({ busy, onStart, onDone, runningRun }: { busy: boolean; onSta
     onStart(requestId);
     try {
       const r = await start({ data: { symbol, requestId } });
-      if ("status" in r) toast[r.status === "completed" ? "success" : "message"](`Research ${r.status.replaceAll("_", " ")}${r.stopReason ? `: ${r.stopReason}` : ""}`);
+      if ("status" in r) { if (r.status) toast[r.status === "completed" ? "success" : "message"](`Research ${r.status.replaceAll("_", " ")}${r.stopReason ? `: ${r.stopReason}` : ""}`); else toast.message(r.stopReason ?? "This research run is already being handled."); }
     } catch (e) { toast.error(e instanceof Error ? e.message : "Research unavailable"); }
     finally { await onDone(); }
   }

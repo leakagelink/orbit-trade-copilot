@@ -8,14 +8,21 @@ import type { ResearchAgent } from "@/lib/research-pipeline";
 
 const U = "00000000-0000-4000-8000-000000000001", RUN = "00000000-0000-4000-8000-0000000000aa";
 type Op = { table: string; op: string; row?: unknown };
-interface Opts { budgetRow?: Record<string, unknown> | null; ledgerMissing?: boolean; usageError?: boolean; halted?: boolean; cancelled?: boolean | (() => boolean); usageRows?: { input_tokens: number; output_tokens: number }[] }
+type RpcResult = { data: unknown; error: { code?: string; message?: string } | null };
+/** Database-side spending ledger stand-in (the real SQL is tested in PGlite and a multi-session Postgres). */
+type Ledger = (fn: string, args: Record<string, unknown>) => RpcResult | Promise<RpcResult>;
+interface Opts { budgetRow?: Record<string, unknown> | null; ledgerMissing?: boolean; usageError?: boolean; halted?: boolean; cancelled?: boolean | (() => boolean); cancelCheckFails?: boolean | (() => boolean); usageRows?: { input_tokens: number; output_tokens: number }[]; ledger?: Ledger }
+const MISSING_FN: RpcResult = { data: null, error: { code: "PGRST202", message: "Could not find the function" } };
 function fakeDb(o: Opts = {}) {
-  const ops: Op[] = []; const rpc: string[] = [];
+  const ops: Op[] = []; const rpc: string[] = []; const rpcArgs: { fn: string; args: Record<string, unknown> }[] = [];
   const result = (table: string, op: string): unknown => {
     if (op === "insert") return { error: table === "ai_decision_records" && o.ledgerMissing ? { code: "PGRST205", message: "Could not find the table" } : null };
-    if (op === "update") return { error: null };
+    if (op === "update") return { error: null, data: [{ id: RUN }] };
     if (table === "ai_research_budget_config") return o.budgetRow === undefined ? { data: null, error: { code: "PGRST205", message: "Could not find the table" } } : { data: o.budgetRow, error: null };
-    if (table === "audit_logs") return { data: (typeof o.cancelled === "function" ? o.cancelled() : o.cancelled) ? [{ id: "c" }] : [], error: null };
+    if (table === "audit_logs") {
+      if (typeof o.cancelCheckFails === "function" ? o.cancelCheckFails() : o.cancelCheckFails) return { data: null, error: { message: "timeout" } };
+      return { data: (typeof o.cancelled === "function" ? o.cancelled() : o.cancelled) ? [{ id: "c" }] : [], error: null };
+    }
     if (table === "ai_research_usage") return o.usageError ? { data: null, error: { message: "down" } } : { data: o.usageRows ?? [], error: null };
     if (table === "risk_settings") return { data: { max_open_exposure: 10, max_daily_loss: 2, max_total_positions: null, trading_halted: !!o.halted }, error: null };
     return { data: [], error: null };
@@ -38,9 +45,9 @@ function fakeDb(o: Opts = {}) {
         delete: () => { ops.push({ table, op: "delete" }); return builder(table, "delete"); },
       };
     },
-    rpc: (fn: string) => { rpc.push(fn); return Promise.resolve({ data: null, error: null }); },
+    rpc: (fn: string, args: Record<string, unknown>) => { rpc.push(fn); rpcArgs.push({ fn, args }); return Promise.resolve(o.ledger ? o.ledger(fn, args) : MISSING_FN); },
   };
-  return { db: db as never, ops, rpc };
+  return { db: db as never, ops, rpc, rpcArgs };
 }
 const now = Date.parse("2026-11-12T10:00:00Z");
 const candles = Array.from({ length: 100 }, (_, i) => ({ t: Date.parse("2026-08-04T00:00:00Z") + i * 86_400_000, o: 100 + i, h: 103 + i, l: 98 + i, c: 101 + i, v: 1000 }));
@@ -62,6 +69,19 @@ function analyst(fail: ResearchAgent[] = []) {
     return { report: aiReport(agent), inputTokens: 1000, outputTokens: 200, reported: { inputTokens: 1000, outputTokens: 200, cacheReadTokens: 0, cacheWriteTokens: 0, costUsd: null, providerMessageId: `msg_${agent}`, stopReason: "tool_use" } };
   });
   return { fn, calls };
+}
+/** A ledger that grants every reservation unless `refuse` says otherwise. */
+function okLedger(refuse: (n: number, args: Record<string, unknown>) => RpcResult | null | Promise<RpcResult | null> = () => null) {
+  let n = 0; const log: { fn: string; args: Record<string, unknown> }[] = [];
+  const fn: Ledger = async (name, args) => {
+    log.push({ fn: name, args });
+    if (name === "claim_ai_research_worker") return { data: true, error: null };
+    if (name === "reserve_ai_research_budget") { n += 1; const r = await refuse(n, args); return r ?? { data: { ok: true, reservation_id: `res-${n}` }, error: null }; }
+    if (name === "settle_ai_research_budget") return { data: (args["_reservations"] as string[]).length, error: null };
+    if (name === "release_ai_research_budget") return { data: true, error: null };
+    return MISSING_FN;
+  };
+  return { fn, log };
 }
 const recordOf = (ops: Op[]) => (ops.find((o) => o.table === "ai_decision_records" && o.op === "insert")?.row as { record: Record<string, any>; outcome: string } | undefined);
 
@@ -172,14 +192,14 @@ describe("storage before migration 0043", () => {
 });
 
 describe("execution isolation", () => {
-  it("writes only research tables and calls no database functions", async () => {
-    const { db, ops, rpc } = fakeDb({ halted: false }); const a = analyst();
+  it("writes only research tables and calls only the research spending-ledger functions", async () => {
+    const { db, ops, rpc } = fakeDb({ halted: false, ledger: okLedger().fn }); const a = analyst();
     await executeResearchRun(db, U, RUN, "AAPL", { loadResearchData: async () => data(), runAnalyst: a.fn, now: () => now });
     const writes = ops.filter((o) => o.op !== "select");
     expect(writes.length).toBeGreaterThan(0);
     for (const w of writes) expect(RESEARCH_WRITE_TABLES as readonly string[]).toContain(w.table);
     expect(writes.some((w) => ["risk_settings", "orders", "positions", "trades", "futures_settings", "autopilot_settings", "trading_bots", "exchange_connections"].includes(w.table))).toBe(false);
-    expect(rpc).toEqual([]);
+    expect(new Set(rpc)).toEqual(new Set(["claim_ai_research_worker", "reserve_ai_research_budget", "settle_ai_research_budget"]));
   });
   it("research code never references order or settings mutations", () => {
     for (const f of ["research-run.server.ts", "research.server.ts", "research-pipeline.ts", "research-record.ts", "research-risk-preview.ts", "research-budget.ts", "research-transparency.ts", "research-insights.functions.ts", "research.functions.ts", "research-risk-evaluation.ts", "research-data-quality.ts", "research-decisions.ts"]) {
@@ -262,5 +282,126 @@ describe("owner cancellation mid-run", () => {
     expect(saved.filter((s) => s === "completed").length).toBeGreaterThanOrEqual(3);
     const usage = ops.filter((o) => o.table === "ai_research_usage" && o.op === "insert");
     expect(usage).toHaveLength(callsAtCancel); // nothing ran in the background after the stop
+  });
+});
+
+describe("atomic spending reservations (database ledger)", () => {
+  it("every provider call is preceded by one reservation and followed by one settlement with the reported usage", async () => {
+    const l = okLedger(); const { db, ops } = fakeDb({ ledger: l.fn }); const a = analyst();
+    const out = await run(db, a.fn);
+    expect(out.outcome).toBe("complete");
+    const reserves = l.log.filter((x) => x.fn === "reserve_ai_research_budget"), settles = l.log.filter((x) => x.fn === "settle_ai_research_budget");
+    expect(reserves).toHaveLength(a.calls.length);
+    expect(settles).toHaveLength(a.calls.length);
+    for (const s of settles) expect(s.args["_consumed_tokens"]).toBe(1200);
+    const calls = recordOf(ops)!.record["execution"].calls as { ledger: { mode: string; basis: string; settled: boolean } }[];
+    expect(calls.every((c) => c.ledger.mode === "atomic" && c.ledger.basis === "provider_reported" && c.ledger.settled)).toBe(true);
+  });
+  it("a refused reservation means that call is never sent and the run stops", async () => {
+    const l = okLedger((n) => (n === 3 ? { data: { ok: false, stopped_by: "platform_month_tokens", reason: "Spending limit reached: the platform's monthly AI research limit would be exceeded. No further AI calls were made." }, error: null } : null));
+    const { db, ops } = fakeDb({ ledger: l.fn }); const a = analyst();
+    const out = await run(db, a.fn);
+    expect(a.calls).toHaveLength(2);
+    expect(out.outcome).toBe("stopped_by_budget");
+    expect(recordOf(ops)!.record["execution"].budget.stoppedBy).toBe("platform_month_tokens");
+  });
+  it("a provider failure settles the reservation in full (usage unknown, never assumed lower)", async () => {
+    const l = okLedger(); const { db } = fakeDb({ ledger: l.fn }); const a = analyst(["market"]);
+    await run(db, a.fn);
+    const settle = l.log.find((x) => x.fn === "settle_ai_research_budget" && (x.args["_reservations"] as string[])[0] === "res-1");
+    expect(settle?.args["_consumed_tokens"]).toBeNull();
+  });
+  it("if the ledger cannot be reached, no further AI call starts and it is not reported as a spending stop", async () => {
+    const l = okLedger((n) => (n >= 2 ? { data: null, error: { message: "connection reset" } } : null));
+    const { db, ops } = fakeDb({ ledger: l.fn }); const a = analyst();
+    const out = await run(db, a.fn);
+    expect(a.calls).toHaveLength(1);
+    expect(out.outcome).toBe("partial");
+    expect(recordOf(ops)!.record["execution"].budget.stoppedBy).toBe("ledger_unavailable");
+  });
+  it("a reservation granted while a parallel agent stopped the run is released, never sent", async () => {
+    const l = okLedger(async (_n, args) => {
+      if (args["_agent"] === "fundamentals") return { data: { ok: false, stopped_by: "user_day_tokens", reason: "Spending limit reached: daily. No further AI calls were made." }, error: null };
+      if (args["_agent"] === "market") await new Promise((r) => setTimeout(r, 20));
+      return null;
+    });
+    const { db } = fakeDb({ ledger: l.fn }); const a = analyst();
+    const out = await run(db, a.fn);
+    expect(a.calls).toHaveLength(0);
+    expect(out.outcome).toBe("stopped_by_budget");
+    expect(l.log.filter((x) => x.fn === "release_ai_research_budget").length).toBeGreaterThanOrEqual(1);
+  });
+  it("the database refusing a cancelled run is recorded as cancelled", async () => {
+    const l = okLedger((n) => (n === 2 ? { data: { ok: false, stopped_by: "cancelled", reason: "Cancelled by you. No further AI calls were made; completed reports are kept." }, error: null } : null));
+    const { db } = fakeDb({ ledger: l.fn }); const a = analyst();
+    const out = await run(db, a.fn);
+    expect(out.outcome).toBe("cancelled");
+    expect(a.calls.length).toBeLessThanOrEqual(1);
+  });
+});
+
+describe("worker ownership", () => {
+  it("a second or stale worker for the same run makes no AI calls and writes nothing", async () => {
+    const ledger: Ledger = (fn) => (fn === "claim_ai_research_worker" ? { data: false, error: null } : MISSING_FN);
+    const { db, ops } = fakeDb({ ledger }); const a = analyst();
+    const out = await run(db, a.fn);
+    expect(a.calls).toHaveLength(0);
+    expect(out.finalized).toBe(false);
+    expect(ops.filter((o) => o.op !== "select")).toEqual([]);
+  });
+  it("if ownership cannot be verified, no AI call is made and the failure is recorded", async () => {
+    const ledger: Ledger = () => ({ data: null, error: { message: "connection reset" } });
+    const { db, ops } = fakeDb({ ledger }); const a = analyst();
+    const out = await run(db, a.fn);
+    expect(a.calls).toHaveLength(0);
+    expect(out.outcome).toBe("failed");
+    expect(recordOf(ops)!.record["failure"]).toMatch(/ownership could not be verified/);
+  });
+  it("the final status write is bound to this worker", async () => {
+    const l = okLedger(); const { db, ops } = fakeDb({ ledger: l.fn }); const a = analyst();
+    const out = await executeResearchRun(db, U, RUN, "AAPL", { loadResearchData: async () => data(), runAnalyst: a.fn, now: () => now, workerId: "00000000-0000-4000-8000-0000000000ff" });
+    expect(out.finalized).toBe(true);
+    expect(l.log[0]).toMatchObject({ fn: "claim_ai_research_worker", args: { _worker: "00000000-0000-4000-8000-0000000000ff" } });
+    expect(ops.some((o) => o.table === "ai_research_runs" && o.op === "update" && (o.row as { status?: string }).status === "completed")).toBe(true);
+  });
+});
+
+describe("cancellation fails closed", () => {
+  it("if the cancel state cannot be read before the first call, no AI call is made", async () => {
+    const { db, ops } = fakeDb({ cancelCheckFails: true }); const a = analyst();
+    const out = await run(db, a.fn);
+    expect(a.calls).toHaveLength(0);
+    expect(out.outcome).toBe("failed");
+    expect(recordOf(ops)!.record["execution"].budget.stoppedBy).toBe("cancel_check_failed");
+  });
+  it("if the cancel check starts failing mid-run, the next call never starts and completed reports are kept", async () => {
+    let fail = false; const { db, ops } = fakeDb({ cancelCheckFails: () => fail }); const a = analyst();
+    const flaky = vi.fn(async (...args: Parameters<typeof a.fn>) => { const r = await a.fn(...args); if (a.calls.length === 3) fail = true; return r; });
+    const out = await run(db, flaky);
+    expect(a.calls).toHaveLength(3); // the three analysts that were already in flight
+    expect(out.outcome).toBe("partial");
+    expect(out.status).toBe("partial");
+    expect(recordOf(ops)!.record["execution"].budget.stoppedBy).toBe("cancel_check_failed");
+    const calls = recordOf(ops)!.record["execution"].calls as { finishedAfterCancelRequest: boolean | null }[];
+    expect(calls.some((c) => c.finishedAfterCancelRequest === null)).toBe(true); // recorded as "could not check"
+  });
+  it("cancellation during active provider calls: in-flight calls finish and are recorded as after-cancel; nothing new starts", async () => {
+    let cancelNow = false; let release!: () => void; const gate = new Promise<void>((r) => { release = r; });
+    const l = okLedger(); const { db, ops } = fakeDb({ cancelled: () => cancelNow, ledger: l.fn }); const a = analyst();
+    const inFlight = vi.fn(async (...args: Parameters<typeof a.fn>) => {
+      if (args[0] === "market") { cancelNow = true; setTimeout(release, 10); }
+      await gate; // every first-stage call is still with the provider when the cancel lands
+      return a.fn(...args);
+    });
+    const out = await run(db, inFlight);
+    expect(out.outcome).toBe("cancelled");
+    expect(a.calls.sort()).toEqual(["fundamentals", "market", "news"]);
+    const calls = recordOf(ops)!.record["execution"].calls as { agent: string; status: string; finishedAfterCancelRequest: boolean | null }[];
+    expect(calls).toHaveLength(3);
+    expect(calls.every((c) => c.status === "completed" && c.finishedAfterCancelRequest === true)).toBe(true);
+    const saved = ops.filter((o) => o.op === "insert" && ["ai_agent_outputs", "ai_research_reports"].includes(o.table) && (o.row as { status: string }).status === "completed");
+    expect(saved).toHaveLength(3); // completed outputs preserved
+    expect(l.log.filter((x) => x.fn === "settle_ai_research_budget")).toHaveLength(3); // their usage is accounted
+    expect(a.fn).toHaveBeenCalledTimes(3); // no blind restart of any provider request
   });
 });

@@ -34,7 +34,7 @@ export const refreshPaperResearch = createServerFn({method:"POST"}).middleware([
   // Owner recovery remains readable after downgrade; this action never invokes AI or trading.
   const paper=await context.supabase.from("ai_research_paper").select("*").eq("id",data.id).eq("user_id",context.userId).maybeSingle();
   if(paper.error||!paper.data)throw new Error("Owned paper scenario required");
-  const {yahooChart}=await import("./exchange-adapters.server");
+  const {yahooChart}=await import("./yahoo-chart.server");
   const candles=await yahooChart(paper.data.symbol,"1d",2000);
   const result=observePaperResearch({proposal:paper.data.proposal,confirmedAt:Date.parse(paper.data.confirmed_at),quantity:Number(paper.data.quantity),feePct:Number(paper.data.fee_pct),slippagePct:Number(paper.data.slippage_pct)},candles);
   const {supabaseAdmin:db}=await import("@/integrations/supabase/client.server");

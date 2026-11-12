@@ -63,6 +63,8 @@ export function leakageWarnings(asOf: string | null, model: string, now = Date.n
   return w;
 }
 
+/** Stops that end a run for safety rather than spending: no further AI calls, but not reported as a budget stop. */
+export const INTEGRITY_STOPS: readonly string[] = ["cancel_check_failed", "run_closed", "ledger_unavailable"];
 export type ResearchOutcome = "complete" | "partial" | "failed" | "stopped_by_budget" | "cancelled";
 /**
  * "complete" means every agent that had evidence finished; analysts may be unavailable only because a source is missing.
@@ -70,6 +72,8 @@ export type ResearchOutcome = "complete" | "partial" | "failed" | "stopped_by_bu
  */
 export function decisionOutcome(agents: AgentRecord[], stoppedBy: boolean | string | null): ResearchOutcome {
   if (stoppedBy === "cancelled") return "cancelled";
+  // Safety stops (cancellation unverifiable, run closed elsewhere, spending ledger unreachable) are not spending limits.
+  if (typeof stoppedBy === "string" && INTEGRITY_STOPS.includes(stoppedBy)) return agents.some((a) => a.status === "completed") ? "partial" : "failed";
   if (stoppedBy) return "stopped_by_budget";
   if (!agents.some((a) => a.status === "completed")) return "failed";
   const market = agents.find((a) => a.agent === "market");

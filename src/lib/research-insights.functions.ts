@@ -20,7 +20,8 @@ export const getResearchInsights = createServerFn({ method: "POST" }).middleware
   .handler(async ({ data, context }) => {
     const run = await context.supabase.from("ai_research_runs").select("id,symbol,snapshot,research_evidence,ai_trade_proposals(proposal)").eq("id", data.runId).eq("user_id", context.userId).maybeSingle();
     if (run.error || !run.data) throw new Error("Research run unavailable");
-    const { tableMissing, computeRiskPreview, loadResearchBudget, monthTokens } = await import("./research-run.server");
+    const { tableMissing, loadResearchBudget, monthTokens } = await import("./research-run.server");
+    const { computeRiskPreview } = await import("./research-risk.server");
     const stored = await (context.supabase as unknown as UntypedRead).from("ai_decision_records").select("record,record_sha256,created_at").eq("run_id", data.runId).maybeSingle();
     const evidence = run.data.research_evidence as { pendingDecisionRecord?: unknown } | null;
     const row = !stored.error && stored.data ? (stored.data as { record: unknown; record_sha256: string; created_at: string }) : null;

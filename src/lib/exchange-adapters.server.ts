@@ -73,38 +73,10 @@ async function binanceKlines(query: string, testnet = false) {
 const TF_MS: Record<string, number> = { "1m": 60e3, "5m": 300e3, "15m": 900e3, "30m": 1800e3, "1h": 3600e3, "4h": 14400e3, "1d": 86400e3 };
 export const timeframeMs = (tf: string) => TF_MS[tf] ?? 3600e3;
 
-// ---- Yahoo Finance (public chart API, no key) — forex & commodities prices for the demo wallet ----
-const Y_INT: Record<string, [string, string]> = {
-  "1m": ["1m", "5d"], "5m": ["5m", "1mo"], "15m": ["15m", "1mo"], "30m": ["30m", "1mo"], "1h": ["60m", "6mo"], "4h": ["60m", "2y"], "1d": ["1d", "5y"],
-};
-export async function yahooChart(ticker: string, tf: string, limit = 300): Promise<Candle[]> {
-  const [interval, range] = Y_INT[tf] ?? ["60m", "6mo"];
-  const path = `/v8/finance/chart/${encodeURIComponent(ticker)}?interval=${interval}&range=${range}`;
-  const init = { headers: { "User-Agent": "Mozilla/5.0 (compatible; AlgoVirt/1.0)", Accept: "application/json" } };
-  let j;
-  try { j = await getJson(`https://query1.finance.yahoo.com${path}`, init); }
-  catch { j = await getJson(`https://query2.finance.yahoo.com${path}`, init); }
-  const r = j?.chart?.result?.[0];
-  if (!r?.timestamp) throw new Error(`Yahoo Finance has no data for ${ticker}`);
-  const qt = r.indicators.quote[0];
-  let out: Candle[] = [];
-  (r.timestamp as number[]).forEach((ts, i) => {
-    const c = qt.close[i];
-    if (c == null || qt.open[i] == null) return;
-    out.push({ t: ts * 1000, o: qt.open[i], h: qt.high[i] ?? c, l: qt.low[i] ?? c, c, v: qt.volume?.[i] ?? 0 });
-  });
-  if (tf === "4h") {
-    const agg = new Map<number, Candle>();
-    for (const k of out) {
-      const t = Math.floor(k.t / 14400e3) * 14400e3;
-      const a = agg.get(t);
-      if (!a) agg.set(t, { ...k, t });
-      else { a.h = Math.max(a.h, k.h); a.l = Math.min(a.l, k.l); a.c = k.c; a.v += k.v; }
-    }
-    out = [...agg.values()];
-  }
-  return out.slice(-limit);
-}
+// Yahoo Finance candles live in a credential-free market-data module so research can read prices without importing
+// this order-capable adapter. Re-exported here so existing trading callers are unchanged.
+import { yahooChart } from "./yahoo-chart.server";
+export { yahooChart };
 
 /** Converts 1 unit of a market's quote currency to USD (1 for USD/USDT quotes). */
 export async function quoteToUsd(symbol: string, price: number): Promise<number> {

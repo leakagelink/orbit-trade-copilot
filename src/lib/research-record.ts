@@ -22,6 +22,10 @@ export interface AgentCall {
   repairs?: number;
   /** SHA-256 of the exact evidence sent to this agent. */
   inputSha256?: string | null;
+  /** Spending reservation for this call: database ledger ("atomic", migration 0043) or in-memory only. */
+  ledger?: { mode: "atomic" | "pending_migration"; reservations: number; reservedTokens: number; consumedTokens: number | null; basis: "provider_reported" | "reservation_estimate"; settled: boolean } | null;
+  /** True when the owner's cancel request was already recorded when this in-flight call finished (null = could not check). */
+  finishedAfterCancelRequest?: boolean | null;
 }
 export interface SourceSummary {
   market?: { provider?: string; asOf?: string; fetchedAt?: string; candles?: number };

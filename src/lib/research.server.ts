@@ -1,7 +1,7 @@
 import { AI_MODEL } from "./ai-provider";
 import { aiPrimeMessageStreamed, messageText, type ClaudeMessage } from "./ai-prime.server";
 import { z } from "zod";
-import { yahooChart } from "./exchange-adapters.server";
+import { yahooChart } from "./yahoo-chart.server";
 import { analystReport, researchSnapshot, unavailableReport } from "./research";
 import { loadResearchNews } from "./research-news.server";
 import { ANALYST_MAX_OUTPUT_TOKENS, ANALYST_REPAIR_MAX_OUTPUT_TOKENS, projectCallTokens, reportedCostUsd } from "./research-budget";

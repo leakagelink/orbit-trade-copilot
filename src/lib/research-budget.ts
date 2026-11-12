@@ -85,6 +85,10 @@ export function createBudgetMeter(limits: ResearchBudget, prior: PriorUsage, clo
       reserved += projected; calls += 1; if (kind === "repair") repairs += 1;
       return projected;
     },
+    /** Undoes a reservation whose call was never sent (for example the database ledger refused it). */
+    release(handle: number, kind: "call" | "repair" = "call") {
+      reserved = Math.max(0, reserved - handle); calls = Math.max(0, calls - 1); if (kind === "repair") repairs = Math.max(0, repairs - 1);
+    },
     /** Stops the run for a non-spending reason (for example the owner cancelled it). */
     halt(limit: string, message: string): never { return stop(limit, message); },
     /** Actual provider-reported usage replaces the reservation. */

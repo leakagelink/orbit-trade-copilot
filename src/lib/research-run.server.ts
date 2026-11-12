@@ -1,14 +1,17 @@
 // Research run orchestration (advisory only). Writes only research tables; it never creates orders, order intents,
-// positions or settings, and never reads exchange credentials. The only trading-module call is the read-only
-// `accountRiskBlock` check (selects only). AI output is never an input to sizing.
+// positions or settings, and never reads exchange credentials. Risk inputs come from the read-only research-risk.server
+// module (no order-capable imports; a test walks the import graph). AI output is never an input to sizing.
+// Spending: every AI call first reserves budget atomically in the database ledger (research-ledger.server.ts, draft
+// migration 0043); until 0043 is applied only the in-memory per-run meter applies. Cancellation and ownership checks
+// fail closed: if they cannot be verified, no further AI call starts.
 import { AI_MODEL, AI_PROVIDER_NAME } from "./ai-provider";
 import { runResearchStages, runDecisionStages, type ResearchAgent, type AgentResult, type ResearchReport } from "./research-pipeline";
 import { buildResearchProposal } from "./research-proposal";
 import { createBudgetMeter, DEFAULT_RESEARCH_BUDGET, projectCallTokens, researchBudget, type BudgetMeter, type ResearchBudget } from "./research-budget";
 import { buildDecisionRecord, canonicalJson, sha256Hex, type AgentCall } from "./research-record";
 import { allAgents, RUN_STATUS_FOR_OUTCOME } from "./research-transparency";
-import { riskPreview, type RiskPreview } from "./research-risk-preview";
-import { tradeNet } from "./trade-accounting";
+import { computeRiskPreview } from "./research-risk.server";
+import { claimResearchWorker, ledgerDb, releaseResearchBudget, reserveResearchBudget, runStoppingRefusal, settleResearchBudget, type LedgerMode, type Reservation } from "./research-ledger.server";
 
 type Admin = Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"];
 type ResearchData = Awaited<ReturnType<typeof import("./research.server").loadResearchData>>;
@@ -20,6 +23,8 @@ export interface ResearchRunDeps {
   loadResearchData: (symbol: string) => Promise<ResearchData>;
   runAnalyst: (agent: ResearchAgent, symbol: string, evidence: unknown, beforeRepair?: (projectedTokens: number) => void | Promise<void>) => Promise<AnalystCallResult>;
   now?: () => number;
+  /** Identity of this worker for the run (tests pass a fixed one). */
+  workerId?: string;
 }
 /** Tables the research pipeline may write. Anything else is a bug (tests assert this). */
 export const RESEARCH_WRITE_TABLES = ["ai_research_runs", "ai_agent_outputs", "ai_research_reports", "ai_research_decisions", "ai_trade_proposals", "ai_research_usage", "ai_research_stage_metrics", "ai_decision_records", "ai_risk_evaluations"] as const;
@@ -65,40 +70,28 @@ export function monthTokens(db: Admin, userId: string | null, now = Date.now()) 
 export function dayTokens(db: Admin, userId: string, now = Date.now()) {
   const d = new Date(now); return usageTokensSince(db, userId, new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())).toISOString());
 }
-/** True once the owner has asked this run to stop (append-only audit event). */
-export async function cancelRequested(db: Admin, userId: string, runId: string) {
+/**
+ * Whether the owner has asked this run to stop (append-only audit event). "unknown" when the check itself failed:
+ * callers must then treat the run as not allowed to continue (fail closed).
+ */
+export async function cancelState(db: Admin, userId: string, runId: string): Promise<"cancelled" | "active" | "unknown"> {
   try {
     const r = await db.from("audit_logs").select("id").eq("user_id", userId).eq("action", RESEARCH_CANCEL_ACTION).eq("entity_id", runId).limit(1);
-    if (r.error) { console.error("Research cancel check failed", r.error.message); return false; }
-    return (r.data?.length ?? 0) > 0;
-  } catch (e) { console.error("Research cancel check failed", e instanceof Error ? e.message : e); return false; }
+    if (r.error || !r.data) { console.error("Research cancel check failed", r.error?.message ?? "no data"); return "unknown"; }
+    return r.data.length > 0 ? "cancelled" : "active";
+  } catch (e) { console.error("Research cancel check failed", e instanceof Error ? e.message : e); return "unknown"; }
 }
 
-/** Read-only account inputs for the preview, then the existing Risk Engine check on the resulting cost. */
-export async function computeRiskPreview(db: Admin, userId: string, snapshot: { close: number; asOf: string; candles: { t: number; o: number; h: number; l: number; c: number }[] } | null): Promise<{ preview: RiskPreview; riskEngineBlock: string | null; accountExposure: number | null }> {
-  const start = new Date(); start.setUTCHours(0, 0, 0, 0);
-  const [risk, pos, trades] = await Promise.all([
-    db.from("risk_settings").select("max_open_exposure,max_daily_loss,max_total_positions,trading_halted").eq("user_id", userId).maybeSingle(),
-    db.from("positions").select("entry_price,quantity,unrealized_pnl").eq("user_id", userId).eq("is_open", true),
-    db.from("trades").select("realized_pnl,fees,funding_pnl,costs_verified").eq("user_id", userId).gte("closed_at", start.toISOString()),
-  ]);
-  const limits = risk.error || !risk.data ? null : { maxOpenExposure: risk.data.max_open_exposure === null ? null : Number(risk.data.max_open_exposure), maxDailyLoss: risk.data.max_daily_loss === null ? null : Number(risk.data.max_daily_loss), maxTotalPositions: risk.data.max_total_positions, halted: risk.data.trading_halted };
-  const account = pos.error || trades.error || !pos.data || !trades.data ? null : {
-    openExposure: pos.data.reduce((a, p) => a + Number(p.entry_price) * Number(p.quantity), 0),
-    openPositions: pos.data.length,
-    dailyNet: trades.data.reduce((a, t) => a + tradeNet(t), 0) + pos.data.reduce((a, p) => a + Math.min(0, Number(p.unrealized_pnl)), 0),
-  };
-  const preview = riskPreview({ referencePrice: snapshot?.close ?? null, asOf: snapshot?.asOf ?? null, candles: snapshot?.candles ?? [], limits, account });
-  let riskEngineBlock: string | null = null;
-  if (preview.status === "estimate" && preview.positionValue !== null && preview.positionValue > 0) {
-    const { accountRiskBlock } = await import("./engine.server"); // read-only check; places nothing
-    riskEngineBlock = await accountRiskBlock(db, userId, preview.positionValue);
-  }
-  return { preview, riskEngineBlock, accountExposure: account?.openExposure ?? null };
-}
+export { computeRiskPreview };
+
+const CANCELLED_MESSAGE = "Cancelled by you. No further AI calls were made; completed reports are kept.";
+const CANCEL_UNVERIFIED_MESSAGE = "Could not confirm that this run is still allowed to continue, so no further AI calls were made. Completed reports are kept.";
+const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e)).slice(0, 300);
 
 export async function executeResearchRun(db: Admin, userId: string, runId: string, symbol: string, deps: ResearchRunDeps) {
   const now = deps.now ?? Date.now;
+  const workerId = deps.workerId ?? crypto.randomUUID();
+  const ledger = ledgerDb(db);
   const startedAt = new Date(now()).toISOString();
   const calls: AgentCall[] = [];
   const results: AgentResult[] = [];
@@ -106,40 +99,95 @@ export async function executeResearchRun(db: Admin, userId: string, runId: strin
   let meter: BudgetMeter | null = null;
   let failure: string | null = null;
   let proposal: ReturnType<typeof buildResearchProposal> | null = null;
+  // Exactly one worker per run. A second or stale worker makes no AI calls and writes nothing.
+  let mode: LedgerMode = "pending_migration";
   try {
+    const claim = await claimResearchWorker(ledger, runId, userId, workerId);
+    if (claim.mode === "refused") return { runId, outcome: "failed" as const, status: null, ledger: "not_run_worker" as const, stopReason: "Another worker already owns this research run; this request made no AI calls and changed nothing.", finalized: false };
+    mode = claim.mode;
+  } catch (e) { failure = errorText(e); }
+  const atomic = mode === "atomic";
+  const ownRun = <T extends { eq: (k: string, v: string) => T }>(q: T) => (atomic ? q.eq("worker_id", workerId) : q);
+  try {
+    if (failure) throw new Error(failure);
     const budget = await loadResearchBudget(db);
     const [userDay, userMonth, platformMonth] = await Promise.all([dayTokens(db, userId, now()), monthTokens(db, userId, now()), monthTokens(db, null, now())]);
     meter = createBudgetMeter(budget.limits, { userDayTokens: userDay, userMonthTokens: userMonth, platformMonthTokens: platformMonth, platformMonthUsd: null }, { startedAt: Date.parse(startedAt), now });
     const m = meter;
     let cancelled = false;
+    // Fail closed: an unverifiable cancel state stops the run before the next AI call.
     const checkCancelled = async () => {
-      if (!cancelled) cancelled = await cancelRequested(db, userId, runId);
-      if (cancelled) m.halt("cancelled", "Cancelled by you. No further AI calls were made; completed reports are kept.");
+      if (!cancelled) {
+        const state = await cancelState(db, userId, runId);
+        if (state === "unknown") m.halt("cancel_check_failed", CANCEL_UNVERIFIED_MESSAGE);
+        cancelled = state === "cancelled";
+      }
+      if (cancelled) m.halt("cancelled", CANCELLED_MESSAGE);
     };
     evidence = await deps.loadResearchData(symbol);
     const ev = evidence;
-    const snapshotWrite = await db.from("ai_research_runs").update({ snapshot: ev.snapshot, research_evidence: { version: 3, news: ev.news, sentiment: ev.sentiment } }).eq("id", runId).eq("user_id", userId);
+    const snapshotWrite = await ownRun(db.from("ai_research_runs").update({ snapshot: ev.snapshot, research_evidence: { version: 3, news: ev.news, sentiment: ev.sentiment } }).eq("id", runId).eq("user_id", userId));
     if (snapshotWrite.error) throw snapshotWrite.error;
     const analyze = async (agent: ResearchAgent, input: unknown) => {
       await checkCancelled();
-      let handle = m.reserve(projectCallTokens(JSON.stringify({ symbol, evidence: input }).length + SYSTEM_OVERHEAD_CHARS));
       const inputSha256 = await sha256Hex(canonicalJson({ symbol, evidence: input }));
+      const reservations: string[] = [];
+      let reservedTotal = 0;
+      // Database reservation (atomic across every run and user). A refusal releases the in-memory reservation too.
+      const ledgerReserve = async (tokens: number, kind: "call" | "repair") => {
+        if (!atomic) return;
+        const res: Reservation = await reserveResearchBudget(ledger, { runId, userId, workerId, agent, kind, tokens }).catch((e) => ({ ok: false as const, stoppedBy: "ledger_unavailable", reason: errorText(e) }));
+        if (!res.ok) {
+          m.release(tokens, kind);
+          if (res.stoppedBy === "cancelled") cancelled = true;
+          if (runStoppingRefusal(res.stoppedBy)) m.halt(res.stoppedBy, res.reason);
+          throw new Error(res.reason);
+        }
+        reservations.push(res.id); reservedTotal += tokens;
+        // A parallel agent may have stopped the run while this reservation was in flight: never send it.
+        const stopped = m.state().stoppedBy;
+        if (stopped) {
+          const id = reservations.pop()!; reservedTotal -= tokens; m.release(tokens, kind);
+          await releaseResearchBudget(ledger, { reservationId: id, workerId });
+          m.halt(stopped, m.state().stopReason ?? "Research was stopped");
+        }
+      };
+      const projected = projectCallTokens(JSON.stringify({ symbol, evidence: input }).length + SYSTEM_OVERHEAD_CHARS);
+      let handle = m.reserve(projected);
+      await ledgerReserve(projected, "call");
+      const settleLedger = async (consumed: number | null, costUsd: number | null): Promise<NonNullable<AgentCall["ledger"]>> => {
+        const settled = atomic && reservations.length ? await settleResearchBudget(ledger, { reservationIds: reservations, workerId, consumedTokens: consumed, costUsd }) : false;
+        if (atomic && !settled) console.error(`Research reservation for ${agent} could not be settled; it keeps counting in full`);
+        return { mode, reservations: atomic ? reservations.length : 0, reservedTokens: atomic ? reservedTotal : handle, consumedTokens: consumed ?? (atomic ? reservedTotal : handle), basis: consumed === null ? "reservation_estimate" : "provider_reported", settled };
+      };
+      // Recorded on every call that finishes: was the owner's cancel already requested by then? (null = unknown)
+      const afterCancel = async () => { const s = await cancelState(db, userId, runId); if (s === "cancelled") cancelled = true; return s === "unknown" ? null : s === "cancelled"; };
       const started = now(); const at = new Date(started).toISOString();
       let result: AnalystCallResult;
-      try { result = await deps.runAnalyst(agent, symbol, input, async (projected) => { await checkCancelled(); handle += m.reserve(projected, "repair"); }); }
-      catch (error) {
+      try {
+        result = await deps.runAnalyst(agent, symbol, input, async (projectedRepair) => {
+          await checkCancelled();
+          const t = m.reserve(projectedRepair, "repair");
+          await ledgerReserve(projectedRepair, "repair");
+          handle += t;
+        });
+      } catch (error) {
         m.settleFailed(handle);
-        const reason = (error instanceof Error ? error.message : String(error)).slice(0, 300);
+        const ledgerInfo = await settleLedger(null, null); // usage unknown: the reservation counts in full
+        const reason = errorText(error);
         console.error(`Research agent ${agent} failed: ${reason}`);
-        calls.push({ agent, status: "failed", startedAt: at, durationMs: now() - started, inputTokens: null, outputTokens: null, cacheReadTokens: null, cacheWriteTokens: null, costUsd: null, providerMessageId: null, stopReason: null, error: reason, inputSha256 });
+        calls.push({ agent, status: "failed", startedAt: at, durationMs: now() - started, inputTokens: null, outputTokens: null, cacheReadTokens: null, cacheWriteTokens: null, costUsd: null, providerMessageId: null, stopReason: null, error: reason, inputSha256, ledger: ledgerInfo, finishedAfterCancelRequest: await afterCancel() });
         const metric = await db.from("ai_research_stage_metrics").insert({ user_id: userId, run_id: runId, agent, duration_ms: now() - started, status: "failed" });
         if (metric.error) throw new Error("Research monitoring unavailable");
         throw error;
       }
       const r = result.reported;
-      m.settle(handle, (r.inputTokens ?? 0) + (r.outputTokens ?? 0) + (r.cacheReadTokens ?? 0) + (r.cacheWriteTokens ?? 0), r.costUsd);
+      const actual = r.inputTokens === null && r.outputTokens === null ? null : (r.inputTokens ?? 0) + (r.outputTokens ?? 0) + (r.cacheReadTokens ?? 0) + (r.cacheWriteTokens ?? 0);
+      m.settle(handle, actual ?? handle, r.costUsd);
+      // Settle before anything else so the call is accounted even if the run was closed meanwhile.
+      const ledgerInfo = await settleLedger(actual, r.costUsd);
       const durationMs = now() - started;
-      calls.push({ agent, status: "completed", startedAt: at, durationMs, ...r, inputSha256 });
+      calls.push({ agent, status: "completed", startedAt: at, durationMs, ...r, inputSha256, ledger: ledgerInfo, finishedAfterCancelRequest: await afterCancel() });
       const metric = await db.from("ai_research_stage_metrics").insert({ user_id: userId, run_id: runId, agent, duration_ms: durationMs, status: "completed", input_tokens: result.inputTokens, output_tokens: result.outputTokens, provider_cost_usd: r.costUsd });
       if (metric.error) throw new Error("Research monitoring unavailable");
       const usage = await db.from("ai_research_usage").insert({ run_id: runId, user_id: userId, agent, model: AI_MODEL, input_tokens: result.inputTokens, output_tokens: result.outputTokens });
@@ -164,7 +212,7 @@ export async function executeResearchRun(db: Admin, userId: string, runId: strin
     if (proposalWrite.error) throw proposalWrite.error;
   } catch (error) {
     console.error("Research run failed", error);
-    failure = error instanceof Error && /limits unavailable|usage evidence/.test(error.message) ? error.message : "Research could not finish. Market data or report storage may be unavailable. No trades were placed.";
+    failure = error instanceof Error && /limits unavailable|usage evidence|ownership could not be verified/.test(error.message) ? error.message : "Research could not finish. Market data or report storage may be unavailable. No trades were placed.";
   }
   // Decision record: always written, including for failed and partial runs.
   const agents = allAgents(results);
@@ -184,27 +232,29 @@ export async function executeResearchRun(db: Admin, userId: string, runId: strin
     agents, proposal, riskPreview: risk?.preview ?? null, riskEngineBlock: risk?.riskEngineBlock ?? null, accountExposure: risk?.accountExposure ?? null,
     provider: { name: AI_PROVIDER_NAME, model: AI_MODEL }, calls, budget: meter?.state() ?? null, failure,
   });
-  let ledger: "stored" | "pending_migration" | "failed" = "failed";
+  let ledgerState: "stored" | "pending_migration" | "failed" = "failed";
   const ins = await untyped(db).from("ai_decision_records").insert({ run_id: runId, user_id: userId, market: record.market, symbol, timeframe: "1d", outcome: record.outcome, decided_at: record.decidedAt, record, schema_version: record.schemaVersion });
-  if (!ins.error) ledger = "stored";
+  if (!ins.error) ledgerState = "stored";
   else if (tableMissing(ins.error)) {
     // Until draft migration 0043 is approved the record is kept with the run (mutable, labelled provisional).
-    const keep = await db.from("ai_research_runs").update({ research_evidence: { version: 3, news: evidence?.news ?? null, sentiment: evidence?.sentiment ?? null, pendingDecisionRecord: record } as never }).eq("id", runId).eq("user_id", userId);
-    ledger = keep.error ? "failed" : "pending_migration";
+    const keep = await db.from("ai_research_runs").update({ research_evidence: { version: 3, news: evidence?.news ?? null, sentiment: evidence?.sentiment ?? null, pendingDecisionRecord: record } as never }).eq("id", runId).eq("user_id", userId).in("status", ["queued", "running"]);
+    ledgerState = keep.error ? "failed" : "pending_migration";
   } else console.error("Decision record could not be saved", ins.error);
   // Risk evaluation history (append-only once migration 0043 is applied; until then it lives in the record only).
   const ev = record.riskEvaluation.evaluation;
   const evWrite = await untyped(db).from("ai_risk_evaluations").insert({ run_id: runId, user_id: userId, symbol, market_type: ev.marketType, proposed_direction: ev.proposedDirection, decision: ev.decision, execution_authorized: false, estimated_position_size: ev.estimatedPositionSize, estimated_risk_amount: ev.estimatedRiskAmount, available_risk_budget: ev.availableRiskBudget, account_exposure: ev.accountExposure, rejection_reasons: ev.rejectionReasons, missing_inputs: ev.missingInputs, evaluation: ev });
   if (evWrite.error && !tableMissing(evWrite.error)) console.error("Risk evaluation could not be saved", evWrite.error);
   const status = RUN_STATUS_FOR_OUTCOME[record.outcome];
-  const errorText = failure ?? record.stopReason ?? null;
+  const reasonText = failure ?? record.stopReason ?? null;
   const completedAt = new Date(now()).toISOString();
-  // Compare-and-set: a run already closed elsewhere (stale-run cancellation) is never overwritten.
-  let saved = await db.from("ai_research_runs").update({ status, ...(errorText ? { error: errorText } : {}), completed_at: completedAt }).eq("id", runId).eq("user_id", userId).in("status", ["queued", "running"]);
+  // Compare-and-set on status (and, with 0043, on this worker): a run already closed elsewhere is never overwritten.
+  let saved = await ownRun(db.from("ai_research_runs").update({ status, ...(reasonText ? { error: reasonText } : {}), completed_at: completedAt }).eq("id", runId).eq("user_id", userId)).in("status", ["queued", "running"]).select("id");
   if (saved.error && saved.error.code === "23514" && (status === "cancelled" || status === "budget_exceeded")) {
     // Before migration 0043 the status list lacks these two; keep the precise outcome in the record and the reason here.
-    saved = await db.from("ai_research_runs").update({ status: results.some((r) => r.status === "completed") ? "partial" : "failed", error: `${status === "cancelled" ? "Cancelled" : "Stopped by a research limit"}: ${errorText ?? "no reason recorded"}`, completed_at: completedAt }).eq("id", runId).eq("user_id", userId).in("status", ["queued", "running"]);
+    saved = await ownRun(db.from("ai_research_runs").update({ status: results.some((r) => r.status === "completed") ? "partial" : "failed", error: `${status === "cancelled" ? "Cancelled" : "Stopped by a research limit"}: ${reasonText ?? "no reason recorded"}`, completed_at: completedAt }).eq("id", runId).eq("user_id", userId)).in("status", ["queued", "running"]).select("id");
   }
   if (saved.error) throw new Error("Research status could not be saved; check history before starting again");
-  return { runId, outcome: record.outcome, status, ledger, stopReason: meter?.state().stopReason ?? null };
+  const finalized = (saved.data?.length ?? 0) > 0;
+  if (!finalized) console.error(`Research run ${runId} was already closed elsewhere; its saved status was left unchanged`);
+  return { runId, outcome: record.outcome, status, ledger: ledgerState, stopReason: meter?.state().stopReason ?? null, finalized };
 }
