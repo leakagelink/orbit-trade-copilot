@@ -1,7 +1,7 @@
 # Roadmap
 
 ## Workspace move 12 Nov 2026
-- [ ] Freshly connect AI Prime Tech in the new workspace; previous-workspace connection references no longer apply
+- [x] Freshly connect AI Prime Tech in the new workspace; previous-workspace connection references no longer apply. Read-only models check returned HTTP 200 and the configured Claude model is available; no inference or trading action was run.
 
 ## Binance Futures scalping and scoring — 11 November 2026
 - [x] Add separate USD-M Futures execution, broker-side algo protection, reduce-only recovery and UI/AI controls; market_type dispatch prevents Spot confusion; live entries remain certification-gated
