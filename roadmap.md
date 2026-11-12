@@ -1,5 +1,10 @@
 # Roadmap
 
+## Phase 1.6 isolated fault-injection certification — 12 November 2026
+- [x] Inspect isolation prerequisites — only Testnet connection shares an owner with production; kill switch is account-wide; stopped per Section B
+- [ ] Dedicated test sign-in, separate Testnet API key, its Elite access and owner-stated limits — waiting on owner
+- [ ] Build INJECTED harness (12 scenarios) and BROKER trigger runs, then Phase 1.6 report — waiting on prerequisites and harness approval
+
 ## Phase 1.5 Testnet certification — 12 November 2026
 - [x] Verify Testnet-only account, symbol, risk, lease and broker inventory before any mutation
 - [x] Execute safe supported broker scenarios A–I; A/B pass after flat-inventory fix, C–I not fully testable on real Testnet without an approved fault harness
