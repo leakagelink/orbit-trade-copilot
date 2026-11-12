@@ -4,7 +4,16 @@
 import type { Candle } from "./indicators";
 import { fillAt, type CostModel } from "./backtest-costs";
 import { intradayFeatures, scalpSimulate, INTRADAY_FEATURE_VERSION, type IntradayConfig, type IntradaySignal, type ScalpSimOptions } from "./scalp-intraday";
-import { calibratePlatt, classificationMetrics, predictProba, trainLogistic, type LogisticModel } from "./ml-logistic";
+import { calibratePlatt, classificationMetrics, predictProba, trainLogistic } from "./ml-logistic";
+import { calibrateGbdt, gbdtProba, trainGbdt, type GbdtParams } from "./ml-gbdt";
+
+export type ModelKind = "logistic" | "gbdt";
+/** A fitted, calibrated scorer: train rows fit the model, validation rows fit the calibration only. */
+export interface FittedScorer { version: string; predict(x: number[]): number }
+export function fitScorer(kind: ModelKind, train: { X: number[][]; y: number[] }, valid: { X: number[][]; y: number[] }, gbdt: GbdtParams = {}): FittedScorer {
+  if (kind === "gbdt") { const m = calibrateGbdt(trainGbdt(train.X, train.y, [...MODEL_FEATURES], gbdt), valid.X, valid.y); return { version: m.version, predict: (x) => gbdtProba(m, x) }; }
+  const m = calibratePlatt(trainLogistic(train.X, train.y, [...MODEL_FEATURES]), valid.X, valid.y); return { version: m.version, predict: (x) => predictProba(m, x) };
+}
 
 export const SCALP_MODEL_FEATURE_VERSION = `${INTRADAY_FEATURE_VERSION}+model-v1` as const;
 export const MODEL_FEATURES = ["close_vs_ema_fast_atr", "ema_spread_atr", "close_vs_vwap_atr", "rsi_centered", "macd_hist_atr", "atr_pct", "bb_width_pct", "log_rel_volume", "htf_trend", "ret1_atr", "ret5_atr", "dist_high_atr", "dist_low_atr"];
@@ -51,14 +60,14 @@ export interface FoldResult { trainRange: [number, number]; validationRange: [nu
  * threshold on the following validation window (purged), then emit signals ONLY for the next test window. A candle's
  * signal is LONG/SHORT when its calibrated probability clears the threshold and beats the other side; else NO_TRADE.
  */
-export function walkForwardModel(cs: Candle[], cfg: IntradayConfig, sim: ScalpSimOptions, o: { trainBars: number; validationBars: number; testBars: number; thresholds: number[]; minValidationTrades: number }) {
+export function walkForwardModel(cs: Candle[], cfg: IntradayConfig, sim: ScalpSimOptions, o: { trainBars: number; validationBars: number; testBars: number; thresholds: number[]; minValidationTrades: number; model?: ModelKind; gbdt?: GbdtParams }) {
   const baseMs = sim.baseMs, costs: CostModel = sim.costs;
   const rows = modelRows(cs, baseMs, cfg), atr = intradayFeatures(cs, baseMs, cfg).map((x) => x.atr);
   const purge = cfg.maxHoldBars + 2;
   const labels = (i: number, side: "LONG" | "SHORT") => (rows[i] && atr[i] ? tripleBarrierLabel(cs, i, side, atr[i]!, cfg, costs) : null);
   const signals: (IntradaySignal | null)[] = new Array(cs.length).fill(null);
   const folds: FoldResult[] = [];
-  const models: { fold: number; long: LogisticModel; short: LogisticModel; threshold: number | null }[] = [];
+  const models: { fold: number; long: FittedScorer; short: FittedScorer; threshold: number | null }[] = [];
   for (let s = 0; s + o.trainBars + purge + o.validationBars + purge + o.testBars <= cs.length; s += o.testBars) {
     const tr: [number, number] = [s, s + o.trainBars - 1 - purge]; // last `purge` rows dropped: their labels look into validation
     const va: [number, number] = [s + o.trainBars, s + o.trainBars + o.validationBars - 1 - purge];
@@ -66,13 +75,13 @@ export function walkForwardModel(cs: Candle[], cfg: IntradayConfig, sim: ScalpSi
     const set = (r: [number, number], side: "LONG" | "SHORT") => { const X: number[][] = [], y: number[] = [], at: number[] = []; for (let i = r[0]; i <= r[1]; i++) { const l = labels(i, side); if (l !== null) { X.push(rows[i]!); y.push(l); at.push(i); } } return { X, y, at }; };
     const tl = set(tr, "LONG"), ts = set(tr, "SHORT"), vl = set(va, "LONG"), vs = set(va, "SHORT");
     if (tl.X.length < 200 || vl.X.length < 50 || new Set(tl.y).size < 2 || new Set(ts.y).size < 2) continue;
-    const ml = calibratePlatt(trainLogistic(tl.X, tl.y, [...MODEL_FEATURES]), vl.X, vl.y);
-    const msh = calibratePlatt(trainLogistic(ts.X, ts.y, [...MODEL_FEATURES]), vs.X, vs.y);
+    if (vs.X.length < 20) continue;
+    const ml = fitScorer(o.model ?? "logistic", tl, vl, o.gbdt), msh = fitScorer(o.model ?? "logistic", ts, vs, o.gbdt);
     const emit = (r: [number, number], t: number, into: (IntradaySignal | null)[]) => {
       let n = 0;
       for (let i = r[0]; i <= r[1]; i++) {
         const x = rows[i]; if (!x || !atr[i]) continue;
-        const pl = predictProba(ml, x), ps = predictProba(msh, x);
+        const pl = ml.predict(x), ps = msh.predict(x);
         const side = pl >= t && pl > ps ? "LONG" : ps >= t && ps > pl ? "SHORT" : null;
         if (!side) continue;
         const c = cs[i]!, dist = cfg.atrStopMult * atr[i]!;
@@ -94,8 +103,8 @@ export function walkForwardModel(cs: Candle[], cfg: IntradayConfig, sim: ScalpSi
     const testL = set(te, "LONG"), testS = set(te, "SHORT");
     const n = threshold === null ? 0 : emit(te, threshold, signals);
     folds.push({ trainRange: [cs[tr[0]]!.t, cs[tr[1]]!.t], validationRange: [cs[va[0]]!.t, cs[va[1]]!.t], testRange: [cs[te[0]]!.t, cs[te[1]]!.t], threshold,
-      long: testL.X.length ? classificationMetrics(testL.X.map((x) => predictProba(ml, x)), testL.y) : null,
-      short: testS.X.length ? classificationMetrics(testS.X.map((x) => predictProba(msh, x)), testS.y) : null, signals: n });
+      long: testL.X.length ? classificationMetrics(testL.X.map((x) => ml.predict(x)), testL.y) : null,
+      short: testS.X.length ? classificationMetrics(testS.X.map((x) => msh.predict(x)), testS.y) : null, signals: n });
     models.push({ fold: folds.length, long: ml, short: msh, threshold });
   }
   return { featureVersion: SCALP_MODEL_FEATURE_VERSION, folds, signals, models };

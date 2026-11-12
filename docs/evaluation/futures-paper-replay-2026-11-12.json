@@ -1,0 +1,100 @@
+{
+  "generatedAt": "2026-11-12T17:30:16.322Z",
+  "kind": "historical replay of the Futures paper engine (not forward paper trading, nothing stored)",
+  "period": {
+    "start": "2026-10-29T00:00:00.000Z",
+    "end": "2026-11-12T00:00:00.000Z",
+    "days": 14,
+    "timeframe": "5m"
+  },
+  "specs": {
+    "BTCUSDT": {
+      "stepSize": 0.001,
+      "tickSize": 0.1,
+      "minNotional": 50,
+      "maintenanceMarginRate": 0.004
+    },
+    "ETHUSDT": {
+      "stepSize": 0.001,
+      "tickSize": 0.01,
+      "minNotional": 20,
+      "maintenanceMarginRate": 0.005
+    }
+  },
+  "assumptions": {
+    "maintenanceMarginRate": "first-bracket assumption per symbol, not read from the exchange",
+    "fees": "taker 0.05% list price, not account-verified",
+    "limits": "paper-only replay limits",
+    "fills": "volume participation cap 1% of each 5m candle"
+  },
+  "config": {
+    "startingBalance": 1000,
+    "triggerSource": "MARK",
+    "maxBasisPct": 0.5,
+    "entryTtlBars": 3,
+    "costs": {
+      "takerFeePct": 0.05,
+      "spreadPct": 0.01,
+      "slippagePct": 0.01,
+      "maxParticipationPct": 1
+    },
+    "specs": {
+      "BTCUSDT": {
+        "stepSize": 0.001,
+        "tickSize": 0.1,
+        "minNotional": 50,
+        "maintenanceMarginRate": 0.004
+      },
+      "ETHUSDT": {
+        "stepSize": 0.001,
+        "tickSize": 0.01,
+        "minNotional": 20,
+        "maintenanceMarginRate": 0.005
+      }
+    },
+    "strategyBudgets": {
+      "futures-scalp-intraday": 50
+    },
+    "limits": {
+      "maxExposure": 2000,
+      "maxDailyLoss": 20,
+      "maxPositions": 2,
+      "maxLossPerTrade": 5,
+      "maxMarginPerTrade": 100,
+      "maxLeverage": 10,
+      "liquidationBufferPct": 2,
+      "maxDataAgeMs": 300000,
+      "maxProposalAgeMs": 300000,
+      "roundTripCostPct": 0.13
+    }
+  },
+  "barsPausedForMissingData": 0,
+  "accepted": 21,
+  "rejections": {
+    "REJECT:one_position_per_symbol": 36,
+    "REJECT:position_count": 16,
+    "REJECT:daily_loss": 26,
+    "REJECT:min_notional": 1165
+  },
+  "trades": 21,
+  "bySymbol": {
+    "BTCUSDT": 8,
+    "ETHUSDT": 13
+  },
+  "byReason": {
+    "stop": 16,
+    "target": 4,
+    "time": 1,
+    "liquidation": 0
+  },
+  "partialFillEvents": 0,
+  "cancelledRemainders": 0,
+  "fundingEvents": 1,
+  "fundingTotal": 0.0508248162961059,
+  "feesTotal": 15.833941420090696,
+  "netTotal": -37.01865189142786,
+  "endingWallet": 962.9813481085719,
+  "openPositions": [],
+  "reconciliation": [],
+  "note": "Simulated from public candles. Not evidence of future profit."
+}

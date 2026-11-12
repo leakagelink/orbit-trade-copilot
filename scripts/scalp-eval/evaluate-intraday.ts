@@ -42,9 +42,15 @@ async function funding(symbol: string) {
 const metrics = (trades: ScalpTrade[], from: number, tfMs: number) => {
   let eq = NOTIONAL; const curve = [{ t: from, v: eq }];
   for (const t of trades) { eq += t.net; curve.push({ t: t.exitT, v: eq }); }
-  const m = performanceMetrics(trades, curve, NOTIONAL, tfMs);
+  // performanceMetrics annualizes per-curve-point returns as if they were per-bar; this curve has one point per TRADE,
+  // so that Sharpe is not meaningful. Replace it with a Sharpe computed from daily net P&L (zero-trade days included).
+  const { sharpe: _perTradeSharpe, ...m } = performanceMetrics(trades, curve, NOTIONAL, tfMs); void _perTradeSharpe;
+  const last = trades.at(-1)?.exitT ?? from, days = Math.max(1, Math.ceil((last - from) / 86_400_000)), daily = new Array(days).fill(0);
+  for (const t of trades) { const d = Math.floor((t.exitT - from) / 86_400_000); if (d >= 0 && d < days) daily[d] += t.net; }
+  const dm = daily.reduce((a, x) => a + x, 0) / days, dsd = Math.sqrt(daily.reduce((a, x) => a + (x - dm) ** 2, 0) / Math.max(1, days - 1));
+  const dailySharpe = dsd > 0 ? (dm / dsd) * Math.sqrt(365) : null;
   const by = (k: "LONG" | "SHORT") => trades.filter((t) => t.side === k).length;
-  return { ...m, longs: by("LONG"), shorts: by("SHORT"), grossBeforeCosts: trades.reduce((a, t) => a + t.pnl + t.spread + t.slippage, 0) };
+  return { ...m, dailySharpe, longs: by("LONG"), shorts: by("SHORT"), grossBeforeCosts: trades.reduce((a, t) => a + t.pnl + t.spread + t.slippage, 0) };
 };
 
 function evaluateRules(cs: Candle[], tfMs: number, cfg: IntradayConfig, fund: { t: number; rate: number }[]) {

@@ -1,5 +1,17 @@
 # Roadmap
 
+## Phase 4A — risk context, Futures paper, strategy + model research — 12 November 2026
+- [x] Central Risk Engine context builder (SELECT-only reads, INSUFFICIENT_DATA on any failed read) + Futures integration design; not connected
+- [x] Futures paper engine (BTCUSDT/ETHUSDT: long/short, leverage/margin, funding, mark/index, liquidation, exchange-style SL/TP, partial fills, costs, reconciliation, daily-loss/exposure via the Risk Engine) + 14-day real-data replay
+- [x] Draft migration 0045 (Futures paper ledger + strategy budgets) + rollback; PGlite and multi-session PostgreSQL tests; not applied
+- [x] 120-day strategy research (576 pre-declared variants, purged walk-forward): NO TRADE for both symbols
+- [x] Pure-TypeScript boosted-tree model vs logistic baseline (AUC/Brier/calibration/net expectancy); LightGBM/XGBoost runtime feasibility
+- [x] Ultra-fast infrastructure architecture + cost report (decision only)
+- [ ] Connect the risk checker to live Futures orders (shadow → Testnet → production) — waits on owner approval
+- [ ] Apply 0045 / schedule a Futures paper worker — waits on fresh export + owner approval (worker not built)
+- [ ] Draft the risk-decision ledger migration — waits on owner approval of the gate design
+- [ ] Live market-data recorder — waits on owner infrastructure decision (paid hosting)
+
 ## Parallel sprint — scalping AI, central risk, live readiness — 12 November 2026
 - [x] Audits (Futures/Testnet, runtime/ML/data, research/paper/risk)
 - [x] Central Risk Engine (pure) + engine adapters + tests
@@ -9,7 +21,7 @@
 - [x] Paper pause notices; six certification checklists; sprint report
 - [ ] Wire Central Risk Engine into live Futures submit — waits on owner approval
 - [ ] Persistent market-data runtime for ultrafast — waits on owner infrastructure decision
-- [ ] Draft risk-decision ledger / strategy budget migrations — waits on owner approval
+- [ ] Draft risk-decision ledger migration — waits on owner approval (strategy budgets drafted in 0045)
 - [ ] Testnet certification run — waits on dedicated account, 0040–0042, Testnet order approval
 
 ## Phase 3 — Forward paper trading — 12 November 2026

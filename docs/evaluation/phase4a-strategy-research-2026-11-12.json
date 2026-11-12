@@ -1,0 +1,2007 @@
+{
+  "version": "scalp-research-v1",
+  "generatedAt": "2026-11-12T17:32:42.424Z",
+  "source": "Binance USD-M public /fapi/v1/klines (1m) + /fapi/v1/fundingRate, credential-free",
+  "period": {
+    "start": "2026-07-15T00:00:00.000Z",
+    "end": "2026-11-12T00:00:00.000Z",
+    "days": 120
+  },
+  "costs": {
+    "takerFeePct": 0.05,
+    "makerFeePct": 0.02,
+    "spreadPct": 0.01,
+    "slippagePct": 0.01
+  },
+  "roundTripCostPct": {
+    "taker": 0.13,
+    "maker": 0.085
+  },
+  "notionalPerTrade": 1000,
+  "folds": {
+    "selectionDays": 28,
+    "purgeDays": 1,
+    "testDays": 7
+  },
+  "selectionRule": {
+    "minTrades": 30,
+    "minTStat": 2
+  },
+  "grid": {
+    "variants": 576,
+    "note": "576 pre-declared variants: timeframe 1/5/15m × setups × stop 1/2 ATR × reward 1/2 × hold 10/40 bars × taker/maker × cost-edge filter off/3× × cooldown 0/10 bars"
+  },
+  "caveats": [
+    "Candle-level simulation: no order-book queue position; maker fills require price to trade through the limit and same-candle stops are assumed hit first.",
+    "Historical bid/ask spread is not available for these dates (Binance bookTicker archive returned 404), so no spread filter can be evaluated; spread is a fixed assumption.",
+    "Fees are list-price assumptions, not account-verified; VIP tiers and BNB discounts are not modelled.",
+    "576 variants were searched; the best selection-window result is biased upward by multiple testing, which is why only unseen test windows count.",
+    "Factor tables are descriptive over the whole period and were NOT used for selection."
+  ],
+  "results": {
+    "BTCUSDT": {
+      "candles1m": 172800,
+      "completenessPct": 100,
+      "dataOk": true,
+      "fundingEvents": 364,
+      "baselineDecomposition": {
+        "1m": {
+          "withCosts": {
+            "trades": 5195,
+            "tradesPerDay": 43.29,
+            "totalNet": -6819.14,
+            "meanNet": -1.3126,
+            "tStat": -70.42,
+            "winRatePct": 18.9,
+            "profitFactor": 0.1,
+            "meanGrossBps": -0.12,
+            "meanCostBps": 13,
+            "fees": 5195,
+            "spread": 519.5,
+            "slippage": 1039,
+            "funding": -1.23,
+            "maxDrawdown": 6819.14,
+            "dailySharpe": -37.93,
+            "markoutBps": {
+              "1": -1.69,
+              "5": -2.03,
+              "15": -2.43
+            }
+          },
+          "zeroCosts": {
+            "trades": 4954,
+            "tradesPerDay": 41.28,
+            "totalNet": -71.19,
+            "meanNet": -0.0144,
+            "tStat": -0.73,
+            "winRatePct": 40.4,
+            "profitFactor": 0.976,
+            "meanGrossBps": -0.14,
+            "meanCostBps": 0,
+            "fees": 0,
+            "spread": 0,
+            "slippage": 0,
+            "funding": -1.12,
+            "maxDrawdown": 129.27,
+            "dailySharpe": -1.25,
+            "markoutBps": {
+              "1": -0.19,
+              "5": -0.47,
+              "15": -0.9
+            }
+          },
+          "meanHoldBars": 6.14,
+          "exitReasons": {
+            "stop": 3430,
+            "target": 1667,
+            "time": 98,
+            "end": 0
+          },
+          "fundingShareOfLossPct": 0.02,
+          "volumeVolatilitySensitivity": [
+            {
+              "minRelVolume": 1,
+              "minAtrPct": 0.03,
+              "trades": 5292,
+              "meanNet": -1.3169,
+              "meanGrossBps": -0.17,
+              "meanCostBps": 13
+            },
+            {
+              "minRelVolume": 1,
+              "minAtrPct": 0.08,
+              "trades": 1213,
+              "meanNet": -1.3825,
+              "meanGrossBps": -0.82,
+              "meanCostBps": 13
+            },
+            {
+              "minRelVolume": 1,
+              "minAtrPct": 0.15,
+              "trades": 190,
+              "meanNet": -1.2247,
+              "meanGrossBps": 0.76,
+              "meanCostBps": 13
+            },
+            {
+              "minRelVolume": 1.5,
+              "minAtrPct": 0.03,
+              "trades": 5195,
+              "meanNet": -1.3126,
+              "meanGrossBps": -0.12,
+              "meanCostBps": 13
+            },
+            {
+              "minRelVolume": 1.5,
+              "minAtrPct": 0.08,
+              "trades": 1197,
+              "meanNet": -1.3662,
+              "meanGrossBps": -0.66,
+              "meanCostBps": 13
+            },
+            {
+              "minRelVolume": 1.5,
+              "minAtrPct": 0.15,
+              "trades": 187,
+              "meanNet": -1.1846,
+              "meanGrossBps": 1.16,
+              "meanCostBps": 13
+            },
+            {
+              "minRelVolume": 2.5,
+              "minAtrPct": 0.03,
+              "trades": 5020,
+              "meanNet": -1.3142,
+              "meanGrossBps": -0.14,
+              "meanCostBps": 13
+            },
+            {
+              "minRelVolume": 2.5,
+              "minAtrPct": 0.08,
+              "trades": 1163,
+              "meanNet": -1.3668,
+              "meanGrossBps": -0.66,
+              "meanCostBps": 13
+            },
+            {
+              "minRelVolume": 2.5,
+              "minAtrPct": 0.15,
+              "trades": 180,
+              "meanNet": -1.2251,
+              "meanGrossBps": 0.75,
+              "meanCostBps": 13
+            },
+            {
+              "minRelVolume": 4,
+              "minAtrPct": 0.03,
+              "trades": 4903,
+              "meanNet": -1.3133,
+              "meanGrossBps": -0.13,
+              "meanCostBps": 13
+            },
+            {
+              "minRelVolume": 4,
+              "minAtrPct": 0.08,
+              "trades": 1149,
+              "meanNet": -1.3622,
+              "meanGrossBps": -0.62,
+              "meanCostBps": 13
+            },
+            {
+              "minRelVolume": 4,
+              "minAtrPct": 0.15,
+              "trades": 178,
+              "meanNet": -1.2264,
+              "meanGrossBps": 0.74,
+              "meanCostBps": 13
+            }
+          ]
+        },
+        "5m": {
+          "withCosts": {
+            "trades": 1728,
+            "tradesPerDay": 14.4,
+            "totalNet": -2323.37,
+            "meanNet": -1.3445,
+            "tStat": -21.32,
+            "winRatePct": 31.8,
+            "profitFactor": 0.316,
+            "meanGrossBps": -0.44,
+            "meanCostBps": 13,
+            "fees": 1728,
+            "spread": 172.8,
+            "slippage": 345.6,
+            "funding": -1.72,
+            "maxDrawdown": 2323.37,
+            "dailySharpe": -30.12,
+            "markoutBps": {
+              "1": -1.72,
+              "5": -2.35,
+              "15": -2.47
+            }
+          },
+          "zeroCosts": {
+            "trades": 1681,
+            "tradesPerDay": 14.01,
+            "totalNet": -104.73,
+            "meanNet": -0.0623,
+            "tStat": -0.95,
+            "winRatePct": 39.6,
+            "profitFactor": 0.947,
+            "meanGrossBps": -0.61,
+            "meanCostBps": 0,
+            "fees": 0,
+            "spread": 0,
+            "slippage": 0,
+            "funding": -1.59,
+            "maxDrawdown": 157.72,
+            "dailySharpe": -1.59,
+            "markoutBps": {
+              "1": -0.19,
+              "5": -0.87,
+              "15": -0.88
+            }
+          },
+          "meanHoldBars": 7.29,
+          "exitReasons": {
+            "stop": 1078,
+            "target": 581,
+            "time": 69,
+            "end": 0
+          },
+          "fundingShareOfLossPct": 0.07,
+          "volumeVolatilitySensitivity": [
+            {
+              "minRelVolume": 1,
+              "minAtrPct": 0.03,
+              "trades": 1750,
+              "meanNet": -1.3372,
+              "meanGrossBps": -0.36,
+              "meanCostBps": 13
+            },
+            {
+              "minRelVolume": 1,
+              "minAtrPct": 0.08,
+              "trades": 1312,
+              "meanNet": -1.3512,
+              "meanGrossBps": -0.51,
+              "meanCostBps": 13
+            },
+            {
+              "minRelVolume": 1,
+              "minAtrPct": 0.15,
+              "trades": 557,
+              "meanNet": -1.4782,
+              "meanGrossBps": -1.78,
+              "meanCostBps": 13
+            },
+            {
+              "minRelVolume": 1.5,
+              "minAtrPct": 0.03,
+              "trades": 1728,
+              "meanNet": -1.3445,
+              "meanGrossBps": -0.44,
+              "meanCostBps": 13
+            },
+            {
+              "minRelVolume": 1.5,
+              "minAtrPct": 0.08,
+              "trades": 1300,
+              "meanNet": -1.3598,
+              "meanGrossBps": -0.59,
+              "meanCostBps": 13
+            },
+            {
+              "minRelVolume": 1.5,
+              "minAtrPct": 0.15,
+              "trades": 550,
+              "meanNet": -1.5024,
+              "meanGrossBps": -2.02,
+              "meanCostBps": 13
+            },
+            {
+              "minRelVolume": 2.5,
+              "minAtrPct": 0.03,
+              "trades": 1691,
+              "meanNet": -1.3333,
+              "meanGrossBps": -0.32,
+              "meanCostBps": 13
+            },
+            {
+              "minRelVolume": 2.5,
+              "minAtrPct": 0.08,
+              "trades": 1271,
+              "meanNet": -1.3438,
+              "meanGrossBps": -0.43,
+              "meanCostBps": 13
+            },
+            {
+              "minRelVolume": 2.5,
+              "minAtrPct": 0.15,
+              "trades": 541,
+              "meanNet": -1.4864,
+              "meanGrossBps": -1.86,
+              "meanCostBps": 13
+            },
+            {
+              "minRelVolume": 4,
+              "minAtrPct": 0.03,
+              "trades": 1657,
+              "meanNet": -1.3232,
+              "meanGrossBps": -0.22,
+              "meanCostBps": 13
+            },
+            {
+              "minRelVolume": 4,
+              "minAtrPct": 0.08,
+              "trades": 1248,
+              "meanNet": -1.3359,
+              "meanGrossBps": -0.35,
+              "meanCostBps": 13
+            },
+            {
+              "minRelVolume": 4,
+              "minAtrPct": 0.15,
+              "trades": 531,
+              "meanNet": -1.4914,
+              "meanGrossBps": -1.91,
+              "meanCostBps": 13
+            }
+          ]
+        }
+      },
+      "factors": [
+        {
+          "factor": "timeframe",
+          "levels": [
+            {
+              "level": "1m",
+              "variants": 192,
+              "positiveVariants": 0,
+              "medianTradesPerDay": 10.98,
+              "medianMeanNetBps": -8.44,
+              "medianGrossBps": -0.17,
+              "medianCostBps": 8.48,
+              "medianMarkout5Bps": -1.2
+            },
+            {
+              "level": "5m",
+              "variants": 192,
+              "positiveVariants": 0,
+              "medianTradesPerDay": 4.59,
+              "medianMeanNetBps": -9.66,
+              "medianGrossBps": -0.85,
+              "medianCostBps": 12.94,
+              "medianMarkout5Bps": -2.69
+            },
+            {
+              "level": "15m",
+              "variants": 192,
+              "positiveVariants": 0,
+              "medianTradesPerDay": 2.51,
+              "medianMeanNetBps": -11.59,
+              "medianGrossBps": -1.91,
+              "medianCostBps": 12.99,
+              "medianMarkout5Bps": -4.17
+            }
+          ]
+        },
+        {
+          "factor": "execution",
+          "levels": [
+            {
+              "level": "taker",
+              "variants": 288,
+              "positiveVariants": 0,
+              "medianTradesPerDay": 3.21,
+              "medianMeanNetBps": -13.18,
+              "medianGrossBps": -0.17,
+              "medianCostBps": 13,
+              "medianMarkout5Bps": -2.98
+            },
+            {
+              "level": "maker",
+              "variants": 288,
+              "positiveVariants": 0,
+              "medianTradesPerDay": 3.91,
+              "medianMeanNetBps": -8.34,
+              "medianGrossBps": -1.2,
+              "medianCostBps": 7.12,
+              "medianMarkout5Bps": -2.04
+            }
+          ]
+        },
+        {
+          "factor": "cost-edge filter",
+          "levels": [
+            {
+              "level": "off",
+              "variants": 288,
+              "positiveVariants": 0,
+              "medianTradesPerDay": 9.85,
+              "medianMeanNetBps": -11.68,
+              "medianGrossBps": -0.83,
+              "medianCostBps": 12.99,
+              "medianMarkout5Bps": -2.34
+            },
+            {
+              "level": "target ≥ 3× cost",
+              "variants": 288,
+              "positiveVariants": 0,
+              "medianTradesPerDay": 1.88,
+              "medianMeanNetBps": -9.3,
+              "medianGrossBps": -0.76,
+              "medianCostBps": 8.48,
+              "medianMarkout5Bps": -2.75
+            }
+          ]
+        },
+        {
+          "factor": "cooldown (lower frequency)",
+          "levels": [
+            {
+              "level": "0 bars",
+              "variants": 288,
+              "positiveVariants": 0,
+              "medianTradesPerDay": 4.28,
+              "medianMeanNetBps": -9.74,
+              "medianGrossBps": -0.77,
+              "medianCostBps": 8.48,
+              "medianMarkout5Bps": -2.45
+            },
+            {
+              "level": "10 bars",
+              "variants": 288,
+              "positiveVariants": 0,
+              "medianTradesPerDay": 3.19,
+              "medianMeanNetBps": -10.3,
+              "medianGrossBps": -0.85,
+              "medianCostBps": 8.48,
+              "medianMarkout5Bps": -2.57
+            }
+          ]
+        },
+        {
+          "factor": "holding limit",
+          "levels": [
+            {
+              "level": "10 bars",
+              "variants": 288,
+              "positiveVariants": 0,
+              "medianTradesPerDay": 3.84,
+              "medianMeanNetBps": -10.01,
+              "medianGrossBps": -0.77,
+              "medianCostBps": 8.48,
+              "medianMarkout5Bps": -2.57
+            },
+            {
+              "level": "40 bars",
+              "variants": 288,
+              "positiveVariants": 0,
+              "medianTradesPerDay": 3.42,
+              "medianMeanNetBps": -9.75,
+              "medianGrossBps": -0.88,
+              "medianCostBps": 8.48,
+              "medianMarkout5Bps": -2.46
+            }
+          ]
+        },
+        {
+          "factor": "stop",
+          "levels": [
+            {
+              "level": "1× ATR",
+              "variants": 288,
+              "positiveVariants": 0,
+              "medianTradesPerDay": 3.38,
+              "medianMeanNetBps": -8.65,
+              "medianGrossBps": -0.41,
+              "medianCostBps": 8.48,
+              "medianMarkout5Bps": -2.56
+            },
+            {
+              "level": "2× ATR",
+              "variants": 288,
+              "positiveVariants": 0,
+              "medianTradesPerDay": 3.84,
+              "medianMeanNetBps": -11.53,
+              "medianGrossBps": -1.24,
+              "medianCostBps": 12.98,
+              "medianMarkout5Bps": -2.39
+            }
+          ]
+        },
+        {
+          "factor": "reward:risk",
+          "levels": [
+            {
+              "level": "1",
+              "variants": 288,
+              "positiveVariants": 0,
+              "medianTradesPerDay": 2.77,
+              "medianMeanNetBps": -9.09,
+              "medianGrossBps": -0.75,
+              "medianCostBps": 8.48,
+              "medianMarkout5Bps": -2.68
+            },
+            {
+              "level": "2",
+              "variants": 288,
+              "positiveVariants": 0,
+              "medianTradesPerDay": 4.22,
+              "medianMeanNetBps": -10.81,
+              "medianGrossBps": -0.89,
+              "medianCostBps": 12.99,
+              "medianMarkout5Bps": -2.39
+            }
+          ]
+        },
+        {
+          "factor": "setups",
+          "levels": [
+            {
+              "level": "breakout",
+              "variants": 192,
+              "positiveVariants": 0,
+              "medianTradesPerDay": 1.37,
+              "medianMeanNetBps": -10.34,
+              "medianGrossBps": -1.11,
+              "medianCostBps": 8.48,
+              "medianMarkout5Bps": -2.89
+            },
+            {
+              "level": "pullback",
+              "variants": 192,
+              "positiveVariants": 0,
+              "medianTradesPerDay": 4.68,
+              "medianMeanNetBps": -9.74,
+              "medianGrossBps": -0.67,
+              "medianCostBps": 12.99,
+              "medianMarkout5Bps": -2.09
+            },
+            {
+              "level": "breakout+pullback",
+              "variants": 192,
+              "positiveVariants": 0,
+              "medianTradesPerDay": 4.88,
+              "medianMeanNetBps": -9.65,
+              "medianGrossBps": -0.8,
+              "medianCostBps": 12.99,
+              "medianMarkout5Bps": -2.17
+            }
+          ]
+        }
+      ],
+      "makerAdverseSelection": {
+        "medianFillRatePct": 97.91,
+        "medianMakerMarkout5Bps": -2.04,
+        "medianTakerMarkout5Bps": -2.98,
+        "note": "Markout = direction-adjusted move from the fill to the close 5 candles later, in basis points (before costs)."
+      },
+      "fullPeriodPositiveVariants": {
+        "count": 0,
+        "note": "In-sample over the WHOLE period (includes test windows) — shown only to illustrate selection bias; never used.",
+        "top5": []
+      },
+      "walkForward": {
+        "primary": {
+          "rule": {
+            "minTrades": 30,
+            "minTStat": 2
+          },
+          "folds": [
+            {
+              "test": [
+                "2026-08-13",
+                "2026-08-20"
+              ],
+              "chosen": "NO TRADE",
+              "qualifyingVariants": 0,
+              "selection": null,
+              "testTrades": 0,
+              "testNet": 0
+            },
+            {
+              "test": [
+                "2026-08-20",
+                "2026-08-27"
+              ],
+              "chosen": "NO TRADE",
+              "qualifyingVariants": 0,
+              "selection": null,
+              "testTrades": 0,
+              "testNet": 0
+            },
+            {
+              "test": [
+                "2026-08-27",
+                "2026-09-03"
+              ],
+              "chosen": "NO TRADE",
+              "qualifyingVariants": 0,
+              "selection": null,
+              "testTrades": 0,
+              "testNet": 0
+            },
+            {
+              "test": [
+                "2026-09-03",
+                "2026-09-10"
+              ],
+              "chosen": "NO TRADE",
+              "qualifyingVariants": 0,
+              "selection": null,
+              "testTrades": 0,
+              "testNet": 0
+            },
+            {
+              "test": [
+                "2026-09-10",
+                "2026-09-17"
+              ],
+              "chosen": "NO TRADE",
+              "qualifyingVariants": 0,
+              "selection": null,
+              "testTrades": 0,
+              "testNet": 0
+            },
+            {
+              "test": [
+                "2026-09-17",
+                "2026-09-24"
+              ],
+              "chosen": "NO TRADE",
+              "qualifyingVariants": 0,
+              "selection": null,
+              "testTrades": 0,
+              "testNet": 0
+            },
+            {
+              "test": [
+                "2026-09-24",
+                "2026-10-01"
+              ],
+              "chosen": "NO TRADE",
+              "qualifyingVariants": 0,
+              "selection": null,
+              "testTrades": 0,
+              "testNet": 0
+            },
+            {
+              "test": [
+                "2026-10-01",
+                "2026-10-08"
+              ],
+              "chosen": "NO TRADE",
+              "qualifyingVariants": 0,
+              "selection": null,
+              "testTrades": 0,
+              "testNet": 0
+            },
+            {
+              "test": [
+                "2026-10-08",
+                "2026-10-15"
+              ],
+              "chosen": "NO TRADE",
+              "qualifyingVariants": 0,
+              "selection": null,
+              "testTrades": 0,
+              "testNet": 0
+            },
+            {
+              "test": [
+                "2026-10-15",
+                "2026-10-22"
+              ],
+              "chosen": "NO TRADE",
+              "qualifyingVariants": 0,
+              "selection": null,
+              "testTrades": 0,
+              "testNet": 0
+            },
+            {
+              "test": [
+                "2026-10-22",
+                "2026-10-29"
+              ],
+              "chosen": "NO TRADE",
+              "qualifyingVariants": 0,
+              "selection": null,
+              "testTrades": 0,
+              "testNet": 0
+            },
+            {
+              "test": [
+                "2026-10-29",
+                "2026-11-05"
+              ],
+              "chosen": "NO TRADE",
+              "qualifyingVariants": 0,
+              "selection": null,
+              "testTrades": 0,
+              "testNet": 0
+            },
+            {
+              "test": [
+                "2026-11-05",
+                "2026-11-12"
+              ],
+              "chosen": "NO TRADE",
+              "qualifyingVariants": 0,
+              "selection": null,
+              "testTrades": 0,
+              "testNet": 0
+            }
+          ],
+          "outOfSample": {
+            "trades": 0,
+            "tradesPerDay": 0,
+            "totalNet": 0,
+            "meanNet": 0,
+            "tStat": null,
+            "winRatePct": null,
+            "profitFactor": null,
+            "meanGrossBps": null,
+            "meanCostBps": null,
+            "fees": 0,
+            "spread": 0,
+            "slippage": 0,
+            "funding": 0,
+            "maxDrawdown": 0,
+            "dailySharpe": null,
+            "markoutBps": {
+              "1": null,
+              "5": null,
+              "15": null
+            }
+          },
+          "verdict": "NO TRADE — no positive out-of-sample net expectancy demonstrated"
+        },
+        "sensitivityAnyPositive": {
+          "rule": {
+            "minTrades": 30,
+            "minTStat": 0
+          },
+          "folds": [
+            {
+              "test": [
+                "2026-08-13",
+                "2026-08-20"
+              ],
+              "chosen": "NO TRADE",
+              "qualifyingVariants": 0,
+              "selection": null,
+              "testTrades": 0,
+              "testNet": 0
+            },
+            {
+              "test": [
+                "2026-08-20",
+                "2026-08-27"
+              ],
+              "chosen": "NO TRADE",
+              "qualifyingVariants": 0,
+              "selection": null,
+              "testTrades": 0,
+              "testNet": 0
+            },
+            {
+              "test": [
+                "2026-08-27",
+                "2026-09-03"
+              ],
+              "chosen": "15m|pullback|sl1|rr1|h40|maker|edge3|cd10",
+              "qualifyingVariants": 14,
+              "selection": {
+                "trades": 34,
+                "meanNet": 0.4783,
+                "tStat": 0.62
+              },
+              "testTrades": 15,
+              "testNet": -26.49
+            },
+            {
+              "test": [
+                "2026-09-03",
+                "2026-09-10"
+              ],
+              "chosen": "15m|breakout|sl2|rr2|h40|maker|edge3|cd0",
+              "qualifyingVariants": 18,
+              "selection": {
+                "trades": 30,
+                "meanNet": 1.1681,
+                "tStat": 0.88
+              },
+              "testTrades": 8,
+              "testNet": -8.81
+            },
+            {
+              "test": [
+                "2026-09-10",
+                "2026-09-17"
+              ],
+              "chosen": "15m|breakout|sl2|rr2|h40|maker|edge3|cd0",
+              "qualifyingVariants": 25,
+              "selection": {
+                "trades": 32,
+                "meanNet": 1.1705,
+                "tStat": 0.87
+              },
+              "testTrades": 6,
+              "testNet": -24.96
+            },
+            {
+              "test": [
+                "2026-09-17",
+                "2026-09-24"
+              ],
+              "chosen": "15m|breakout|sl1|rr2|h10|maker|edge3|cd10",
+              "qualifyingVariants": 20,
+              "selection": {
+                "trades": 31,
+                "meanNet": 0.8467,
+                "tStat": 1.02
+              },
+              "testTrades": 10,
+              "testNet": 4.9
+            },
+            {
+              "test": [
+                "2026-09-24",
+                "2026-10-01"
+              ],
+              "chosen": "15m|breakout|sl1|rr2|h40|maker|edge3|cd10",
+              "qualifyingVariants": 8,
+              "selection": {
+                "trades": 31,
+                "meanNet": 0.4285,
+                "tStat": 0.57
+              },
+              "testTrades": 9,
+              "testNet": -2.65
+            },
+            {
+              "test": [
+                "2026-10-01",
+                "2026-10-08"
+              ],
+              "chosen": "NO TRADE",
+              "qualifyingVariants": 0,
+              "selection": null,
+              "testTrades": 0,
+              "testNet": 0
+            },
+            {
+              "test": [
+                "2026-10-08",
+                "2026-10-15"
+              ],
+              "chosen": "15m|pullback|sl2|rr1|h40|maker|edge3|cd10",
+              "qualifyingVariants": 2,
+              "selection": {
+                "trades": 65,
+                "meanNet": 0.1474,
+                "tStat": 0.23
+              },
+              "testTrades": 14,
+              "testNet": -18.64
+            },
+            {
+              "test": [
+                "2026-10-15",
+                "2026-10-22"
+              ],
+              "chosen": "15m|pullback|sl2|rr1|h40|maker|edge3|cd10",
+              "qualifyingVariants": 3,
+              "selection": {
+                "trades": 62,
+                "meanNet": 0.1689,
+                "tStat": 0.25
+              },
+              "testTrades": 14,
+              "testNet": -2.61
+            },
+            {
+              "test": [
+                "2026-10-22",
+                "2026-10-29"
+              ],
+              "chosen": "1m|pullback|sl2|rr1|h40|maker|edge3|cd10",
+              "qualifyingVariants": 2,
+              "selection": {
+                "trades": 47,
+                "meanNet": 0.1152,
+                "tStat": 0.25
+              },
+              "testTrades": 9,
+              "testNet": -5
+            },
+            {
+              "test": [
+                "2026-10-29",
+                "2026-11-05"
+              ],
+              "chosen": "1m|pullback|sl2|rr1|h40|maker|edge3|cd10",
+              "qualifyingVariants": 13,
+              "selection": {
+                "trades": 48,
+                "meanNet": 0.5146,
+                "tStat": 1.17
+              },
+              "testTrades": 22,
+              "testNet": -37.94
+            },
+            {
+              "test": [
+                "2026-11-05",
+                "2026-11-12"
+              ],
+              "chosen": "NO TRADE",
+              "qualifyingVariants": 0,
+              "selection": null,
+              "testTrades": 0,
+              "testNet": 0
+            }
+          ],
+          "outOfSample": {
+            "trades": 107,
+            "tradesPerDay": 1.18,
+            "totalNet": -122.21,
+            "meanNet": -1.1421,
+            "tStat": -2.65,
+            "winRatePct": 41.1,
+            "profitFactor": 0.577,
+            "meanGrossBps": -4.67,
+            "meanCostBps": 6.78,
+            "fees": 62.6,
+            "spread": 3.3,
+            "slippage": 6.6,
+            "funding": 0.28,
+            "maxDrawdown": 124.7,
+            "dailySharpe": -5.02,
+            "markoutBps": {
+              "1": 1.34,
+              "5": -3.05,
+              "15": -1.88
+            }
+          },
+          "verdict": "NO TRADE — no positive out-of-sample net expectancy demonstrated"
+        }
+      },
+      "models5m": {
+        "logistic": {
+          "version": "logreg-l2-gd-v1",
+          "folds": 12,
+          "meanAuc": {
+            "long": 0.522,
+            "short": 0.539
+          },
+          "meanBrier": {
+            "long": 0.2329,
+            "short": 0.2282
+          },
+          "meanBrierBaseline": {
+            "long": 0.2213,
+            "short": 0.2215
+          },
+          "meanEce": {
+            "long": 0.0626,
+            "short": 0.0693
+          },
+          "foldsWithThreshold": 0,
+          "outOfSample": {
+            "trades": 0,
+            "totalNet": 0,
+            "meanNet": null
+          }
+        },
+        "gbdt": {
+          "version": "gbdt-hist-v1",
+          "folds": 12,
+          "meanAuc": {
+            "long": 0.561,
+            "short": 0.555
+          },
+          "meanBrier": {
+            "long": 0.2168,
+            "short": 0.2182
+          },
+          "meanBrierBaseline": {
+            "long": 0.2213,
+            "short": 0.2215
+          },
+          "meanEce": {
+            "long": 0.0435,
+            "short": 0.0585
+          },
+          "foldsWithThreshold": 0,
+          "outOfSample": {
+            "trades": 0,
+            "totalNet": 0,
+            "meanNet": null
+          }
+        }
+      },
+      "runtimeSeconds": 49
+    },
+    "ETHUSDT": {
+      "candles1m": 172800,
+      "completenessPct": 100,
+      "dataOk": true,
+      "fundingEvents": 364,
+      "baselineDecomposition": {
+        "1m": {
+          "withCosts": {
+            "trades": 6178,
+            "tradesPerDay": 51.48,
+            "totalNet": -8122.03,
+            "meanNet": -1.3147,
+            "tStat": -59.66,
+            "winRatePct": 25.5,
+            "profitFactor": 0.168,
+            "meanGrossBps": -0.15,
+            "meanCostBps": 13,
+            "fees": 6177.95,
+            "spread": 617.79,
+            "slippage": 1235.59,
+            "funding": -1.1,
+            "maxDrawdown": 8122.03,
+            "dailySharpe": -51.75,
+            "markoutBps": {
+              "1": -1.68,
+              "5": -2.16,
+              "15": -2.44
+            }
+          },
+          "zeroCosts": {
+            "trades": 5920,
+            "tradesPerDay": 49.33,
+            "totalNet": -92.55,
+            "meanNet": -0.0156,
+            "tStat": -0.68,
+            "winRatePct": 40.1,
+            "profitFactor": 0.979,
+            "meanGrossBps": -0.15,
+            "meanCostBps": 0,
+            "fees": 0,
+            "spread": 0,
+            "slippage": 0,
+            "funding": -0.92,
+            "maxDrawdown": 156.63,
+            "dailySharpe": -1.03,
+            "markoutBps": {
+              "1": -0.24,
+              "5": -0.79,
+              "15": -1.08
+            }
+          },
+          "meanHoldBars": 6.43,
+          "exitReasons": {
+            "stop": 4009,
+            "target": 2030,
+            "time": 139,
+            "end": 0
+          },
+          "fundingShareOfLossPct": 0.01,
+          "volumeVolatilitySensitivity": [
+            {
+              "minRelVolume": 1,
+              "minAtrPct": 0.03,
+              "trades": 6274,
+              "meanNet": -1.3129,
+              "meanGrossBps": -0.13,
+              "meanCostBps": 13
+            },
+            {
+              "minRelVolume": 1,
+              "minAtrPct": 0.08,
+              "trades": 2414,
+              "meanNet": -1.3375,
+              "meanGrossBps": -0.37,
+              "meanCostBps": 13
+            },
+            {
+              "minRelVolume": 1,
+              "minAtrPct": 0.15,
+              "trades": 544,
+              "meanNet": -1.484,
+              "meanGrossBps": -1.84,
+              "meanCostBps": 13
+            },
+            {
+              "minRelVolume": 1.5,
+              "minAtrPct": 0.03,
+              "trades": 6178,
+              "meanNet": -1.3147,
+              "meanGrossBps": -0.15,
+              "meanCostBps": 13
+            },
+            {
+              "minRelVolume": 1.5,
+              "minAtrPct": 0.08,
+              "trades": 2388,
+              "meanNet": -1.34,
+              "meanGrossBps": -0.4,
+              "meanCostBps": 13
+            },
+            {
+              "minRelVolume": 1.5,
+              "minAtrPct": 0.15,
+              "trades": 540,
+              "meanNet": -1.491,
+              "meanGrossBps": -1.91,
+              "meanCostBps": 13
+            },
+            {
+              "minRelVolume": 2.5,
+              "minAtrPct": 0.03,
+              "trades": 5989,
+              "meanNet": -1.3183,
+              "meanGrossBps": -0.18,
+              "meanCostBps": 13
+            },
+            {
+              "minRelVolume": 2.5,
+              "minAtrPct": 0.08,
+              "trades": 2332,
+              "meanNet": -1.3465,
+              "meanGrossBps": -0.46,
+              "meanCostBps": 13
+            },
+            {
+              "minRelVolume": 2.5,
+              "minAtrPct": 0.15,
+              "trades": 535,
+              "meanNet": -1.4885,
+              "meanGrossBps": -1.88,
+              "meanCostBps": 13
+            },
+            {
+              "minRelVolume": 4,
+              "minAtrPct": 0.03,
+              "trades": 5855,
+              "meanNet": -1.3106,
+              "meanGrossBps": -0.1,
+              "meanCostBps": 13
+            },
+            {
+              "minRelVolume": 4,
+              "minAtrPct": 0.08,
+              "trades": 2285,
+              "meanNet": -1.3299,
+              "meanGrossBps": -0.29,
+              "meanCostBps": 13
+            },
+            {
+              "minRelVolume": 4,
+              "minAtrPct": 0.15,
+              "trades": 525,
+              "meanNet": -1.4475,
+              "meanGrossBps": -1.47,
+              "meanCostBps": 13
+            }
+          ]
+        },
+        "5m": {
+          "withCosts": {
+            "trades": 1699,
+            "tradesPerDay": 14.16,
+            "totalNet": -2244.53,
+            "meanNet": -1.3211,
+            "tStat": -15.13,
+            "winRatePct": 34.7,
+            "profitFactor": 0.436,
+            "meanGrossBps": -0.2,
+            "meanCostBps": 13,
+            "fees": 1698.95,
+            "spread": 169.9,
+            "slippage": 339.79,
+            "funding": -2.49,
+            "maxDrawdown": 2249.97,
+            "dailySharpe": -23.82,
+            "markoutBps": {
+              "1": -1.21,
+              "5": -1.63,
+              "15": -1.28
+            }
+          },
+          "zeroCosts": {
+            "trades": 1663,
+            "tradesPerDay": 13.86,
+            "totalNet": -65.06,
+            "meanNet": -0.0391,
+            "tStat": -0.44,
+            "winRatePct": 39.7,
+            "profitFactor": 0.975,
+            "meanGrossBps": -0.38,
+            "meanCostBps": 0,
+            "fees": 0,
+            "spread": 0,
+            "slippage": 0,
+            "funding": -2.46,
+            "maxDrawdown": 130.58,
+            "dailySharpe": -0.75,
+            "markoutBps": {
+              "1": 0.14,
+              "5": -0.12,
+              "15": 0.63
+            }
+          },
+          "meanHoldBars": 7.95,
+          "exitReasons": {
+            "stop": 1032,
+            "target": 581,
+            "time": 86,
+            "end": 0
+          },
+          "fundingShareOfLossPct": 0.11,
+          "volumeVolatilitySensitivity": [
+            {
+              "minRelVolume": 1,
+              "minAtrPct": 0.03,
+              "trades": 1716,
+              "meanNet": -1.3273,
+              "meanGrossBps": -0.26,
+              "meanCostBps": 13
+            },
+            {
+              "minRelVolume": 1,
+              "minAtrPct": 0.08,
+              "trades": 1490,
+              "meanNet": -1.3366,
+              "meanGrossBps": -0.35,
+              "meanCostBps": 13
+            },
+            {
+              "minRelVolume": 1,
+              "minAtrPct": 0.15,
+              "trades": 989,
+              "meanNet": -1.3509,
+              "meanGrossBps": -0.49,
+              "meanCostBps": 13
+            },
+            {
+              "minRelVolume": 1.5,
+              "minAtrPct": 0.03,
+              "trades": 1699,
+              "meanNet": -1.3211,
+              "meanGrossBps": -0.2,
+              "meanCostBps": 13
+            },
+            {
+              "minRelVolume": 1.5,
+              "minAtrPct": 0.08,
+              "trades": 1477,
+              "meanNet": -1.3247,
+              "meanGrossBps": -0.23,
+              "meanCostBps": 13
+            },
+            {
+              "minRelVolume": 1.5,
+              "minAtrPct": 0.15,
+              "trades": 985,
+              "meanNet": -1.3271,
+              "meanGrossBps": -0.26,
+              "meanCostBps": 13
+            },
+            {
+              "minRelVolume": 2.5,
+              "minAtrPct": 0.03,
+              "trades": 1662,
+              "meanNet": -1.3295,
+              "meanGrossBps": -0.28,
+              "meanCostBps": 13
+            },
+            {
+              "minRelVolume": 2.5,
+              "minAtrPct": 0.08,
+              "trades": 1444,
+              "meanNet": -1.3365,
+              "meanGrossBps": -0.35,
+              "meanCostBps": 13
+            },
+            {
+              "minRelVolume": 2.5,
+              "minAtrPct": 0.15,
+              "trades": 964,
+              "meanNet": -1.3431,
+              "meanGrossBps": -0.41,
+              "meanCostBps": 13
+            },
+            {
+              "minRelVolume": 4,
+              "minAtrPct": 0.03,
+              "trades": 1639,
+              "meanNet": -1.3372,
+              "meanGrossBps": -0.36,
+              "meanCostBps": 13
+            },
+            {
+              "minRelVolume": 4,
+              "minAtrPct": 0.08,
+              "trades": 1427,
+              "meanNet": -1.3467,
+              "meanGrossBps": -0.45,
+              "meanCostBps": 13
+            },
+            {
+              "minRelVolume": 4,
+              "minAtrPct": 0.15,
+              "trades": 952,
+              "meanNet": -1.3296,
+              "meanGrossBps": -0.28,
+              "meanCostBps": 13
+            }
+          ]
+        }
+      },
+      "factors": [
+        {
+          "factor": "timeframe",
+          "levels": [
+            {
+              "level": "1m",
+              "variants": 192,
+              "positiveVariants": 0,
+              "medianTradesPerDay": 13.8,
+              "medianMeanNetBps": -9.12,
+              "medianGrossBps": -0.96,
+              "medianCostBps": 7.99,
+              "medianMarkout5Bps": -1.94
+            },
+            {
+              "level": "5m",
+              "variants": 192,
+              "positiveVariants": 0,
+              "medianTradesPerDay": 6.33,
+              "medianMeanNetBps": -11.46,
+              "medianGrossBps": -1.51,
+              "medianCostBps": 12.98,
+              "medianMarkout5Bps": -1.16
+            },
+            {
+              "level": "15m",
+              "variants": 192,
+              "positiveVariants": 0,
+              "medianTradesPerDay": 2.86,
+              "medianMeanNetBps": -12.16,
+              "medianGrossBps": -2.6,
+              "medianCostBps": 13,
+              "medianMarkout5Bps": -0.67
+            }
+          ]
+        },
+        {
+          "factor": "execution",
+          "levels": [
+            {
+              "level": "taker",
+              "variants": 288,
+              "positiveVariants": 0,
+              "medianTradesPerDay": 3.78,
+              "medianMeanNetBps": -14.1,
+              "medianGrossBps": -1.08,
+              "medianCostBps": 13,
+              "medianMarkout5Bps": -2.07
+            },
+            {
+              "level": "maker",
+              "variants": 288,
+              "positiveVariants": 0,
+              "medianTradesPerDay": 4.89,
+              "medianMeanNetBps": -8.87,
+              "medianGrossBps": -1.65,
+              "medianCostBps": 7.12,
+              "medianMarkout5Bps": -1.21
+            }
+          ]
+        },
+        {
+          "factor": "cost-edge filter",
+          "levels": [
+            {
+              "level": "off",
+              "variants": 288,
+              "positiveVariants": 0,
+              "medianTradesPerDay": 9.89,
+              "medianMeanNetBps": -12.34,
+              "medianGrossBps": -1.16,
+              "medianCostBps": 13,
+              "medianMarkout5Bps": -1.61
+            },
+            {
+              "level": "target ≥ 3× cost",
+              "variants": 288,
+              "positiveVariants": 0,
+              "medianTradesPerDay": 2.78,
+              "medianMeanNetBps": -10.62,
+              "medianGrossBps": -1.8,
+              "medianCostBps": 8,
+              "medianMarkout5Bps": -1.54
+            }
+          ]
+        },
+        {
+          "factor": "cooldown (lower frequency)",
+          "levels": [
+            {
+              "level": "0 bars",
+              "variants": 288,
+              "positiveVariants": 0,
+              "medianTradesPerDay": 4.77,
+              "medianMeanNetBps": -10.62,
+              "medianGrossBps": -1.52,
+              "medianCostBps": 8.01,
+              "medianMarkout5Bps": -1.41
+            },
+            {
+              "level": "10 bars",
+              "variants": 288,
+              "positiveVariants": 0,
+              "medianTradesPerDay": 3.58,
+              "medianMeanNetBps": -11.96,
+              "medianGrossBps": -1.34,
+              "medianCostBps": 8,
+              "medianMarkout5Bps": -1.68
+            }
+          ]
+        },
+        {
+          "factor": "holding limit",
+          "levels": [
+            {
+              "level": "10 bars",
+              "variants": 288,
+              "positiveVariants": 0,
+              "medianTradesPerDay": 4.46,
+              "medianMeanNetBps": -11.84,
+              "medianGrossBps": -1.41,
+              "medianCostBps": 8.01,
+              "medianMarkout5Bps": -1.57
+            },
+            {
+              "level": "40 bars",
+              "variants": 288,
+              "positiveVariants": 0,
+              "medianTradesPerDay": 3.92,
+              "medianMeanNetBps": -11.08,
+              "medianGrossBps": -1.42,
+              "medianCostBps": 7.43,
+              "medianMarkout5Bps": -1.57
+            }
+          ]
+        },
+        {
+          "factor": "stop",
+          "levels": [
+            {
+              "level": "1× ATR",
+              "variants": 288,
+              "positiveVariants": 0,
+              "medianTradesPerDay": 3.94,
+              "medianMeanNetBps": -11.12,
+              "medianGrossBps": -1.67,
+              "medianCostBps": 7.5,
+              "medianMarkout5Bps": -1.5
+            },
+            {
+              "level": "2× ATR",
+              "variants": 288,
+              "positiveVariants": 0,
+              "medianTradesPerDay": 4.49,
+              "medianMeanNetBps": -11.96,
+              "medianGrossBps": -1.34,
+              "medianCostBps": 13,
+              "medianMarkout5Bps": -1.66
+            }
+          ]
+        },
+        {
+          "factor": "reward:risk",
+          "levels": [
+            {
+              "level": "1",
+              "variants": 288,
+              "positiveVariants": 0,
+              "medianTradesPerDay": 3.73,
+              "medianMeanNetBps": -10.9,
+              "medianGrossBps": -1.73,
+              "medianCostBps": 7.16,
+              "medianMarkout5Bps": -1.29
+            },
+            {
+              "level": "2",
+              "variants": 288,
+              "positiveVariants": 0,
+              "medianTradesPerDay": 5.4,
+              "medianMeanNetBps": -12.25,
+              "medianGrossBps": -1.29,
+              "medianCostBps": 13,
+              "medianMarkout5Bps": -1.77
+            }
+          ]
+        },
+        {
+          "factor": "setups",
+          "levels": [
+            {
+              "level": "breakout",
+              "variants": 192,
+              "positiveVariants": 0,
+              "medianTradesPerDay": 1.63,
+              "medianMeanNetBps": -11.82,
+              "medianGrossBps": -2.03,
+              "medianCostBps": 7.85,
+              "medianMarkout5Bps": -2.66
+            },
+            {
+              "level": "pullback",
+              "variants": 192,
+              "positiveVariants": 0,
+              "medianTradesPerDay": 6.18,
+              "medianMeanNetBps": -11.08,
+              "medianGrossBps": -1.13,
+              "medianCostBps": 13,
+              "medianMarkout5Bps": -1.26
+            },
+            {
+              "level": "breakout+pullback",
+              "variants": 192,
+              "positiveVariants": 0,
+              "medianTradesPerDay": 6.35,
+              "medianMeanNetBps": -11.42,
+              "medianGrossBps": -1.25,
+              "medianCostBps": 13,
+              "medianMarkout5Bps": -1.41
+            }
+          ]
+        }
+      ],
+      "makerAdverseSelection": {
+        "medianFillRatePct": 97.88,
+        "medianMakerMarkout5Bps": -1.21,
+        "medianTakerMarkout5Bps": -2.07,
+        "note": "Markout = direction-adjusted move from the fill to the close 5 candles later, in basis points (before costs)."
+      },
+      "fullPeriodPositiveVariants": {
+        "count": 0,
+        "note": "In-sample over the WHOLE period (includes test windows) — shown only to illustrate selection bias; never used.",
+        "top5": []
+      },
+      "walkForward": {
+        "primary": {
+          "rule": {
+            "minTrades": 30,
+            "minTStat": 2
+          },
+          "folds": [
+            {
+              "test": [
+                "2026-08-13",
+                "2026-08-20"
+              ],
+              "chosen": "NO TRADE",
+              "qualifyingVariants": 0,
+              "selection": null,
+              "testTrades": 0,
+              "testNet": 0
+            },
+            {
+              "test": [
+                "2026-08-20",
+                "2026-08-27"
+              ],
+              "chosen": "NO TRADE",
+              "qualifyingVariants": 0,
+              "selection": null,
+              "testTrades": 0,
+              "testNet": 0
+            },
+            {
+              "test": [
+                "2026-08-27",
+                "2026-09-03"
+              ],
+              "chosen": "NO TRADE",
+              "qualifyingVariants": 0,
+              "selection": null,
+              "testTrades": 0,
+              "testNet": 0
+            },
+            {
+              "test": [
+                "2026-09-03",
+                "2026-09-10"
+              ],
+              "chosen": "NO TRADE",
+              "qualifyingVariants": 0,
+              "selection": null,
+              "testTrades": 0,
+              "testNet": 0
+            },
+            {
+              "test": [
+                "2026-09-10",
+                "2026-09-17"
+              ],
+              "chosen": "NO TRADE",
+              "qualifyingVariants": 0,
+              "selection": null,
+              "testTrades": 0,
+              "testNet": 0
+            },
+            {
+              "test": [
+                "2026-09-17",
+                "2026-09-24"
+              ],
+              "chosen": "NO TRADE",
+              "qualifyingVariants": 0,
+              "selection": null,
+              "testTrades": 0,
+              "testNet": 0
+            },
+            {
+              "test": [
+                "2026-09-24",
+                "2026-10-01"
+              ],
+              "chosen": "NO TRADE",
+              "qualifyingVariants": 0,
+              "selection": null,
+              "testTrades": 0,
+              "testNet": 0
+            },
+            {
+              "test": [
+                "2026-10-01",
+                "2026-10-08"
+              ],
+              "chosen": "NO TRADE",
+              "qualifyingVariants": 0,
+              "selection": null,
+              "testTrades": 0,
+              "testNet": 0
+            },
+            {
+              "test": [
+                "2026-10-08",
+                "2026-10-15"
+              ],
+              "chosen": "NO TRADE",
+              "qualifyingVariants": 0,
+              "selection": null,
+              "testTrades": 0,
+              "testNet": 0
+            },
+            {
+              "test": [
+                "2026-10-15",
+                "2026-10-22"
+              ],
+              "chosen": "NO TRADE",
+              "qualifyingVariants": 0,
+              "selection": null,
+              "testTrades": 0,
+              "testNet": 0
+            },
+            {
+              "test": [
+                "2026-10-22",
+                "2026-10-29"
+              ],
+              "chosen": "NO TRADE",
+              "qualifyingVariants": 0,
+              "selection": null,
+              "testTrades": 0,
+              "testNet": 0
+            },
+            {
+              "test": [
+                "2026-10-29",
+                "2026-11-05"
+              ],
+              "chosen": "NO TRADE",
+              "qualifyingVariants": 0,
+              "selection": null,
+              "testTrades": 0,
+              "testNet": 0
+            },
+            {
+              "test": [
+                "2026-11-05",
+                "2026-11-12"
+              ],
+              "chosen": "NO TRADE",
+              "qualifyingVariants": 0,
+              "selection": null,
+              "testTrades": 0,
+              "testNet": 0
+            }
+          ],
+          "outOfSample": {
+            "trades": 0,
+            "tradesPerDay": 0,
+            "totalNet": 0,
+            "meanNet": 0,
+            "tStat": null,
+            "winRatePct": null,
+            "profitFactor": null,
+            "meanGrossBps": null,
+            "meanCostBps": null,
+            "fees": 0,
+            "spread": 0,
+            "slippage": 0,
+            "funding": 0,
+            "maxDrawdown": 0,
+            "dailySharpe": null,
+            "markoutBps": {
+              "1": null,
+              "5": null,
+              "15": null
+            }
+          },
+          "verdict": "NO TRADE — no positive out-of-sample net expectancy demonstrated"
+        },
+        "sensitivityAnyPositive": {
+          "rule": {
+            "minTrades": 30,
+            "minTStat": 0
+          },
+          "folds": [
+            {
+              "test": [
+                "2026-08-13",
+                "2026-08-20"
+              ],
+              "chosen": "NO TRADE",
+              "qualifyingVariants": 0,
+              "selection": null,
+              "testTrades": 0,
+              "testNet": 0
+            },
+            {
+              "test": [
+                "2026-08-20",
+                "2026-08-27"
+              ],
+              "chosen": "NO TRADE",
+              "qualifyingVariants": 0,
+              "selection": null,
+              "testTrades": 0,
+              "testNet": 0
+            },
+            {
+              "test": [
+                "2026-08-27",
+                "2026-09-03"
+              ],
+              "chosen": "NO TRADE",
+              "qualifyingVariants": 0,
+              "selection": null,
+              "testTrades": 0,
+              "testNet": 0
+            },
+            {
+              "test": [
+                "2026-09-03",
+                "2026-09-10"
+              ],
+              "chosen": "15m|breakout+pullback|sl2|rr2|h10|maker|edge3|cd10",
+              "qualifyingVariants": 8,
+              "selection": {
+                "trades": 90,
+                "meanNet": 0.3676,
+                "tStat": 0.48
+              },
+              "testTrades": 23,
+              "testNet": -26.41
+            },
+            {
+              "test": [
+                "2026-09-10",
+                "2026-09-17"
+              ],
+              "chosen": "15m|breakout+pullback|sl2|rr2|h10|maker|edge3|cd10",
+              "qualifyingVariants": 5,
+              "selection": {
+                "trades": 90,
+                "meanNet": 0.3742,
+                "tStat": 0.48
+              },
+              "testTrades": 22,
+              "testNet": -37.38
+            },
+            {
+              "test": [
+                "2026-09-17",
+                "2026-09-24"
+              ],
+              "chosen": "15m|breakout+pullback|sl2|rr2|h10|maker|edge0|cd10",
+              "qualifyingVariants": 24,
+              "selection": {
+                "trades": 89,
+                "meanNet": 0.7693,
+                "tStat": 0.88
+              },
+              "testTrades": 23,
+              "testNet": 18.28
+            },
+            {
+              "test": [
+                "2026-09-24",
+                "2026-10-01"
+              ],
+              "chosen": "NO TRADE",
+              "qualifyingVariants": 0,
+              "selection": null,
+              "testTrades": 0,
+              "testNet": 0
+            },
+            {
+              "test": [
+                "2026-10-01",
+                "2026-10-08"
+              ],
+              "chosen": "NO TRADE",
+              "qualifyingVariants": 0,
+              "selection": null,
+              "testTrades": 0,
+              "testNet": 0
+            },
+            {
+              "test": [
+                "2026-10-08",
+                "2026-10-15"
+              ],
+              "chosen": "NO TRADE",
+              "qualifyingVariants": 0,
+              "selection": null,
+              "testTrades": 0,
+              "testNet": 0
+            },
+            {
+              "test": [
+                "2026-10-15",
+                "2026-10-22"
+              ],
+              "chosen": "15m|pullback|sl2|rr2|h40|maker|edge0|cd10",
+              "qualifyingVariants": 2,
+              "selection": {
+                "trades": 66,
+                "meanNet": 0.0006,
+                "tStat": 0
+              },
+              "testTrades": 16,
+              "testNet": -45.41
+            },
+            {
+              "test": [
+                "2026-10-22",
+                "2026-10-29"
+              ],
+              "chosen": "5m|breakout|sl2|rr1|h40|maker|edge3|cd10",
+              "qualifyingVariants": 2,
+              "selection": {
+                "trades": 65,
+                "meanNet": 0.0641,
+                "tStat": 0.12
+              },
+              "testTrades": 21,
+              "testNet": -21
+            },
+            {
+              "test": [
+                "2026-10-29",
+                "2026-11-05"
+              ],
+              "chosen": "15m|pullback|sl2|rr2|h40|maker|edge0|cd0",
+              "qualifyingVariants": 4,
+              "selection": {
+                "trades": 77,
+                "meanNet": 0.4043,
+                "tStat": 0.41
+              },
+              "testTrades": 17,
+              "testNet": -35.99
+            },
+            {
+              "test": [
+                "2026-11-05",
+                "2026-11-12"
+              ],
+              "chosen": "15m|pullback|sl2|rr2|h40|maker|edge0|cd0",
+              "qualifyingVariants": 2,
+              "selection": {
+                "trades": 75,
+                "meanNet": 0.1168,
+                "tStat": 0.1
+              },
+              "testTrades": 20,
+              "testNet": -12.64
+            }
+          ],
+          "outOfSample": {
+            "trades": 142,
+            "tradesPerDay": 1.56,
+            "totalNet": -160.54,
+            "meanNet": -1.1306,
+            "tStat": -1.64,
+            "winRatePct": 33.1,
+            "profitFactor": 0.703,
+            "meanGrossBps": -3.59,
+            "meanCostBps": 7.68,
+            "fees": 91.63,
+            "spread": 5.8,
+            "slippage": 11.61,
+            "funding": -0.52,
+            "maxDrawdown": 193.24,
+            "dailySharpe": -3.32,
+            "markoutBps": {
+              "1": -3.72,
+              "5": -0.82,
+              "15": 1.42
+            }
+          },
+          "verdict": "NO TRADE — no positive out-of-sample net expectancy demonstrated"
+        }
+      },
+      "models5m": {
+        "logistic": {
+          "version": "logreg-l2-gd-v1",
+          "folds": 12,
+          "meanAuc": {
+            "long": 0.52,
+            "short": 0.536
+          },
+          "meanBrier": {
+            "long": 0.2365,
+            "short": 0.2357
+          },
+          "meanBrierBaseline": {
+            "long": 0.2325,
+            "short": 0.2295
+          },
+          "meanEce": {
+            "long": 0.053,
+            "short": 0.0616
+          },
+          "foldsWithThreshold": 1,
+          "outOfSample": {
+            "trades": 8,
+            "totalNet": 4.63,
+            "meanNet": 0.5784
+          }
+        },
+        "gbdt": {
+          "version": "gbdt-hist-v1",
+          "folds": 12,
+          "meanAuc": {
+            "long": 0.507,
+            "short": 0.524
+          },
+          "meanBrier": {
+            "long": 0.2371,
+            "short": 0.2333
+          },
+          "meanBrierBaseline": {
+            "long": 0.2325,
+            "short": 0.2295
+          },
+          "meanEce": {
+            "long": 0.0569,
+            "short": 0.0568
+          },
+          "foldsWithThreshold": 0,
+          "outOfSample": {
+            "trades": 0,
+            "totalNet": 0,
+            "meanNet": null
+          }
+        }
+      },
+      "runtimeSeconds": 89
+    }
+  }
+}
