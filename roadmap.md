@@ -1,5 +1,10 @@
 # Roadmap
 
+## Phase 1.5 Testnet certification — 12 November 2026
+- [ ] Verify Testnet-only account, symbol, risk, lease and broker inventory before any mutation
+- [ ] Execute safe supported broker scenarios A–I; mark unreproducible cases NOT TESTABLE without treating mocks as certification
+- [ ] Run regression tests and produce evidence report with explicit certification decision; stop before Phase 2
+
 ## Phase 1 authorization and workspace move — 12 November 2026
 - [x] Harden Futures accounting, partial fills, protection, risk ordering, attribution, fencing and immutable environments; 271 tests pass and signed-in real/testnet trade views checked; no live orders
 - [ ] Phase 2 — waiting for owner approval

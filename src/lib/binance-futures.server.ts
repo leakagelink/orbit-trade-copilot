@@ -36,7 +36,15 @@ export async function futuresSymbol(a:FuturesAccount,pair:string){
  if(!s||![price,step,tick].every(n=>Number.isFinite(n)&&n>0))throw new Error('Futures symbol is unavailable');
  return {symbol,price,step,tick,minQty:Number(lot?.minQty??0),minNotional:Number(mn?.notional??0)};
 }
-export const futuresPositions=(a:FuturesAccount,symbol:string)=>futuresCall<BrokerPosition[]>(a,'GET','/fapi/v3/positionRisk',{symbol});
+export async function futuresPositions(a:FuturesAccount,symbol:string){
+ const active=await futuresCall<BrokerPosition[]>(a,'GET','/fapi/v3/positionRisk',{symbol});
+ if(active.some(p=>p.symbol===symbol&&p.positionSide==='BOTH'))return active;
+ // V3 omits symbols with neither exposure nor orders. Absence alone is not proof of flat.
+ const explicit=await futuresCall<BrokerPosition[]>(a,'GET','/fapi/v2/positionRisk',{symbol});
+ const row=explicit.find(p=>p.symbol===symbol&&p.positionSide==='BOTH');
+ if(!row||!Number.isFinite(Number(row.positionAmt)))throw new Error('Explicit broker inventory unavailable; recovery remains locked');
+ return explicit;
+}
 export const futuresOrder=(a:FuturesAccount,symbol:string,clientId:string)=>futuresCall<BrokerOrder>(a,'GET','/fapi/v1/order',{symbol,origClientOrderId:clientId});
 export const futuresAlgo=(a:FuturesAccount,clientId:string)=>futuresCall<AlgoOrder>(a,'GET','/fapi/v1/algoOrder',{clientAlgoId:clientId});
 export const futuresCancelAlgo=(a:FuturesAccount,clientId:string)=>futuresCall(a,'DELETE','/fapi/v1/algoOrder',{clientAlgoId:clientId});
