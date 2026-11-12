@@ -6,14 +6,16 @@
 -- Guarantees
 --  * ai_decision_records and ai_risk_evaluations are insert-only for the backend. No role (including
 --    service_role and the table owner through normal DML) can UPDATE, DELETE or TRUNCATE them.
---  * Browser roles can only read their own rows; they cannot insert, change or delete anything.
+--  * Browser roles can only read their own rows; they cannot insert, change or delete anything. Existing research
+--    tables also lose the browser write privileges the hosted database grants by default (RLS already refused them).
 --  * The database sets each decision record's SHA-256 fingerprint and timestamps itself.
 --  * A research run can change only while queued or running; once finished it is frozen, its identity can
 --    never change and runs can never be deleted, so failed and stopped attempts stay in the history.
---  * Existing research output tables become append-only (they are only ever inserted today).
+--  * Existing research output tables become append-only, including TRUNCATE (they are only ever inserted today).
 --  * Risk evaluations must say NOT_EXECUTABLE and execution_authorized = false; nothing here can authorize,
 --    create or submit an order.
 --  * Research spending limits change only through one admin-checked RPC; every change is kept append-only.
+--    The backend role can only read limits and their history; browser roles cannot touch either table.
 --  * Only that RPC is SECURITY DEFINER (fixed search_path, EXECUTE revoked from PUBLIC and anon, explicit
 --    admin check). Validation triggers run as the caller.
 --  * No trading, order, position, risk-setting, certification or emergency-stop object is touched.
@@ -161,6 +163,19 @@ CREATE TRIGGER ai_research_reports_immutable BEFORE UPDATE OR DELETE ON public.a
 CREATE TRIGGER ai_research_decisions_immutable BEFORE UPDATE OR DELETE ON public.ai_research_decisions FOR EACH ROW EXECUTE FUNCTION public.ai_research_history_immutable();
 CREATE TRIGGER ai_trade_proposals_immutable BEFORE UPDATE OR DELETE ON public.ai_trade_proposals FOR EACH ROW EXECUTE FUNCTION public.ai_research_history_immutable();
 CREATE TRIGGER ai_research_usage_immutable BEFORE UPDATE OR DELETE ON public.ai_research_usage FOR EACH ROW EXECUTE FUNCTION public.ai_research_history_immutable();
+CREATE TRIGGER ai_agent_outputs_no_truncate BEFORE TRUNCATE ON public.ai_agent_outputs FOR EACH STATEMENT EXECUTE FUNCTION public.ai_research_history_immutable();
+CREATE TRIGGER ai_research_reports_no_truncate BEFORE TRUNCATE ON public.ai_research_reports FOR EACH STATEMENT EXECUTE FUNCTION public.ai_research_history_immutable();
+CREATE TRIGGER ai_research_decisions_no_truncate BEFORE TRUNCATE ON public.ai_research_decisions FOR EACH STATEMENT EXECUTE FUNCTION public.ai_research_history_immutable();
+CREATE TRIGGER ai_trade_proposals_no_truncate BEFORE TRUNCATE ON public.ai_trade_proposals FOR EACH STATEMENT EXECUTE FUNCTION public.ai_research_history_immutable();
+CREATE TRIGGER ai_research_usage_no_truncate BEFORE TRUNCATE ON public.ai_research_usage FOR EACH STATEMENT EXECUTE FUNCTION public.ai_research_history_immutable();
+
+-- Defence in depth: the hosted database grants anon/authenticated full table privileges by default and relies on RLS
+-- (no write policies exist). TRUNCATE is not subject to RLS, so browser roles lose every write privilege outright.
+-- Owner reads keep working through the existing SELECT policies; visitors lose SELECT (no anon policy exists).
+REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ON public.ai_research_runs, public.ai_agent_outputs, public.ai_research_reports,
+  public.ai_research_decisions, public.ai_trade_proposals, public.ai_research_usage, public.ai_research_stage_metrics FROM anon, authenticated;
+REVOKE SELECT ON public.ai_research_runs, public.ai_agent_outputs, public.ai_research_reports, public.ai_research_decisions,
+  public.ai_trade_proposals, public.ai_research_usage, public.ai_research_stage_metrics FROM anon;
 
 REVOKE ALL ON FUNCTION public.validate_ai_decision_record(), public.validate_ai_risk_evaluation(), public.guard_ai_research_run(), public.ai_research_history_immutable() FROM PUBLIC, anon, authenticated;
 
@@ -189,13 +204,13 @@ CREATE TRIGGER ai_research_budget_events_immutable BEFORE UPDATE OR DELETE ON pu
   FOR EACH ROW EXECUTE FUNCTION public.ai_research_history_immutable();
 CREATE TRIGGER ai_research_budget_events_no_truncate BEFORE TRUNCATE ON public.ai_research_budget_events
   FOR EACH STATEMENT EXECUTE FUNCTION public.ai_research_history_immutable();
-REVOKE ALL ON public.ai_research_budget_config, public.ai_research_budget_events FROM PUBLIC, anon, authenticated;
-GRANT SELECT ON public.ai_research_budget_config TO authenticated;
-GRANT ALL ON public.ai_research_budget_config TO service_role;
-GRANT SELECT, INSERT ON public.ai_research_budget_events TO service_role;
+-- The backend only reads the limits; only the admin-checked RPC below (running as the table owner) writes them.
+-- Browser roles have no direct access at all (limits are shown through an authenticated server function).
+REVOKE ALL ON public.ai_research_budget_config, public.ai_research_budget_events FROM PUBLIC, anon, authenticated, service_role;
+GRANT SELECT ON public.ai_research_budget_config TO service_role;
+GRANT SELECT ON public.ai_research_budget_events TO service_role;
 ALTER TABLE public.ai_research_budget_config ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.ai_research_budget_events ENABLE ROW LEVEL SECURITY;
-CREATE POLICY ai_research_budget_read ON public.ai_research_budget_config FOR SELECT TO authenticated USING (true);
 
 CREATE FUNCTION public.set_ai_research_budget(_per_run_tokens integer, _per_user_day_tokens bigint, _per_user_month_tokens bigint, _platform_month_tokens bigint,
   _max_calls_per_run integer, _max_repairs_per_run integer, _max_run_seconds integer, _per_run_usd numeric, _platform_month_usd numeric)

@@ -1,22 +1,22 @@
 // Research run orchestration with a fake database and fake AI: no network, no real database.
 import { describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
-import { executeResearchRun, RESEARCH_WRITE_TABLES, type AnalystCallResult } from "@/lib/research-run.server";
+import { executeResearchRun, RESEARCH_WRITE_TABLES, type AnalystCallResult, type ResearchRunDeps } from "@/lib/research-run.server";
 import { researchSnapshot } from "@/lib/research";
 import { riskPreview } from "@/lib/research-risk-preview";
 import type { ResearchAgent } from "@/lib/research-pipeline";
 
 const U = "00000000-0000-4000-8000-000000000001", RUN = "00000000-0000-4000-8000-0000000000aa";
 type Op = { table: string; op: string; row?: unknown };
-interface Opts { budgetRow?: Record<string, unknown> | null; ledgerMissing?: boolean; usageError?: boolean; halted?: boolean; cancelled?: boolean }
+interface Opts { budgetRow?: Record<string, unknown> | null; ledgerMissing?: boolean; usageError?: boolean; halted?: boolean; cancelled?: boolean | (() => boolean); usageRows?: { input_tokens: number; output_tokens: number }[] }
 function fakeDb(o: Opts = {}) {
   const ops: Op[] = []; const rpc: string[] = [];
   const result = (table: string, op: string): unknown => {
     if (op === "insert") return { error: table === "ai_decision_records" && o.ledgerMissing ? { code: "PGRST205", message: "Could not find the table" } : null };
     if (op === "update") return { error: null };
     if (table === "ai_research_budget_config") return o.budgetRow === undefined ? { data: null, error: { code: "PGRST205", message: "Could not find the table" } } : { data: o.budgetRow, error: null };
-    if (table === "audit_logs") return { data: o.cancelled ? [{ id: "c" }] : [], error: null };
-    if (table === "ai_research_usage") return o.usageError ? { data: null, error: { message: "down" } } : { data: [], error: null };
+    if (table === "audit_logs") return { data: (typeof o.cancelled === "function" ? o.cancelled() : o.cancelled) ? [{ id: "c" }] : [], error: null };
+    if (table === "ai_research_usage") return o.usageError ? { data: null, error: { message: "down" } } : { data: o.usageRows ?? [], error: null };
     if (table === "risk_settings") return { data: { max_open_exposure: 10, max_daily_loss: 2, max_total_positions: null, trading_halted: !!o.halted }, error: null };
     return { data: [], error: null };
   };
@@ -192,5 +192,75 @@ describe("execution isolation", () => {
     await executeResearchRun(db, U, RUN, "AAPL", { loadResearchData: async () => data(), runAnalyst: a.fn, now: () => now });
     expect(recordOf(ops)!.record["riskEvaluation"].preview.status).toBe("blocked");
     expect(recordOf(ops)!.record["riskEvaluation"].rejectionReasons.join(" ")).toMatch(/emergency stop/);
+  });
+});
+
+// Phase 1 review: every limit must stop the *next* provider call, not only show a warning.
+const limitsRow = (o: Record<string, unknown> = {}) => ({ per_run_tokens: 250_000, per_user_day_tokens: 600_000, per_user_month_tokens: 3_000_000, platform_month_tokens: 20_000_000, max_calls_per_run: 16, max_repairs_per_run: 3, max_run_seconds: 1200, per_run_usd: null, platform_month_usd: null, ...o });
+const run = (db: never, fn: ResearchRunDeps["runAnalyst"], clock: () => number = () => now) => executeResearchRun(db, U, RUN, "AAPL", { loadResearchData: async () => data(), runAnalyst: fn, now: clock });
+
+describe("spending limits block the next provider call (run level)", () => {
+  it("call limit: exactly the allowed number of provider calls are made", async () => {
+    const { db, ops } = fakeDb({ budgetRow: limitsRow({ max_calls_per_run: 3 }) }); const a = analyst();
+    const out = await run(db, a.fn);
+    expect(a.calls).toHaveLength(3);
+    expect(out.outcome).toBe("stopped_by_budget");
+    expect(recordOf(ops)!.record["execution"].budget.stoppedBy).toBe("max_calls");
+  });
+  it("daily limit: no provider call when today's recorded usage leaves too little room", async () => {
+    const { db, ops } = fakeDb({ budgetRow: limitsRow(), usageRows: [{ input_tokens: 598_000, output_tokens: 0 }] }); const a = analyst();
+    const out = await run(db, a.fn);
+    expect(a.calls).toHaveLength(0);
+    expect(out.outcome).toBe("stopped_by_budget");
+    expect(recordOf(ops)!.record["execution"].budget.stoppedBy).toBe("user_day_tokens");
+  });
+  it("monthly limit: no provider call when this month's usage leaves too little room", async () => {
+    const { db, ops } = fakeDb({ budgetRow: limitsRow({ per_user_day_tokens: 100_000_000 }), usageRows: [{ input_tokens: 2_998_000, output_tokens: 0 }] }); const a = analyst();
+    await run(db, a.fn);
+    expect(a.calls).toHaveLength(0);
+    expect(recordOf(ops)!.record["execution"].budget.stoppedBy).toBe("user_month_tokens");
+  });
+  it("time limit: once the run passes its maximum duration no further call starts", async () => {
+    let t = now;
+    const { db, ops } = fakeDb({ budgetRow: limitsRow({ max_run_seconds: 60 }) });
+    const a = analyst();
+    const slow = vi.fn(async (...args: Parameters<typeof a.fn>) => { t += 40_000; return a.fn(...args); });
+    const out = await run(db, slow, () => t);
+    expect(a.calls.length).toBeGreaterThan(0);
+    expect(a.calls.length).toBeLessThan(11);
+    expect(out.outcome).toBe("stopped_by_budget");
+    expect(recordOf(ops)!.record["execution"].budget.stoppedBy).toBe("max_duration");
+  });
+  it("format-correction limit: a correction beyond the limit is never sent, and only that agent fails", async () => {
+    const { db, ops } = fakeDb({ budgetRow: limitsRow({ max_repairs_per_run: 1 }) });
+    const sent: string[] = []; const a = analyst();
+    const repairing = vi.fn(async (agent: ResearchAgent, symbol: string, ev: unknown, beforeRepair?: (n: number) => void | Promise<void>) => {
+      if (agent === "market" || agent === "fundamentals") { await beforeRepair?.(5_000); sent.push(agent); }
+      void symbol; void ev;
+      return a.fn(agent);
+    });
+    await run(db, repairing);
+    expect(sent).toHaveLength(1); // the second correction was refused before any request
+    const agents = recordOf(ops)!.record["agents"] as { agent: string; status: string }[];
+    expect(agents.filter((x) => ["market", "fundamentals"].includes(x.agent) && x.status === "failed")).toHaveLength(1);
+    expect(recordOf(ops)!.record["execution"].budget.stoppedBy).toBeNull();
+  });
+});
+
+describe("owner cancellation mid-run", () => {
+  it("calls finished before the cancel are kept; no call starts afterwards", async () => {
+    let cancelNow = false;
+    const { db, ops } = fakeDb({ cancelled: () => cancelNow }); const a = analyst();
+    const cancelling = vi.fn(async (...args: Parameters<typeof a.fn>) => { const r = await a.fn(...args); if (a.calls.length === 4) cancelNow = true; return r; });
+    const out = await run(db, cancelling);
+    expect(out.outcome).toBe("cancelled");
+    expect(out.status).toBe("cancelled");
+    const callsAtCancel = a.calls.length;
+    expect(callsAtCancel).toBeGreaterThanOrEqual(4);
+    expect(callsAtCancel).toBeLessThan(11);
+    const saved = ops.filter((o) => o.op === "insert" && ["ai_agent_outputs", "ai_research_reports"].includes(o.table)).map((o) => (o.row as { status: string }).status);
+    expect(saved.filter((s) => s === "completed").length).toBeGreaterThanOrEqual(3);
+    const usage = ops.filter((o) => o.table === "ai_research_usage" && o.op === "insert");
+    expect(usage).toHaveLength(callsAtCancel); // nothing ran in the background after the stop
   });
 });

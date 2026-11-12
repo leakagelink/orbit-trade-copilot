@@ -95,6 +95,33 @@ describe("research risk evaluation", () => {
     expect(e.decision).toBe("REJECTED");
     expect(e.rejectionReasons.join(" ")).toMatch(/Trading halted/);
   });
+  it("quantities or leverage supplied with a proposal are ignored", () => {
+    const e = evaluate({ ...proposal(), quantity: 50, leverage: 100, notional: 1_000_000 });
+    expect(e.decision).toBe("PREVIEW_ONLY");
+    expect(e.estimatedPositionSize).toBe(preview.quantity);
+    expect(e.estimatedPositionSize).not.toBe(50);
+    expect(e.notes.join(" ")).toMatch(/fixed at 1x/);
+  });
+  it("a proposal carrying its own position size is not accepted at all", () => {
+    const e = evaluate(proposal({ positionSize: 50 }));
+    expect(e.decision).toBe("INSUFFICIENT_DATA");
+    expect(e.estimatedPositionSize).toBeNull();
+  });
+  it("a proposal claiming execution is allowed is not accepted and authorizes nothing", () => {
+    const e = evaluate(proposal({ executionAllowed: true }));
+    expect(e.decision).toBe("INSUFFICIENT_DATA");
+    expect(e.executionAuthorized).toBe(false);
+  });
+  it("rejects a short scenario whose stop is below the entry", () => {
+    expect(evaluate(proposal({ direction: "short", stopLoss: 96, takeProfit: 92 })).decision).toBe("REJECTED");
+  });
+  it("missing Risk Engine inputs mean insufficient data, not a guessed size", () => {
+    const noLimits = riskPreview({ referencePrice: 100, asOf, candles, limits: null, account: { openExposure: 0, openPositions: 0, dailyNet: 0 } });
+    const e = evaluate(proposal(), noLimits);
+    expect(e.decision).toBe("INSUFFICIENT_DATA");
+    expect(e.estimatedPositionSize).toBeNull();
+    expect(e.missingInputs.length).toBeGreaterThan(0);
+  });
   it("sizes from the Risk Engine, not from the proposal", () => {
     const e = evaluate(proposal());
     expect(e.decision).toBe("PREVIEW_ONLY");

@@ -22,7 +22,13 @@ CREATE TABLE public.ai_research_reports (LIKE public.ai_agent_outputs INCLUDING 
 CREATE TABLE public.ai_research_decisions (LIKE public.ai_agent_outputs INCLUDING DEFAULTS);
 CREATE TABLE public.ai_trade_proposals (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), run_id uuid, user_id uuid, proposal jsonb);
 CREATE TABLE public.ai_research_usage (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), run_id uuid, user_id uuid, agent text, input_tokens int, output_tokens int);
-GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;
+CREATE TABLE public.ai_research_stage_metrics (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), run_id uuid, user_id uuid, agent text);
+-- Mirrors the hosted database: default grants give browser roles full table privileges and RLS (owner-read only) protects rows.
+GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role, authenticated, anon;
+DO $$ DECLARE t text; BEGIN FOREACH t IN ARRAY ARRAY['ai_research_runs','ai_agent_outputs','ai_research_reports','ai_research_decisions','ai_trade_proposals','ai_research_usage','ai_research_stage_metrics'] LOOP
+  EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', t);
+  EXECUTE format('CREATE POLICY owner_read ON public.%I FOR SELECT TO authenticated USING (user_id = auth.uid())', t);
+END LOOP; END $$;
 INSERT INTO public.user_roles VALUES ('${ADMIN}', 'admin');
 INSERT INTO public.ai_research_runs VALUES ('${RA}', '${A}', 'AAPL'), ('${RB}', '${B}', 'BTC-USD');
 INSERT INTO public.ai_agent_outputs(run_id,user_id,agent,status,report) VALUES ('${RA}','${A}','market','completed','{}');
@@ -103,6 +109,24 @@ describe("existing research outputs become append-only", () => {
   it("usage records cannot be changed", async () => {
     await expect(db.exec(`UPDATE public.ai_research_usage SET input_tokens=0`)).rejects.toThrow(/append-only/);
   });
+  it("research output tables cannot be truncated", async () => {
+    for (const t of ["ai_agent_outputs", "ai_research_reports", "ai_research_decisions", "ai_trade_proposals", "ai_research_usage"]) {
+      await expect(db.exec(`TRUNCATE public.${t}`)).rejects.toThrow(/append-only/);
+    }
+  });
+  it("a signed-in user cannot update or delete research runs or outputs directly", async () => {
+    await expect(as("authenticated", A, `UPDATE public.ai_research_runs SET status='completed' WHERE id='${RA}'`)).rejects.toThrow(/permission denied/);
+    await expect(as("authenticated", A, `DELETE FROM public.ai_research_runs WHERE id='${RA}'`)).rejects.toThrow(/permission denied/);
+    await expect(as("authenticated", A, `UPDATE public.ai_agent_outputs SET status='failed'`)).rejects.toThrow(/permission denied/);
+  });
+  it("owners still read their own runs; visitors read nothing", async () => {
+    expect((await as("authenticated", A, "SELECT id FROM public.ai_research_runs WHERE id IN ('" + RA + "','" + RB + "')")).rows).toEqual([{ id: RA }]);
+    await expect(as("anon", null, "SELECT id FROM public.ai_research_runs")).rejects.toThrow(/permission denied/);
+  });
+  it("browser roles cannot truncate research tables", async () => {
+    await expect(as("authenticated", A, "TRUNCATE public.ai_research_usage")).rejects.toThrow(/permission denied/);
+    await expect(as("anon", null, "TRUNCATE public.ai_research_runs CASCADE")).rejects.toThrow(/permission denied/);
+  });
   it("new outputs can still be inserted", async () => {
     await expect(db.exec(`INSERT INTO public.ai_research_reports(run_id,user_id,agent,status,report) VALUES ('${RA}','${A}','news','completed','{}')`)).resolves.toBeTruthy();
   });
@@ -118,11 +142,21 @@ describe("research spending limits", () => {
   });
   it("an admin can change limits and every change is kept append-only", async () => {
     await as("authenticated", ADMIN, call);
-    const r = await as("authenticated", A, "SELECT per_run_tokens FROM public.ai_research_budget_config");
+    const r = await as("service_role", null, "SELECT per_run_tokens FROM public.ai_research_budget_config");
     expect(r.rows).toEqual([{ per_run_tokens: 100000 }]);
     const ev = await db.query<{ n: number }>("SELECT count(*)::int n FROM public.ai_research_budget_events");
     expect(ev.rows[0]!.n).toBe(1);
     await expect(db.exec("DELETE FROM public.ai_research_budget_events")).rejects.toThrow(/append-only/);
+  });
+  it("browser roles cannot read limits or their history directly", async () => {
+    await expect(as("authenticated", A, "SELECT * FROM public.ai_research_budget_config")).rejects.toThrow(/permission denied/);
+    await expect(as("authenticated", ADMIN, "SELECT * FROM public.ai_research_budget_events")).rejects.toThrow(/permission denied/);
+    await expect(as("anon", null, "SELECT * FROM public.ai_research_budget_config")).rejects.toThrow(/permission denied/);
+  });
+  it("the backend role can read limits but cannot change them or their history", async () => {
+    await expect(as("service_role", null, "UPDATE public.ai_research_budget_config SET per_run_tokens=20000")).rejects.toThrow(/permission denied/);
+    await expect(as("service_role", null, "INSERT INTO public.ai_research_budget_events(changed_by,config) VALUES (gen_random_uuid(),'{}')")).rejects.toThrow(/permission denied/);
+    await expect(as("service_role", null, "SELECT public.set_ai_research_budget(100000, 600000, 1000000, 5000000, 16, 3, 1200, NULL, NULL)")).rejects.toThrow(/Only an admin/);
   });
   it("out-of-range limits are refused", async () => {
     await expect(as("authenticated", ADMIN, "SELECT public.set_ai_research_budget(5, 600000, 1000000, 5000000, 16, 3, 1200, NULL, NULL)")).rejects.toThrow(/check constraint/);
@@ -195,6 +229,8 @@ describe("rollback", () => {
     await expect(d.exec(`UPDATE public.ai_agent_outputs SET status='completed'`)).resolves.toBeTruthy();
     expect((await d.query<{ n: number }>("SELECT count(*)::int n FROM pg_tables WHERE tablename='ai_risk_evaluations'")).rows[0]!.n).toBe(0);
     await expect(d.exec(`DELETE FROM public.ai_research_runs WHERE id='${RB}'`)).resolves.toBeTruthy();
+    const g = await d.query<{ ok: boolean }>("SELECT has_table_privilege('authenticated','public.ai_research_runs','UPDATE') ok");
+    expect(g.rows[0]!.ok).toBe(true);
   }, 60_000);
   it("relabels runs with statuses the original list does not allow", async () => {
     const d = new PGlite(); await d.exec(STUB); await d.exec(MIGRATION);

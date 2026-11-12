@@ -16,6 +16,11 @@ DROP TRIGGER ai_research_reports_immutable ON public.ai_research_reports;
 DROP TRIGGER ai_research_decisions_immutable ON public.ai_research_decisions;
 DROP TRIGGER ai_trade_proposals_immutable ON public.ai_trade_proposals;
 DROP TRIGGER ai_research_usage_immutable ON public.ai_research_usage;
+DROP TRIGGER ai_agent_outputs_no_truncate ON public.ai_agent_outputs;
+DROP TRIGGER ai_research_reports_no_truncate ON public.ai_research_reports;
+DROP TRIGGER ai_research_decisions_no_truncate ON public.ai_research_decisions;
+DROP TRIGGER ai_trade_proposals_no_truncate ON public.ai_trade_proposals;
+DROP TRIGGER ai_research_usage_no_truncate ON public.ai_research_usage;
 DROP FUNCTION public.set_ai_research_budget(integer, bigint, bigint, bigint, integer, integer, integer, numeric, numeric);
 DROP TABLE public.ai_research_budget_events;
 DROP TABLE public.ai_research_budget_config;
@@ -25,3 +30,6 @@ DROP FUNCTION public.validate_ai_risk_evaluation();
 DROP FUNCTION public.validate_ai_decision_record();
 DROP FUNCTION public.guard_ai_research_run();
 DROP FUNCTION public.ai_research_history_immutable();
+-- Restore the hosted default table privileges removed by 0043 (RLS still refuses every browser write).
+GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ON public.ai_research_runs, public.ai_agent_outputs, public.ai_research_reports,
+  public.ai_research_decisions, public.ai_trade_proposals, public.ai_research_usage, public.ai_research_stage_metrics TO anon, authenticated;
