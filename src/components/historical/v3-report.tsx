@@ -80,8 +80,8 @@ function CompareTable({ rows }: { rows: { label: string; m: PerformanceMetrics; 
     <div className="overflow-x-auto rounded-lg border bg-card">
       <table className="w-full text-sm"><thead><tr className="text-left text-xs text-muted-foreground">{head.map((h) => <th key={h} className="px-3 py-2 font-normal">{h}</th>)}</tr></thead>
         <tbody>{rows.map(({ label, m, extra }) => (
-          <tr key={label} className="border-t font-mono text-xs">
-            <td className="px-3 py-2 font-sans text-sm">{label}{extra && <div className="text-[11px] text-muted-foreground">{extra}</div>}</td>
+          <tr key={label} className="border-t whitespace-nowrap font-mono text-xs">
+            <td className="whitespace-normal px-3 py-2 font-sans text-sm">{label}{extra && <div className="text-[11px] text-muted-foreground">{extra}</div>}</td>
             <td className={`px-3 py-2 ${tone(m.netReturnPct)}`}>{pct(m.netReturnPct)}</td><td className="px-3 py-2">{m.trades}</td><td className="px-3 py-2">{pct(m.winRatePct, 1)}</td>
             <td className="px-3 py-2">{m.profitFactor == null ? "—" : num(m.profitFactor)}</td><td className={`px-3 py-2 ${tone(m.expectancy)}`}>{num(m.expectancy)}</td>
             <td className="px-3 py-2">{pct(m.maxDrawdownPct)}</td><td className="px-3 py-2">{num(m.sharpe)}</td><td className="px-3 py-2">{num(m.totalFees + m.totalSpread + m.totalSlippage - m.totalFunding)}</td>
@@ -121,7 +121,7 @@ export function V3Report({ log, capital }: { log: V3Log; capital: number }) {
         <div className="overflow-x-auto rounded-lg border bg-card">
           <table className="w-full text-sm"><thead><tr className="text-left text-xs text-muted-foreground">{["Side", "Entry", "Exit", "Entry price", "Exit price", "Bars", "Gross", "Fees", "Spread + slip", "Funding", "Net", "Reason"].map((h) => <th key={h} className="px-3 py-2 font-normal">{h}</th>)}</tr></thead>
             <tbody>{log.trades.slice().reverse().slice(0, 300).map((t, i) => (
-              <tr key={i} className="border-t font-mono text-xs">
+              <tr key={i} className="border-t whitespace-nowrap font-mono text-xs">
                 <td className="px-3 py-2">{t.side}</td><td className="px-3 py-2">{new Date(t.entryT).toLocaleString()}</td><td className="px-3 py-2">{new Date(t.exitT).toLocaleString()}</td>
                 <td className="px-3 py-2">{t.entry.toFixed(4)}</td><td className="px-3 py-2">{t.exit.toFixed(4)}</td><td className="px-3 py-2">{t.bars}</td>
                 <td className={`px-3 py-2 ${tone(t.pnl)}`}>{t.pnl.toFixed(2)}</td><td className="px-3 py-2">{t.fees.toFixed(2)}</td><td className="px-3 py-2">{(t.spread + t.slippage).toFixed(2)}</td><td className="px-3 py-2">{t.funding.toFixed(2)}</td>

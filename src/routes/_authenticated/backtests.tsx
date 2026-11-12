@@ -27,13 +27,22 @@ function Backtests() {
   const q = useQuery({
     queryKey: ["backtests"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("backtests").select("*, strategies(name), backtest_results(*)").order("created_at", { ascending: false }).limit(100);
+      // The list stays light; the full evidence (candles, trades, benchmarks) is loaded only for the selected run.
+      const { data, error } = await supabase.from("backtests").select("id,status,error,trading_pair,timeframe,created_at,strategy_version,start_date,end_date,starting_capital,fee_pct,slippage_pct,strategies(name)").order("created_at", { ascending: false }).limit(100);
       if (error) throw new Error(error.message);
       return data;
     },
   });
   const sel = q.data?.find((b) => b.id === id) ?? q.data?.[0];
-  const res = sel ? (Array.isArray(sel.backtest_results) ? sel.backtest_results[0] : sel.backtest_results) : null;
+  const detail = useQuery({
+    queryKey: ["backtest-result", sel?.id], enabled: !!sel,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("backtest_results").select("*").eq("backtest_id", sel!.id).maybeSingle();
+      if (error) throw new Error(error.message);
+      return data;
+    },
+  });
+  const res = detail.data ?? null;
   const raw = (res?.trade_log ?? {}) as Record<string, unknown>;
   const isV3 = (raw["manifest"] as { simulatorVersion?: string } | undefined)?.simulatorVersion === "next-bar-v3" && raw["status"] === "completed";
   const insufficient = raw["status"] === "insufficient_data" ? (raw as unknown as InsufficientLog) : null;
@@ -48,7 +57,7 @@ function Backtests() {
           <TabsContent value="research" className="pb-6 pt-4"><ResearchOutcomesPanel /></TabsContent>
           <TabsContent value="strategies">
             <div className="grid gap-6 py-4 lg:grid-cols-[300px_minmax(0,1fr)]">
-              <div className="space-y-2">
+              <div className="max-h-80 space-y-2 overflow-y-auto lg:max-h-none lg:overflow-visible">
                 {q.isLoading ? <Skeleton className="h-40" /> : q.error ? <p className="text-sm text-loss">Backtests could not be loaded.</p> : !q.data?.length ? (
                   <EmptyState icon={FlaskConical} title="No backtests yet" body="Open a strategy and click Backtest." action={<Link to="/strategies" className="text-sm text-primary hover:underline">Open strategies</Link>} />
                 ) : q.data.map((b) => (
@@ -65,6 +74,8 @@ function Backtests() {
                     <p className="text-xs text-muted-foreground">{new Date(sel.start_date).toLocaleDateString()} → {new Date(sel.end_date).toLocaleDateString()} · {String(raw["candles"] ?? "—")} candles from {String(raw["exchange"] ?? (insufficient?.data.source.provider ?? "—"))} · starting capital {fmtMoney(sel.starting_capital)} · fee {Number(sel.fee_pct)}% · slippage {Number(sel.slippage_pct)}%{isV3 ? ` · spread ${(raw as unknown as V3Log).manifest.spreadPct}% · max ${(raw as unknown as V3Log).manifest.maxParticipationPct ?? "—"}% of candle volume` : ""}</p>
                     {sel.error && <p className={`mt-2 text-sm ${sel.status === "insufficient_data" ? "text-warning" : "text-loss"}`}>{sel.error}</p>}
                   </div>
+                  {detail.isLoading && <Skeleton className="h-64" />}
+                  {detail.error && <p className="text-sm text-loss">The saved results could not be loaded.</p>}
                   {insufficient && <><p className="flex gap-2 text-sm"><AlertTriangle className="mt-0.5 h-4 w-4 text-warning" />Insufficient data: nothing was simulated, and no missing candles were filled in.</p><DataCompleteness integrity={insufficient.integrity} sha={insufficient.data.candleSha256} /></>}
                   {res && isV3 && <V3Report log={raw as unknown as V3Log} capital={Number(sel.starting_capital)} />}
                   {res && !isV3 && !insufficient && <LegacyReport res={res} log={raw as { sharpe?: number | null; trades?: LogTrade[] }} />}

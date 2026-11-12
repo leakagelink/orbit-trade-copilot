@@ -1,5 +1,10 @@
 # Roadmap
 
+## Phase 2 — Historical evaluation — 12 November 2026
+- [x] next-bar-v3 simulator (v2 preserved and replayable), data checks + provenance, costs/volume cap/funding, reconciliation, time-ordered periods with purge/embargo, walk-forward, frozen selection, benchmarks, forward-only research outcomes, Historical evaluation page; 614 tests pass; real 90-day and 1-year runs checked; no AI calls, orders, migrations
+- [ ] Longer history than 5,000 candles per run — needs paged history fetch (not requested)
+- [ ] Phase 3 (paper trading) — not authorized
+
 ## Engine A Phase 1 — Orbit AI Command Center — 12 November 2026
 - [x] Final closure audit (12 Nov 14:10 UTC): fixed two "shown as completed" gaps (proposal save failure → partial; cancel during last call → cancelled), failed runs keep the provider reason, timeout/overload tests, flaky spending tests made deterministic; 575 tests + 10 Postgres race tests pass; Phase 2/3 plans and retention recommendations written; no orders, no migration
 - [ ] Successful live 12-agent run — blocked: AI Prime Tech key disabled (HTTP 401 API_KEY_DISABLED on run 03968ce1); owner must re-enable/replace the key and reconnect

@@ -1,7 +1,7 @@
 ## src/lib rules
 - Exchange account-type preferences use spot/futures/both metadata; owner-authenticated edits never enable futures execution or alter keys — selection is not trading authority.
 - Exchange I/O goes through `src/lib/exchange-adapters.server.ts` (Web Crypto HMAC, fetch only) and indicator math lives in pure `src/lib/indicators.ts` — Workers-safe and testable.
-- Backtests use prior-bar signals and next-open/gap-aware fills in `backtest.ts`; persist full config/candle manifests and ledgers — historical results remain reproducible, not live qualification.
+- New backtests run `next-bar-v3` (`backtest-v3.ts`) only after `historical-data.ts` validation passes, storing provenance, splits and benchmarks in the existing result log; `backtest.ts` (v2) stays frozen and replay dispatches by simulator version — saved evidence stays reproducible and incomplete history is never simulated.
 - Bot mutations and connection verification are server-authorized; engine reads bind owners, uncertain fills retain original intents, and inactive bots still manage exits — prevents browser promotion and blind order retries.
 - Independent evaluations consume canonical-hashed historical evidence and remain append-only; only versioned admin-authored anchors yield experimental historical utilities, while missing validation never yields a composite or promotion — prevents agent self-grading.
 - Evaluation reports retain the scoring policy snapshot and distinguish missing policy, sample floors and independent evidence; observed drawdown remains descriptive and invalid arithmetic yields no utility — keeps historical diagnostics auditable without granting trading authority.
