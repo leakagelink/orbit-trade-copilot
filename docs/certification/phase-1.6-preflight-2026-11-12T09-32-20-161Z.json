@@ -1,0 +1,82 @@
+{
+  "kind": "Phase 1.6 read-only preflight",
+  "at": "2026-11-12T09:32:20.161Z",
+  "phase15": "FAIL / NOT CERTIFIED",
+  "harnessOverall": "FAIL / NOT CERTIFIED",
+  "ordersPlaced": 0,
+  "databaseWrites": 0,
+  "testAccount": {
+    "userId": "0160c356-ffe4-462d-8a5d-2742a43f94a2",
+    "email": "h***@socilet.in",
+    "emailConfirmed": true,
+    "admin": false,
+    "elite": true,
+    "autopilot": {
+      "enabled": false,
+      "live_enabled": false
+    },
+    "futuresLimits": {
+      "max_margin": 5,
+      "max_leverage": 1,
+      "max_loss": 2,
+      "live_enabled": false
+    },
+    "risk": {
+      "max_daily_loss": 2,
+      "max_open_exposure": 10,
+      "max_total_positions": null,
+      "trading_halted": false
+    },
+    "connections": [
+      {
+        "id": "4fc2b056-ba7d-4587-b515-866f1fa6750f",
+        "exchange": "deriv",
+        "testnet": false,
+        "status": "connected",
+        "accountType": "options"
+      },
+      {
+        "id": "89712729-7b1f-45c4-9d08-aed275561e10",
+        "exchange": "binance",
+        "testnet": true,
+        "status": "connected",
+        "accountType": "futures"
+      },
+      {
+        "id": "e371dd9b-9f29-469f-8b45-9acb64c3ec7c",
+        "exchange": "binance",
+        "testnet": false,
+        "status": "connected",
+        "accountType": "both"
+      }
+    ]
+  },
+  "killSwitch": {
+    "scope": "per sign-in (emergency stop filters every write by the caller user ID)",
+    "testAccountHalted": false,
+    "productionHalted": false,
+    "separateRiskRows": false
+  },
+  "exchange": {
+    "skipped": "Isolation not proven; no exchange call was made"
+  },
+  "production": {
+    "autopilotOn": 0,
+    "futuresLiveOn": 0,
+    "passCertifications": 0,
+    "productionPendingOrders": 0,
+    "productionOpenFutures": 0,
+    "activeLeases": 0,
+    "certificationRowsTotal": 0,
+    "fingerprintUnchanged": true,
+    "fingerprint": "007fc008b00492bbfab37f54f4f5abd7f71120a2c4924fda1f61a1f406ed30e5"
+  },
+  "isolationProblems": [
+    "Dedicated test account must differ from the production owner",
+    "Test account owns a production or non-Testnet connection",
+    "Open positions must be 1 (found unset)",
+    "Test sign-in uses the production email"
+  ],
+  "productionSafetyProblems": [],
+  "verdict": "NOT READY"
+}
