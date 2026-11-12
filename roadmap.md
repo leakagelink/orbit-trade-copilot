@@ -1,11 +1,15 @@
 # Roadmap
 
 ## Phase 4C — shadow design, 0045 successor, risk-data contracts, EMA forward research — 12 November 2026
-- [ ] A. Central Risk shadow design docs (design, input contract, safety invariants, source matrix, dependencies, approval checklist) — design only
-- [ ] B. 0045 successor draft + rollback (not applied), focused PGlite + multi-session tests, local-only restore verifier + tests
-- [ ] C. Risk-data contracts, source approval matrix, strategy attribution design (+ pure contract validators, not wired)
-- [ ] D. EMA 4h forward evaluation: spec frozen and committed before new data is scored; BTC/ETH separately
-- [ ] Protected-file fingerprint test, isolation tests, full suite/typecheck/build, Phase 4C final report
+- [x] A. Central Risk shadow design docs (design, input contract, safety invariants, source matrix, dependencies, approval checklist) — design only
+- [x] B. 0046 successor draft + rollback (not applied), 15 PGlite + 3 multi-session tests, local-only restore verifier + tests
+- [x] C. Risk-data contracts, source approval matrix, strategy attribution design (+ pure contract validators, not wired)
+- [x] D. EMA 4h forward evaluation (spec frozen and committed first): NO TRADE for BTC and ETH
+- [x] Protected-file fingerprint test, isolation tests, full suite, Phase 4C final report
+- [ ] Restore-verify 0046 on a real export — waits on the owner creating a fresh database export
+- [ ] Apply 0046 / engine fill-time re-check / any worker — wait on owner approval
+- [ ] Shadow live hook, leverage-bracket + margin reads, strategy attribution migration — wait on owner approval
+- [ ] EMA forward evidence (≥ 30 closed trades) — waits on time
 
 ## Phase 4B — Central Risk shadow mode + Futures paper readiness — 12 November 2026
 - [x] Shadow evaluator (ticket → proposal adapter, SELECT-only context, versioned in-memory record), never called by any order path

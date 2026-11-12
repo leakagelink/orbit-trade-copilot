@@ -42,7 +42,7 @@ async function newAccount(user: string) {
 }
 const commit = (id: string, seq: number, barT: number, payload: unknown) => as("service_role", null, `SELECT public.futures_paper_commit_bar($1, $2, $3, $4::jsonb) AS seq`, [id, seq, barT, JSON.stringify(payload)]);
 
-beforeAll(async () => { db = new PGlite(); await db.exec(STUB); await db.exec(MIGRATION); });
+beforeAll(async () => { db = new PGlite(); await db.exec(STUB); await db.exec(MIGRATION); }, 120_000);
 
 describe("draft migration 0045 — Futures paper ledger", () => {
   let acct: string; let state: FPState = initialFuturesPaperState(1000); const all: FPEvent[] = [];

@@ -64,7 +64,7 @@ async function play(run: Run, k: number, px: Record<string, OHLC>, intents: FPIn
   expect(seq).toBe(r.state.seq); run.state = r.state; run.all.push(...r.events); return r;
 }
 
-beforeAll(async () => { db = new PGlite(); await db.exec(STUB); await db.exec(MIGRATION_0046); });
+beforeAll(async () => { db = new PGlite(); await db.exec(STUB); await db.exec(MIGRATION_0046); }, 120_000);
 
 describe("draft 0046 — happy path with real engine output", () => {
   it("commits a two-symbol account candle by candle; the database book, ledger and state reconcile", async () => {
@@ -180,8 +180,8 @@ describe("draft 0046 — corrected invariants 6–8: atomic valid state, reconci
     const exitIdx = r.payload.events.findIndex((e) => e.kind === "exit_fill");
     const tamper = (f: (e: Record<string, unknown>) => Record<string, unknown>) => ({ ...r.payload, events: r.payload.events.map((e, i) => (i === exitIdx ? f(e) : e)) });
     const before = await count(`SELECT count(*) FROM public.futures_paper_events WHERE account_id='${acc.id}'`);
-    await expect(commit(acc.id, run.state.seq, T0 + 2 * M, tamper((e) => ({ ...e, wallet_delta: (e.wallet_delta as number) + 5 })))).rejects.toThrow(/kind_shape/);
-    await expect(commit(acc.id, run.state.seq, T0 + 2 * M, tamper((e) => ({ ...e, qty: (e.qty as number) / 2 })))).rejects.toThrow(/close quantity/);
+    await expect(commit(acc.id, run.state.seq, T0 + 2 * M, tamper((e) => ({ ...e, wallet_delta: (e['wallet_delta'] as number) + 5 })))).rejects.toThrow(/kind_shape/);
+    await expect(commit(acc.id, run.state.seq, T0 + 2 * M, tamper((e) => ({ ...e, qty: (e['qty'] as number) / 2 })))).rejects.toThrow(/close quantity/);
     const kept = step(run.state, 2, { BTCUSDT: [100.2, 100.4, 100.1, 100.3], ETHUSDT: FLAT }); // position stays open
     const p = kept.state.positions["BTCUSDT"]!;
     await expect(commit(acc.id, run.state.seq, T0 + 2 * M, { ...kept.payload, state: { ...kept.state, positions: { BTCUSDT: { ...p, qty: p.qty * 2 } } } })).rejects.toThrow(/does not reconcile/);
