@@ -1,5 +1,10 @@
 # Roadmap
 
+## Phase 1 authorization and workspace move — 12 November 2026
+- [ ] Harden Futures accounting, partial fills, protection, risk ordering, attribution, fencing and immutable environments; offline failure tests only, no live orders
+- [ ] Freshly connect AI Prime Tech after the 03:42 UTC workspace move; prior links no longer apply
+
+
 ## Workspace move 12 Nov 2026
 - [x] Freshly connect AI Prime Tech in the new workspace; previous-workspace connection references no longer apply. Read-only models check returned HTTP 200 and the configured Claude model is available; no inference or trading action was run.
 
