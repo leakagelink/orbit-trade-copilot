@@ -40,7 +40,8 @@ export function decodeReportInput(raw: unknown): unknown {
     if (typeof v !== "string") continue;
     try { const p: unknown = JSON.parse(v); if (Array.isArray(p) && p.every((x) => typeof x === "string")) out[k] = p; } catch { /* left as-is */ }
   }
-  if (typeof out.outlook === "string") out.outlook = out.outlook.trim().toLowerCase();
+  const outlook = out["outlook"];
+  if (typeof outlook === "string") out["outlook"] = outlook.trim().toLowerCase();
   return out;
 }
 /** Before a format-correction call; may throw (e.g. ResearchBudgetStop) to refuse it. */

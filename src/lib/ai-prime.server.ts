@@ -49,28 +49,37 @@ export async function aiPrimeMessage(body: Record<string, unknown>, timeoutMs = 
   return JSON.parse(text) as ClaudeMessage;
 }
 
+interface StreamBlock { type: string; text?: string; thinking?: string; signature?: string; input?: unknown; [k: string]: unknown }
+interface StreamEvent {
+  type?: string; index?: number;
+  message?: { usage?: Record<string, unknown>; [k: string]: unknown };
+  content_block?: StreamBlock;
+  delta?: { type?: string; text?: string; partial_json?: string; thinking?: string; signature?: string; stop_reason?: string | null };
+  usage?: Record<string, unknown>;
+}
 /** Rebuilds a Messages response from Server-Sent Events, keeping thinking signatures and tool inputs intact. */
 export function assembleClaudeStream(events: { event: string; data: unknown }[]): ClaudeMessage {
-  let message: Record<string, unknown> = {}; const blocks: Record<string, unknown>[] = []; const json: string[] = [];
+  let message: Record<string, unknown> = {}; const blocks: StreamBlock[] = []; const json: string[] = [];
   let usage: Record<string, unknown> = {}; let stop: string | null = null;
   for (const { event, data } of events) {
-    const d = (data ?? {}) as Record<string, any>;
+    const d = (data ?? {}) as StreamEvent;
     if (event === "error" || d.type === "error") { console.error(`AI Prime Tech stream error: ${JSON.stringify(d).slice(0, 500)}`); throw new Error(aiErrorMessage(529, JSON.stringify(d))); }
-    if (d.type === "message_start") { message = { ...d.message }; usage = { ...(d.message?.usage ?? {}) }; }
-    else if (d.type === "content_block_start") { blocks[d.index] = { ...d.content_block }; json[d.index] = ""; }
-    else if (d.type === "content_block_delta") {
-      const b = blocks[d.index]; const x = d.delta ?? {};
+    const idx = typeof d.index === "number" ? d.index : -1;
+    if (d.type === "message_start") { message = { ...(d.message ?? {}) }; usage = { ...(d.message?.usage ?? {}) }; }
+    else if (d.type === "content_block_start" && idx >= 0 && d.content_block) { blocks[idx] = { ...d.content_block }; json[idx] = ""; }
+    else if (d.type === "content_block_delta" && idx >= 0) {
+      const b = blocks[idx]; const x = d.delta ?? {};
       if (!b) continue;
-      if (x.type === "text_delta") b.text = String(b.text ?? "") + x.text;
-      else if (x.type === "input_json_delta") json[d.index] += x.partial_json ?? "";
-      else if (x.type === "thinking_delta") b.thinking = String(b.thinking ?? "") + x.thinking;
-      else if (x.type === "signature_delta") b.signature = String(b.signature ?? "") + x.signature;
-    } else if (d.type === "content_block_stop") {
-      const b = blocks[d.index];
-      if (b?.type === "tool_use" && json[d.index]) { try { b.input = JSON.parse(json[d.index]!); } catch { b.input = json[d.index]; } }
+      if (x.type === "text_delta") b.text = (b.text ?? "") + (x.text ?? "");
+      else if (x.type === "input_json_delta") json[idx] = (json[idx] ?? "") + (x.partial_json ?? "");
+      else if (x.type === "thinking_delta") b.thinking = (b.thinking ?? "") + (x.thinking ?? "");
+      else if (x.type === "signature_delta") b.signature = (b.signature ?? "") + (x.signature ?? "");
+    } else if (d.type === "content_block_stop" && idx >= 0) {
+      const b = blocks[idx]; const raw = json[idx];
+      if (b?.type === "tool_use" && raw) { try { b.input = JSON.parse(raw); } catch { b.input = raw; } }
     } else if (d.type === "message_delta") { stop = d.delta?.stop_reason ?? stop; usage = { ...usage, ...(d.usage ?? {}) }; }
   }
-  return { ...message, content: blocks.filter(Boolean) as ClaudeBlock[], stop_reason: stop, usage: usage as ClaudeMessage["usage"] };
+  return { ...message, content: blocks.filter(Boolean) as ClaudeBlock[], stop_reason: stop, usage: usage as NonNullable<ClaudeMessage["usage"]> };
 }
 
 /**
