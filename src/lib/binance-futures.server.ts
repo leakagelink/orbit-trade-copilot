@@ -1,22 +1,16 @@
 // Binance USD-M only; never fall back to Spot hosts or change account-wide position mode.
 import type { Creds } from './exchange-adapters.server';
-import { prepareCall, finishCall, type FaultPlan } from './futures-faults.server';
+import type { FaultPlan } from './futures-faults.server';
+import { testnetFuturesAdapter } from './binance-futures-testnet.server';
+import { liveFuturesAdapter } from './binance-futures-live.server';
+import type { FuturesAdapter } from './binance-futures-core.server';
 // `faults` is attached only by the Testnet certification harness; production accounts refuse it.
 export type FuturesAccount={connectionId:string;testnet:boolean;creds:Creds;faults?:FaultPlan};
-export function futuresHost(testnet:boolean){return testnet?'https://testnet.binancefuture.com':'https://fapi.binance.com';}
-export async function futuresCall<T>(a:Pick<FuturesAccount,'testnet'|'creds'|'faults'>,method:'GET'|'POST'|'DELETE',path:string,params:Record<string,string|number>={},signed=true):Promise<T>{
- const fault=a.faults?prepareCall(a.faults,a.testnet,method,path,params):null;if(fault)params=fault.params;
- const qs=new URLSearchParams(Object.entries(params).map(([k,v])=>[k,String(v)]));
- if(signed){
-  qs.set('timestamp',String(Date.now()));qs.set('recvWindow','10000');
-  const enc=new TextEncoder();const key=await crypto.subtle.importKey('raw',enc.encode(a.creds.apiSecret),{name:'HMAC',hash:'SHA-256'},false,['sign']);
-  const bytes=new Uint8Array(await crypto.subtle.sign('HMAC',key,enc.encode(qs.toString())));
-  qs.set('signature',Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join(''));
- }
- const r=await fetch(`${futuresHost(a.testnet)}${path}?${qs}`,{method,headers:signed?{'X-MBX-APIKEY':a.creds.apiKey}:{},signal:AbortSignal.timeout(12000)});
- if(!r.ok){let j:{code?:number;msg?:string}={};try{j=await r.json();}catch{};throw new Error(`Binance Futures ${r.status}${j.code?` (${j.code})`:''}: ${j.msg??'request unavailable'}`);}
- const body=await r.json();
- return (fault?finishCall(fault.rule,body):body) as T;
+/** The only two adapters. Each validates environment, endpoint and credential binding itself on every request. */
+export const futuresAdapter=(testnet:boolean):FuturesAdapter=>testnet===true?testnetFuturesAdapter:liveFuturesAdapter;
+export function futuresHost(testnet:boolean){return futuresAdapter(testnet).baseUrl;}
+export function futuresCall<T>(a:Pick<FuturesAccount,'testnet'|'creds'|'faults'>,method:'GET'|'POST'|'DELETE',path:string,params:Record<string,string|number>={},signed=true):Promise<T>{
+ return futuresAdapter(a.testnet).call<T>(a,method,path,params,signed);
 }
 export type BrokerPosition={symbol:string;positionAmt:string;entryPrice:string;markPrice:string;unRealizedProfit:string;positionSide:string;leverage?:string;marginType?:string};
 export type BrokerOrder=import('./futures-execution').FillOrder & {time?:number;updateTime?:number};
