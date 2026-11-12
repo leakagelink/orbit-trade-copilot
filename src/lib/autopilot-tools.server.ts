@@ -9,7 +9,12 @@ import { toolInputs, liveToolInputs, createRunBudget, type LiveAccounts } from "
 import { MARKETS, marketOf } from "./markets";
 import { validateStrategy, type StrategyConfig } from "./strategy";
 
-type Ctx = { supabase: SupabaseClient<Database>; userId: string; budget: ReturnType<typeof createRunBudget>; live?: LiveAccounts | null };
+type Ctx = {
+  supabase: SupabaseClient<Database>; userId: string; budget: ReturnType<typeof createRunBudget>; live?: LiveAccounts | null;
+  /** Scheduled runs: run ID for deterministic request IDs, and a guard re-checking run/Autopilot authorization right before a submission. */
+  runId?: string | undefined; guard?: (() => Promise<void>) | undefined;
+};
+type ToolOpts = { toolCallId?: string | undefined };
 
 const admin = async () => (await import("@/integrations/supabase/client.server")).supabaseAdmin;
 const priceSource = (sym: string, exchange = "binance") => (marketOf(sym)?.category === "crypto" ? exchange : "yahoo");
@@ -26,9 +31,9 @@ async function audit(ctx: Ctx, action: string, details: Record<string, unknown>,
 }
 
 /** Wraps an executor so errors become a readable tool result the model can react to. */
-function safe<I>(fn: (input: I) => Promise<unknown>) {
-  return async (input: I) => {
-    try { return await fn(input); }
+function safe<I>(fn: (input: I, opts: ToolOpts) => Promise<unknown>) {
+  return async (input: I, opts?: ToolOpts) => {
+    try { return await fn(input, opts ?? {}); }
     catch (e) { return { ok: false, error: e instanceof Error ? e.message : String(e) }; }
   };
 }
@@ -122,6 +127,7 @@ function paperTools(ctx: Ctx): ToolSet {
       inputSchema: toolInputs.startPaperBot,
       execute: safe(async (input) => {
         ctx.budget.claim("bots");
+        await ctx.guard?.();
         const { createPaperBotFor, startPaperBotFor } = await import("./bots.server");
         const { id } = await createPaperBotFor(supabase, userId, { ...input, connectionId: null }, "Bot created by AI Autopilot (paper mode)");
         await startPaperBotFor(supabase, userId, id, "Paper trading started by AI Autopilot — engine checks every minute");
@@ -150,6 +156,7 @@ function paperTools(ctx: Ctx): ToolSet {
         const db = await admin();
         const { loadAccount, openManual } = await import("./manual.server");
         const a = await loadAccount(db, userId, null, priceSource(symbol));
+        await ctx.guard?.();
         const r = await openManual(db, userId, a, { symbol, side, amount: amountUsd, sl: stopLoss, tp: takeProfit });
         await audit(ctx, "open_paper_trade", { symbol, side, amountUsd }, { type: "position", id: r.positionId });
         return { ok: true, ...r };
@@ -167,6 +174,7 @@ function paperTools(ctx: Ctx): ToolSet {
         const db = await admin();
         const { loadAccount, openManual } = await import("./manual.server");
         const a = await loadAccount(db, userId, null, priceSource(symbol));
+        await ctx.guard?.();
         const r = await openManual(db, userId, a, { symbol, side, amount: amountUsd, sl: null, tp: null, scalp: { tpPct, slPct, holdMin } });
         await audit(ctx, "open_paper_scalp", { symbol, side, amountUsd, tpPct, slPct, holdMin }, { type: "position", id: r.positionId });
         return { ok: true, ...r };
@@ -209,6 +217,7 @@ function paperTools(ctx: Ctx): ToolSet {
         ctx.budget.claim("entries");
         const db = await admin();
         const { executeArbitrage } = await import("./arbitrage.server");
+        await ctx.guard?.();
         const run = await executeArbitrage(db, userId, {
           ...input, exchanges: [input.buyExchange, input.sellExchange], feeBps: 10, slippageBps: 5,
           requestKey: crypto.randomUUID(), buyConnectionId: null, sellConnectionId: null, mode: "paper", confirmation: "",
@@ -269,7 +278,18 @@ function liveTools(ctx: Ctx, live: LiveAccounts): ToolSet {
     if(live.futures) t["live_open_futures_scalp"] = tool({
       description: "USD-M Futures scalp only after separate Futures live opt-in and independent testnet certification. Bounded by saved margin, leverage and loss limits; broker protection required.",
       inputSchema: futuresTicket.omit({connectionId:true,confirmation:true,requestId:true}),
-      execute: safe(async(input)=>{ctx.budget.claim("entries");const db=await admin();const {data:s}=await db.from("futures_settings").select("live_enabled,testnet_certified_at,connection_id").eq("user_id",userId).maybeSingle();if(!acc.testnet&&(!s?.live_enabled||!s.testnet_certified_at||s.connection_id!==acc.id))throw new Error("Futures tools are locked; separate live authorization and testnet verification required");const {openFutures}=await import("./futures.server");return openFutures(db,userId,{...input,connectionId:acc.id,confirmation:acc.testnet?"TESTNET":"LIVE",requestId:crypto.randomUUID()});}),
+      execute: safe(async (input, opts) => {
+        ctx.budget.claim("entries");
+        const db = await admin();
+        // Same authority as manual entries: current PASS certification bound to this account, never the legacy timestamp.
+        if (!acc.testnet) { const { assertProductionFutures } = await import("./futures-authorization.server"); await assertProductionFutures(db, userId, acc.id); }
+        await ctx.guard?.();
+        const { autopilotRequestId } = await import("./autopilot-fence");
+        // Deterministic per run + tool call: a duplicate execution hits the same idempotency claim instead of a second order.
+        const requestId = ctx.runId && opts.toolCallId ? await autopilotRequestId(ctx.runId, opts.toolCallId) : crypto.randomUUID();
+        const { openFutures } = await import("./futures.server");
+        return openFutures(db, userId, { ...input, connectionId: acc.id, confirmation: acc.testnet ? "TESTNET" : "LIVE", requestId }, { beforeSubmit: ctx.guard });
+      }),
     });
 
     t["live_open_binance_trade"] = tool({
@@ -282,6 +302,7 @@ function liveTools(ctx: Ctx, live: LiveAccounts): ToolSet {
         const { loadAccount, openManual } = await import("./manual.server");
         const a = await loadAccount(db, userId, acc.id);
         if (a.exchange !== "binance") throw new Error("Live Binance account mismatch");
+        await ctx.guard?.();
         const r = await openManual(db, userId, a, { symbol, side: "buy", amount: amountUsd, sl: stopLoss, tp: takeProfit });
         await audit(ctx, "live_open_binance_trade", { symbol, amountUsd, stopLoss, takeProfit, testnet: a.testnet }, { type: "position", id: r.positionId });
         return { ok: true, ...r };
@@ -326,6 +347,7 @@ function liveTools(ctx: Ctx, live: LiveAccounts): ToolSet {
         const a = await loadAccount(db, userId, acc.id, "deriv");
         if (a.exchange !== "deriv" || !a.connId || !a.creds) throw new Error("Live Deriv account mismatch");
         const { openDerivMultiplier } = await import("./deriv-trade.server");
+        await ctx.guard?.();
         const r = await openDerivMultiplier(db, userId, { connId: a.connId, testnet: a.testnet, creds: a.creds }, input);
         await audit(ctx, "live_open_deriv_multiplier", { ...input, contractId: r.contractId }, { type: "position", id: r.positionId });
         return { ok: true, ...r };

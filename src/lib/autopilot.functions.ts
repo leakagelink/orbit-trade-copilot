@@ -78,5 +78,7 @@ export async function stopActive(admin: Admin, userId: string, reason: string) {
   const { data: runs } = await admin.from("autopilot_runs").select("id").eq("user_id", userId).in("status", ["waiting_model", "executing"]);
   if (!runs?.length) return;
   // A model reply still in flight is ignored once the run is stopped; it can never trigger an action.
-  await admin.from("autopilot_runs").update({ status: "stopped", error: reason, finished_at: new Date().toISOString(), lease_until: null }).in("id", runs.map((r) => r.id));
+  // The status change alone defeats every stale worker write (they compare-and-set on an active status and their holder).
+  const { error } = await admin.from("autopilot_runs").update({ status: "stopped", error: reason, finished_at: new Date().toISOString(), lease_until: null }).in("id", runs.map((r) => r.id)).in("status", ["waiting_model", "executing"]);
+  if (error) throw new Error("Active Autopilot runs could not be stopped; try again");
 }

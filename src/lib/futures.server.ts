@@ -74,14 +74,19 @@ async function finalize(db:Admin,p:FPosition,lease:ExecutionLease,trade:Json|nul
  await lease.assert();const r=await db.rpc('futures_finalize_position',{_position:p.id,_holder:lease.holder,_fence:lease.fence,_trade:trade as Json});if(r.error)throw new Error('Atomic Futures trade ledger failed; broker outcome retained for recovery');return r.data;
 }
 /** Entry preflight claims central risk and an account writer BEFORE any configuration mutation. */
-export async function openFutures(db:Admin,userId:string,t:FuturesTicket){
+/** Production entries re-check the current PASS certification (never the legacy timestamp) before any account mutation and again immediately before submission. */
+async function authorizeEntry(db:Admin,userId:string,a:FuturesAccount,beforeSubmit?:()=>Promise<void>){
+ if(!a.testnet){const {assertProductionFutures}=await import('./futures-authorization.server');await assertProductionFutures(db,userId,a.connectionId);}
+ await beforeSubmit?.();
+}
+export async function openFutures(db:Admin,userId:string,t:FuturesTicket,opts:{beforeSubmit?:(()=>Promise<void>)|undefined}={}){
  const {requireElite}=await import('./plan.server');await requireElite(db,userId);
  const a=await loadFuturesAccount(db,userId,t.connectionId),env=a.testnet?'testnet':'production';
  if(t.confirmation!==(a.testnet?'TESTNET':'LIVE'))throw new Error('Confirm the selected Futures trading mode');
  const limits=await db.from('futures_settings').select('*').eq('user_id',userId).maybeSingle();const s=limits.data;
  if(limits.error||!s)throw new Error('Save explicit Futures risk limits first');
  const problem=futuresLimitProblem(t,s);if(problem)throw new Error(problem);
- if(!a.testnet&&(!s.live_enabled||s.connection_id!==a.connectionId||!s.testnet_certified_at))throw new Error('Live Futures requires separate opt-in and independently observed testnet verification');
+ await authorizeEntry(db,userId,a,opts.beforeSubmit);
  const m=await futuresSymbol(a,t.symbol),qty=futuresQuantity(t.margin,t.leverage,m.price,m.step,m.minQty,m.minNotional),bracket=futuresPrices(t.side,m.price,t.slPct,t.tpPct,m.tick);
  const {accountRiskBlock}=await import('./engine.server');const block=await accountRiskBlock(db,userId,qty*m.price,env);if(block)throw new Error(block);
  const risk=await db.from('risk_settings').select('max_daily_loss,max_open_exposure').eq('user_id',userId).maybeSingle();if(risk.error||!risk.data?.max_daily_loss||!risk.data.max_open_exposure)throw new Error('Save account risk limits first');
@@ -99,6 +104,7 @@ export async function openFutures(db:Admin,userId:string,t:FuturesTicket){
   const ord=await db.from('orders').insert({id,user_id:userId,exchange:'binance',exchange_connection_id:a.connectionId,trading_pair:t.symbol,side:t.side,order_type:'market',price:m.price,quantity:qty,status:'pending',mode:'live',market_type:'usd_m_futures',execution_environment:env,client_order_id:client,idempotency_key:`futures:${t.requestId}`});if(ord.error)throw new Error('Entry duplicate or central risk gate rejected it');claimed=id;
   const details={entryClient:client,slClient:`fs-${t.requestId.slice(0,28)}`,tpClient:`ft-${t.requestId.slice(0,28)}`,leverage:t.leverage,margin:t.margin,testnet:a.testnet,protection:'pending',state:'claimed',recovery:null};
   const created=await db.from('positions').insert({id:t.requestId,user_id:userId,exchange:'binance',exchange_connection_id:a.connectionId,trading_pair:t.symbol,side:t.side,quantity:qty,entry_price:m.price,current_price:m.price,mode:'live',market_type:'usd_m_futures',execution_environment:env,is_scalp:true,stop_loss:bracket.sl,take_profit:bracket.tp,max_hold_until:new Date(Date.now()+t.holdMin*60000).toISOString(),entry_order_id:id,futures_details:details});if(created.error)throw new Error('Position intent persistence failed');positionId=t.requestId;
+  await authorizeEntry(db,userId,a,opts.beforeSubmit);
   // Re-read actual account state after the atomic risk claim and before settings mutations.
   const positions=await futuresCall<BrokerPosition[]>(a,'GET','/fapi/v3/positionRisk');const [regular,algo]=await Promise.all([regulars(a),algos(a)]);
   if((state.hedge||state.multiAssets)&&(positions.some(x=>Number(x.positionAmt)!==0)||regular.length||algo.length))throw new Error('Account changed during preflight');
@@ -111,6 +117,7 @@ export async function openFutures(db:Admin,userId:string,t:FuturesTicket){
   if(Number(config?.leverage)!==t.leverage){await lease.assert(true);await futuresCall(a,'POST','/fapi/v1/leverage',{symbol:m.symbol,leverage:t.leverage});}
   const check=(await futuresCall<{symbol:string;marginType:string;leverage:number}[]>(a,'GET','/fapi/v1/symbolConfig',{symbol:m.symbol})).find(x=>x.symbol===m.symbol);
   if(check?.marginType?.toLowerCase()!=='isolated'||Number(check.leverage)!==t.leverage)throw new Error('Isolated leverage not confirmed');
+  await authorizeEntry(db,userId,a,opts.beforeSubmit);
   await lease.position(t.requestId,{futures_details:{...details,state:'submit_started'}});
   await lease.assert(true);submitted=true;
   // An acknowledgement/timeout is not proof either way: settle only by looking up this original client ID.
