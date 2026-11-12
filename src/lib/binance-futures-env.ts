@@ -37,8 +37,16 @@ export function credentialPayloadProblem(payload: { environment?: unknown }, isT
   return payload.environment === futuresEnvironment(isTestnet) ? null : "Stored credentials belong to a different environment than this account; they were not used";
 }
 
-/** Only documented USD-M REST paths: /fapi/v1..v3/<name>. Rejects protocol-relative, traversal and query tricks. */
-export const FUTURES_PATH = /^\/fapi\/v[1-3]\/[A-Za-z]+$/;
+/** Exact USD-M endpoints the app uses, with their allowed methods. Anything else (Spot, wallet, withdrawal,
+ *  protocol-relative or traversal paths) is refused before signing. No endpoint here can move funds. */
+export const FUTURES_ENDPOINTS: Readonly<Record<string, readonly ("GET" | "POST" | "DELETE")[]>> = Object.freeze({
+  "/fapi/v1/accountConfig": ["GET"], "/fapi/v1/allOrders": ["GET"], "/fapi/v1/exchangeInfo": ["GET"], "/fapi/v1/income": ["GET"],
+  "/fapi/v1/klines": ["GET"], "/fapi/v1/openAlgoOrders": ["GET"], "/fapi/v1/openOrders": ["GET"], "/fapi/v1/premiumIndex": ["GET"],
+  "/fapi/v1/symbolConfig": ["GET"], "/fapi/v1/userTrades": ["GET"], "/fapi/v2/positionRisk": ["GET"], "/fapi/v3/account": ["GET"],
+  "/fapi/v3/positionRisk": ["GET"], "/fapi/v1/multiAssetsMargin": ["GET", "POST"], "/fapi/v1/positionSide/dual": ["GET", "POST"],
+  "/fapi/v1/leverage": ["POST"], "/fapi/v1/marginType": ["POST"],
+  "/fapi/v1/order": ["GET", "POST", "DELETE"], "/fapi/v1/algoOrder": ["GET", "POST", "DELETE"],
+});
 export interface FuturesRequestCheck {
   adapterEnvironment: FuturesEnvironment;
   adapterBaseUrl: string;
@@ -56,7 +64,9 @@ export function futuresRequestProblem(c: FuturesRequestCheck): string | null {
   if (typeof c.accountTestnet !== "boolean") return "account environment unknown";
   if (futuresEnvironment(c.accountTestnet) !== c.adapterEnvironment) return `${envLabel(c.accountTestnet)} account cannot use the ${envLabel(c.adapterEnvironment)} adapter`;
   if (!["GET", "POST", "DELETE"].includes(c.method)) return "HTTP method not allowed";
-  if (!FUTURES_PATH.test(c.path)) return "endpoint path not allowed";
+  const allowed = Object.prototype.hasOwnProperty.call(FUTURES_ENDPOINTS, c.path) ? FUTURES_ENDPOINTS[c.path] : undefined;
+  if (!allowed) return "endpoint path not allowed";
+  if (!allowed.includes(c.method as "GET")) return "HTTP method not allowed for this endpoint";
   if (c.hasFaults && c.adapterEnvironment !== "testnet") return "fault injection is Testnet-only";
   if (c.signed) {
     const credEnv = credentialEnvironment(c.credentials);

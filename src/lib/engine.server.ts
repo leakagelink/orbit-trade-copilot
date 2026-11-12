@@ -56,8 +56,9 @@ async function venueFor(db: Admin, bot: Row): Promise<Venue | string> {
   if (conn.exchange !== bot.exchange) return "Bot exchange does not match its trading account";
   const { data: sealed } = await db.from("connection_credentials").select("ciphertext,iv").eq("connection_id", conn.id).eq("user_id",bot.user_id).maybeSingle();
   if (!sealed) return "Trading account has no stored keys";
-  const { decryptJson } = await import("./crypto.server");
-  return { live: true, testnet: conn.is_testnet, creds: await decryptJson<Creds>(sealed.ciphertext, sealed.iv), connId: conn.id };
+  const { openCredentials } = await import("./credential-environment.server");
+  try { return { live: true, testnet: conn.is_testnet, creds: await openCredentials(sealed, conn.is_testnet), connId: conn.id }; }
+  catch (e) { return e instanceof Error ? e.message : "Trading account credentials unavailable"; }
 }
 
 async function tickBot(db: Admin, bot: Row, pro: boolean): Promise<string> {

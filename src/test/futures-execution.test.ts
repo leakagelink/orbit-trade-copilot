@@ -69,6 +69,8 @@ vi.mock("@/lib/futures-lease.server", () => ({
   },
 }));
 vi.mock("@/lib/plan.server", () => ({ requireElite: async () => undefined }));
+// Execution mechanics run at the fixture's scale; the real fixed Testnet limits are asserted in futures-testnet-isolation.test.ts.
+vi.mock("@/lib/futures-testnet-limits", async (orig) => ({ ...(await orig<typeof import("@/lib/futures-testnet-limits")>()), TESTNET_FUTURES_LIMITS: { maxMargin: 10, maxLossReserve: 2, maxDailyLoss: 2, maxExposure: 100, maxOpenPositions: 5, maxLeverage: 10 } }));
 vi.mock("@/lib/crypto.server", () => ({ decryptJson: async () => ({ apiKey: "k", apiSecret: "s" }) }));
 vi.mock("@/lib/engine.server", () => ({ accountRiskBlock: async () => (S.db.tables["risk_settings"]![0]!["trading_halted"] ? "trading halted (emergency stop)" : null) }));
 
@@ -80,6 +82,7 @@ class Query {
   select(_c?: string, o?: { head?: boolean }) { if (o?.head) this.head = true; return this; }
   eq(k: string, v: unknown) { this.filters.push((r) => r[k] === v); return this; }
   in(k: string, v: unknown[]) { this.filters.push((r) => v.includes(r[k])); return this; }
+  gte(k: string, v: unknown) { this.filters.push((r) => String(r[k]) >= String(v)); return this; }
   like(k: string, v: string) { this.filters.push((r) => String(r[k]).startsWith(v.replace("%", ""))); return this; }
   order() { return this; }
   limit() { return this; }

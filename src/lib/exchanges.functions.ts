@@ -4,7 +4,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { EXCHANGES } from "./exchanges";
 import { derivAppId, DERIV_DISCONNECT_FIRST } from "./deriv";
 import { accountTypeSchema, supportsBothAccounts, validateAccountSelection } from "./exchange-account-types";
-import { bindCredentials, futuresEnvironment, withEnv } from "./binance-futures-env";
+import { bindCredentials, envLabel, futuresEnvironment, withEnv } from "./binance-futures-env";
 
 const credsSchema = z.object({
   apiKey: z.string().trim().min(8).max(256),
@@ -39,7 +39,7 @@ export const connectExchange = createServerFn({ method: "POST" })
       // Before anything is stored: refuse keys known from the other environment, and prove Testnet keys on Testnet only.
       const { assertKeyNotFromOtherEnvironment, verifyBinanceTestnetCredentials } = await import("./testnet-credentials.server");
       await assertKeyNotFromOtherEnvironment(supabaseAdmin, context.userId, meta.id, data.isTestnet, data.apiKey);
-      if (data.isTestnet) await verifyBinanceTestnetCredentials(data.accountType, { apiKey: data.apiKey, apiSecret: data.apiSecret, passphrase: data.passphrase });
+      if (data.isTestnet) await verifyBinanceTestnetCredentials(data.accountType, { apiKey: data.apiKey, apiSecret: data.apiSecret, ...(data.passphrase ? { passphrase: data.passphrase } : {}) });
     }
     const { data: conn, error } = await supabaseAdmin
       .from("exchange_connections")
@@ -66,7 +66,7 @@ export const connectExchange = createServerFn({ method: "POST" })
     }
     await context.supabase.from("audit_logs").insert({
       user_id: context.userId, action: "exchange.connect", entity_type: "exchange_connection", entity_id: conn.id,
-      details: { exchange: meta.id, testnet: data.isTestnet, environment: withEnv(data.isTestnet, "").trim() },
+      details: { exchange: meta.id, testnet: data.isTestnet, environment: envLabel(data.isTestnet) },
     });
     return { id: conn.id };
   });
@@ -86,14 +86,14 @@ export const updateExchangeCredentials = createServerFn({ method: "POST" })
       // Verification happens before the upsert, so a failed Testnet key leaves the stored key untouched.
       const { assertKeyNotFromOtherEnvironment, verifyBinanceTestnetCredentials } = await import("./testnet-credentials.server");
       await assertKeyNotFromOtherEnvironment(supabaseAdmin, context.userId, own.exchange, own.is_testnet, data.apiKey, own.id);
-      if (own.is_testnet) await verifyBinanceTestnetCredentials(own.account_type as "spot" | "futures" | "both", { apiKey: data.apiKey, apiSecret: data.apiSecret, passphrase: data.passphrase });
+      if (own.is_testnet) await verifyBinanceTestnetCredentials(own.account_type as "spot" | "futures" | "both", { apiKey: data.apiKey, apiSecret: data.apiSecret, ...(data.passphrase ? { passphrase: data.passphrase } : {}) });
     }
     const sealed = await encryptJson({ apiKey: data.apiKey, apiSecret: data.apiSecret, passphrase: data.passphrase, environment: futuresEnvironment(own.is_testnet) });
     await supabaseAdmin.from("connection_credentials").upsert({ connection_id: data.id, user_id: context.userId, ...sealed });
     await supabaseAdmin.from("exchange_connections").update({
       status: "pending", api_key_hint: own.exchange === "deriv" ? null : `••••${data.apiKey.slice(-4)}`, last_error: PENDING_NOTE,
     }).eq("id", data.id);
-    await context.supabase.from("audit_logs").insert({ user_id: context.userId, action: "exchange.reconnect", entity_type: "exchange_connection", entity_id: data.id, details: { exchange: own.exchange, environment: withEnv(own.is_testnet, "").trim() } });
+    await context.supabase.from("audit_logs").insert({ user_id: context.userId, action: "exchange.reconnect", entity_type: "exchange_connection", entity_id: data.id, details: { exchange: own.exchange, environment: envLabel(own.is_testnet) } });
     return { ok: true };
   });
 
@@ -121,7 +121,7 @@ export const disconnectExchange = createServerFn({ method: "POST" })
     if (removed.error) throw new Error("Could not delete stored credentials; try disconnecting again");
     const changed = await supabaseAdmin.from("exchange_connections").update({ status: "disconnected", last_error: null, permissions: {} }).eq("id", data.id).eq("user_id", context.userId);
     if (changed.error) throw new Error("Could not finish disconnecting; try again");
-    await context.supabase.from("audit_logs").insert({ user_id: context.userId, action: "exchange.disconnect", entity_type: "exchange_connection", entity_id: data.id, details: { exchange: own.exchange, environment: withEnv(own.is_testnet, "").trim() } });
+    await context.supabase.from("audit_logs").insert({ user_id: context.userId, action: "exchange.disconnect", entity_type: "exchange_connection", entity_id: data.id, details: { exchange: own.exchange, environment: envLabel(own.is_testnet) } });
     return { ok: true };
   });
 
@@ -155,7 +155,7 @@ export const verifyExchange = createServerFn({ method: "POST" })
         status: "connected", last_error: null, last_synced_at: now, permissions: { verified_at: now, balances: balances.slice(0, 50) } as unknown as never,
       }).eq("id", data.id).eq("user_id", context.userId).neq("status", "disconnected").select("id").maybeSingle();
       if (saved.error || !saved.data) throw new Error("Connection changed during verification; refresh and try again");
-      await context.supabase.from("audit_logs").insert({ user_id: context.userId, action: "exchange.verify", entity_type: "exchange_connection", entity_id: data.id, details: { exchange: own.exchange, environment: withEnv(own.is_testnet, "").trim(), ok: true } });
+      await context.supabase.from("audit_logs").insert({ user_id: context.userId, action: "exchange.verify", entity_type: "exchange_connection", entity_id: data.id, details: { exchange: own.exchange, environment: envLabel(own.is_testnet), ok: true } });
       return { ok: true as const, assets: balances.length };
     } catch (e) {
       const msg = withEnv(own.is_testnet, e instanceof Error ? e.message : String(e));

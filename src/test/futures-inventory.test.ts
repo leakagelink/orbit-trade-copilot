@@ -1,6 +1,7 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { futuresPositions } from '@/lib/binance-futures.server';
-const account={connectionId:'test-only',testnet:true,creds:{apiKey:'test-key',apiSecret:'test-secret'}};
+import { bindCredentials } from '@/lib/binance-futures-env';
+const account={connectionId:'test-only',testnet:true,creds:bindCredentials({apiKey:'test-key',apiSecret:'test-secret'},'testnet')};
 afterEach(()=>vi.unstubAllGlobals());
 it('requires explicit zero inventory when V3 omits a flat symbol',async()=>{
  const urls:string[]=[];

@@ -21,8 +21,8 @@ export async function loadAccount(db: Admin, userId: string, connId: string | nu
   if (conn.status !== "connected") throw new Error("Verify this trading account on the Exchanges page first");
   const { data: sealed } = await db.from("connection_credentials").select("ciphertext,iv").eq("connection_id", conn.id).eq("user_id",userId).maybeSingle();
   if (!sealed) throw new Error("Trading account has no stored keys");
-  const { decryptJson } = await import("./crypto.server");
-  return { connId: conn.id, exchange: conn.exchange, testnet: conn.is_testnet, creds: await decryptJson<Creds>(sealed.ciphertext, sealed.iv) };
+  const { openCredentials } = await import("./credential-environment.server");
+  return { connId: conn.id, exchange: conn.exchange, testnet: conn.is_testnet, creds: await openCredentials(sealed, conn.is_testnet) };
 }
 
 export async function lastPrice(a: Account, symbol: string) {

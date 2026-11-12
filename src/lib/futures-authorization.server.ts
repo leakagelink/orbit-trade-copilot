@@ -21,7 +21,7 @@ export async function productionFuturesAuthorization(db: Admin, userId: string, 
 
 export async function assertProductionFutures(db: Admin, userId: string, connectionId: string) {
   const { problem } = await productionFuturesAuthorization(db, userId, connectionId);
-  if (problem) throw new Error(`Production Futures locked: ${problem}`);
+  if (problem) throw new Error(`[PRODUCTION] Production Futures locked: ${problem}`);
 }
 
 /**

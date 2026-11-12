@@ -33,8 +33,8 @@ export const verifyRecoveryOrder=createServerFn({method:"POST"}).middleware([req
     return {status,noOrdersSent:true,lockRetained:true};
   }
   const sealed=await db.from("connection_credentials").select("ciphertext,iv").eq("connection_id",conn.data.id).eq("user_id",context.userId).maybeSingle();if(sealed.error||!sealed.data)throw new Error("Original account credentials unavailable");
-  const {decryptJson}=await import("./crypto.server");const {lookupArbitrageOrder}=await import("./exchange-adapters.server");
-  const creds=await decryptJson<import("./exchange-adapters.server").Creds>(sealed.data.ciphertext,sealed.data.iv);
+  const {openCredentials}=await import("./credential-environment.server");const {lookupArbitrageOrder}=await import("./exchange-adapters.server");
+  const creds=await openCredentials(sealed.data,conn.data.is_testnet);
   let evidence:import("./arbitrage-recovery").OrderEvidence|null=null;
   try{evidence=await lookupArbitrageOrder(o.exchange,creds,conn.data.is_testnet,o.trading_pair,o.side==="buy"?"buy":"sell",o.id);}catch{/* Provider responses and credentials never persist. */}
   const status=orderRecoveryStatus(evidence);

@@ -272,7 +272,7 @@ function liveTools(ctx: Ctx, live: LiveAccounts): ToolSet {
     t["live_futures_snapshot"] = tool({
       description: "Read Binance USD-M Futures market and Futures settings. No orders or settings changes.",
       inputSchema: toolInputs.marketSnapshot,
-      execute: safe(async ({symbol})=>{const db=await admin();const {loadFuturesAccount}=await import("./futures.server");const {futuresSymbol,futuresAccountState}=await import("./binance-futures.server");const a=await loadFuturesAccount(db,userId,acc.id);const limits=await db.from("futures_settings").select("*").eq("user_id",userId).maybeSingle();return {market:await futuresSymbol(a,symbol),account:await futuresAccountState(a),limits:limits.data};}),
+      execute: safe(async ({symbol})=>{const db=await admin();const {loadFuturesAccount}=await import("./futures.server");const {futuresSymbol,futuresAccountState}=await import("./binance-futures.server");const a=await loadFuturesAccount(db,userId,acc.id);const limits=a.testnet?{data:(await import("./futures-testnet-limits")).TESTNET_FUTURES_LIMITS}:await db.from("futures_settings").select("*").eq("user_id",userId).maybeSingle();return {environment:a.testnet?"TESTNET":"PRODUCTION",market:await futuresSymbol(a,symbol),account:await futuresAccountState(a),limits:limits.data};}),
     });
     // Entry executor rechecks the separate Futures opt-in, certification, plan and risk limits on every call.
     if(live.futures) t["live_open_futures_scalp"] = tool({

@@ -2,7 +2,9 @@ import { futuresQuantity,futuresPrices,futuresLimitProblem,futuresRiskReserve,ty
 import { futuresCall,futuresAccountState,futuresSymbol,futuresPositions,futuresOrder,futuresAlgo,futuresCancelAlgo,futuresCancelOrder,futuresEvidence,type FuturesAccount,type BrokerOrder,type BrokerPosition } from './binance-futures.server';
 import {acquireExecution,type ExecutionLease} from './futures-lease.server';
 import {activeOrder,terminalOrder,confirmedQuantity,validateOrder,settleOriginal,protectionProblem,attributeLedger,remainderQuantity} from './futures-execution';
-import {sameEnvironment} from './trade-accounting';
+import {sameEnvironment,tradeNet} from './trade-accounting';
+import {bindCredentials,futuresEnvironment,withEnv} from './binance-futures-env';
+import {TESTNET_FUTURES_LIMITS,testnetTicketProblem,testnetAccountProblem} from './futures-testnet-limits';
 import type {FaultPlan} from './futures-faults.server';
 import type { Json } from '@/integrations/supabase/types';
 type Admin=Awaited<typeof import('@/integrations/supabase/client.server')>['supabaseAdmin'];
@@ -12,8 +14,28 @@ export async function loadFuturesAccount(db:Admin,userId:string,id:string):Promi
  if(c.account_type!=='futures'&&c.account_type!=='both')throw new Error('Select Futures or Both on Exchanges first');
  const {data:k}=await db.from('connection_credentials').select('ciphertext,iv').eq('connection_id',id).eq('user_id',userId).maybeSingle();
  if(!k)throw new Error('Trading credentials unavailable');
- const {decryptJson}=await import('./crypto.server');
- return {connectionId:id,testnet:c.is_testnet,creds:await decryptJson(k.ciphertext,k.iv)};
+ if(typeof c.is_testnet!=='boolean')throw new Error('Futures account environment unknown');
+ // Credentials are opened only for this connection's immutable environment and bound to its adapter.
+ const {openCredentials}=await import('./credential-environment.server');
+ return {connectionId:id,testnet:c.is_testnet,creds:bindCredentials(await openCredentials(k,c.is_testnet),futuresEnvironment(c.is_testnet))};
+}
+/** Re-reads the stored environment right before order submissions; a mismatch stops the request. */
+async function assertStoredEnvironment(db:Admin,a:FuturesAccount){
+ const r=await db.from('exchange_connections').select('is_testnet,status').eq('id',a.connectionId).maybeSingle();
+ if(r.error||!r.data||r.data.is_testnet!==a.testnet)throw new Error(withEnv(a.testnet,'Futures account environment could not be re-verified; request stopped'));
+}
+/** Testnet-only risk gate: fixed limits, Testnet positions/trades only. Reads only the emergency-stop flag from risk_settings. */
+async function testnetRiskBlock(db:Admin,userId:string,newCost:number,slPct:number){
+ const start=new Date();start.setUTCHours(0,0,0,0);
+ const [risk,pos,trades]=await Promise.all([
+  db.from('risk_settings').select('trading_halted').eq('user_id',userId).maybeSingle(),
+  db.from('positions').select('entry_price,quantity,unrealized_pnl').eq('user_id',userId).eq('is_open',true).eq('execution_environment','testnet'),
+  db.from('trades').select('realized_pnl,fees,funding_pnl,costs_verified').eq('user_id',userId).eq('execution_environment','testnet').gte('closed_at',start.toISOString()),
+ ]);
+ if(risk.error||pos.error||trades.error||!pos.data||!trades.data)return 'Testnet account evidence unavailable';
+ const exposure=pos.data.reduce((s,p)=>s+Number(p.entry_price)*Number(p.quantity),0);
+ const dailyNet=trades.data.reduce((s,t)=>s+tradeNet(t),0)+pos.data.reduce((s,p)=>s+Math.min(0,Number(p.unrealized_pnl??0)),0);
+ return testnetAccountProblem({halted:risk.data?risk.data.trading_halted:null,openPositions:pos.data.length,exposure,dailyNet,newCost,slPct},TESTNET_FUTURES_LIMITS);
 }
 export async function verifyFutures(db:Admin,userId:string,id:string){
  const a=await loadFuturesAccount(db,userId,id);const s=await futuresAccountState(a);
@@ -68,6 +90,7 @@ const emergencyClient=(id:string)=>`fe-${id.slice(0,28)}`;
 async function emergencyContain(a:FuturesAccount,p:FPosition,cap:number){
  const symbol=p.trading_pair.replace('/',''),broker=(await futuresPositions(a,symbol)).find(x=>x.positionSide==='BOTH'),amt=Number(broker?.positionAmt??NaN);
  if(!Number.isFinite(amt)||amt===0||(amt>0)!==(p.side==='buy'))return false;
+ console.error(withEnv(a.testnet,'Futures emergency reduce-only containment submitting'));
  await futuresCall(a,'POST','/fapi/v1/order',{symbol,side:p.side==='buy'?'SELL':'BUY',positionSide:'BOTH',type:'MARKET',quantity:Math.min(Math.abs(amt),cap),reduceOnly:'true',newClientOrderId:emergencyClient(p.id),newOrderRespType:'RESULT'});
  return true;
 }
@@ -77,6 +100,7 @@ async function finalize(db:Admin,p:FPosition,lease:ExecutionLease,trade:Json|nul
 /** Entry preflight claims central risk and an account writer BEFORE any configuration mutation. */
 /** Production entries re-check the current PASS certification (never the legacy timestamp) before any account mutation and again immediately before submission. */
 async function authorizeEntry(db:Admin,userId:string,a:FuturesAccount,beforeSubmit?:()=>Promise<void>){
+ await assertStoredEnvironment(db,a);
  if(!a.testnet){const {assertProductionFutures}=await import('./futures-authorization.server');await assertProductionFutures(db,userId,a.connectionId);}
  await beforeSubmit?.();
 }
@@ -85,21 +109,34 @@ export type FuturesCheckpoint='after_claim'|'after_submit_started'|'after_entry_
 export async function openFutures(db:Admin,userId:string,t:FuturesTicket,opts:{beforeSubmit?:(()=>Promise<void>)|undefined;faults?:FaultPlan;checkpoint?:(name:FuturesCheckpoint)=>Promise<void>|void}={}){
  const {requireElite}=await import('./plan.server');await requireElite(db,userId);
  const a=await loadFuturesAccount(db,userId,t.connectionId),env=a.testnet?'testnet':'production';
- if((opts.faults||opts.checkpoint)&&!a.testnet)throw new Error('Fault injection and crash checkpoints are Testnet-only');
+ const fail=(m:string)=>new Error(withEnv(a.testnet,m));
+ if((opts.faults||opts.checkpoint)&&!a.testnet)throw fail('Fault injection and crash checkpoints are Testnet-only');
  if(opts.faults)a.faults=opts.faults;
- if(t.confirmation!==(a.testnet?'TESTNET':'LIVE'))throw new Error('Confirm the selected Futures trading mode');
- const limits=await db.from('futures_settings').select('*').eq('user_id',userId).maybeSingle();const s=limits.data;
- if(limits.error||!s)throw new Error('Save explicit Futures risk limits first');
- const problem=futuresLimitProblem(t,s);if(problem)throw new Error(problem);
+ if(t.confirmation!==(a.testnet?'TESTNET':'LIVE'))throw fail('Confirm the selected Futures trading mode');
+ if(a.testnet){
+  // Fixed Testnet limits; the production futures_settings record is never read or written here.
+  const problem=testnetTicketProblem(t,TESTNET_FUTURES_LIMITS);if(problem)throw fail(problem);
+ }else{
+  const limits=await db.from('futures_settings').select('*').eq('user_id',userId).maybeSingle();const s=limits.data;
+  if(limits.error||!s)throw fail('Save explicit Futures risk limits first');
+  const problem=futuresLimitProblem(t,s);if(problem)throw fail(problem);
+ }
  await authorizeEntry(db,userId,a,opts.beforeSubmit);
  const m=await futuresSymbol(a,t.symbol),qty=futuresQuantity(t.margin,t.leverage,m.price,m.step,m.minQty,m.minNotional),bracket=futuresPrices(t.side,m.price,t.slPct,t.tpPct,m.tick);
- const {accountRiskBlock}=await import('./engine.server');const block=await accountRiskBlock(db,userId,qty*m.price,env);if(block)throw new Error(block);
- const risk=await db.from('risk_settings').select('max_daily_loss,max_open_exposure').eq('user_id',userId).maybeSingle();if(risk.error||!risk.data?.max_daily_loss||!risk.data.max_open_exposure)throw new Error('Save account risk limits first');
- if(futuresRiskReserve(qty*m.price,t.slPct)>risk.data.max_daily_loss)throw new Error('Scalp reserve exceeds daily loss cap');
+ const {accountRiskBlock}=await import('./engine.server');
+ const riskBlock=()=>a.testnet?testnetRiskBlock(db,userId,qty*m.price,t.slPct):accountRiskBlock(db,userId,qty*m.price,env);
+ const block=await riskBlock();if(block)throw fail(block);
+ if(!a.testnet){
+  const risk=await db.from('risk_settings').select('max_daily_loss,max_open_exposure').eq('user_id',userId).maybeSingle();if(risk.error||!risk.data?.max_daily_loss||!risk.data.max_open_exposure)throw fail('Save account risk limits first');
+  if(futuresRiskReserve(qty*m.price,t.slPct)>risk.data.max_daily_loss)throw fail('Scalp reserve exceeds daily loss cap');
+ }
  const lease=await acquireExecution(db,userId,a.connectionId,'entry');let claimed:string|null=null;let positionId:string|null=null;let submitted=false;
  try{
-  const again=await accountRiskBlock(db,userId,qty*m.price,env);if(again)throw new Error(again);
-  const pending=await db.from('orders').select('id',{count:'exact',head:true}).eq('user_id',userId).in('status',['pending','open','partially_filled']);if(pending.error||pending.count)throw new Error('Pending orders require reconciliation');
+  const again=await riskBlock();if(again)throw new Error(again);
+  // Production keeps the account-wide pending check; Testnet checks only Testnet intents (the database gate still applies).
+  let pendingQuery=db.from('orders').select('id',{count:'exact',head:true}).eq('user_id',userId).in('status',['pending','open','partially_filled']);
+  if(a.testnet)pendingQuery=pendingQuery.eq('execution_environment','testnet');
+  const pending=await pendingQuery;if(pending.error||pending.count)throw new Error('Pending orders require reconciliation');
   const state=await futuresAccountState(a);if(!state.canTrade)throw new Error('Futures trading permission unavailable');
   if(Number(state.availableBalance)<t.margin)throw new Error('Not enough available Futures margin');
   const all=await futuresCall<BrokerPosition[]>(a,'GET','/fapi/v3/positionRisk');const [open,conditional]=await Promise.all([regulars(a),algos(a)]);
@@ -128,13 +165,13 @@ export async function openFutures(db:Admin,userId:string,t:FuturesTicket,opts:{b
   await opts.checkpoint?.('after_submit_started');
   await lease.assert(true);submitted=true;
   // An acknowledgement/timeout is not proof either way: settle only by looking up this original client ID.
-  try{await futuresCall<BrokerOrder>(a,'POST','/fapi/v1/order',{symbol:m.symbol,side:t.side==='buy'?'BUY':'SELL',positionSide:'BOTH',type:'MARKET',quantity:qty,newClientOrderId:client,newOrderRespType:'RESULT'});}catch(e){console.error('Futures entry submit outcome uncertain; lookup only',String(e).slice(0,200));}
+  try{await futuresCall<BrokerOrder>(a,'POST','/fapi/v1/order',{symbol:m.symbol,side:t.side==='buy'?'BUY':'SELL',positionSide:'BOTH',type:'MARKET',quantity:qty,newClientOrderId:client,newOrderRespType:'RESULT'});}catch(e){console.error(withEnv(a.testnet,'Futures entry submit outcome uncertain; lookup only'),String(e).slice(0,200));}
   await opts.checkpoint?.('after_entry_submit');
   const fill=await settle(a,m.symbol,client,t.side==='buy'?'BUY':'SELL',lease);await saveOrder(db,lease,id,fill);
   const filled=confirmedQuantity(fill);if(filled!==qty||fill.status!=='FILLED'||!(Number(fill.avgPrice)>0))throw new Error('Partial entry: immediate containment required');
   const stops=futuresPrices(t.side,Number(fill.avgPrice),t.slPct,t.tpPct,m.tick);
   await lease.position(t.requestId,{entry_price:Number(fill.avgPrice),quantity:filled,stop_loss:stops.sl,take_profit:stops.tp,futures_details:{...details,state:'protecting'}});
-  for(const [type,triggerPrice,clientAlgoId] of [['STOP_MARKET',stops.sl,details.slClient],['TAKE_PROFIT_MARKET',stops.tp,details.tpClient]] as const){await lease.assert();try{await futuresCall(a,'POST','/fapi/v1/algoOrder',{algoType:'CONDITIONAL',symbol:m.symbol,side:t.side==='buy'?'SELL':'BUY',positionSide:'BOTH',type,triggerPrice,closePosition:'true',workingType:'MARK_PRICE',clientAlgoId});}catch(e){console.error('Futures protection acknowledgement unavailable; verifying actual broker order',String(e).slice(0,200));}}
+  for(const [type,triggerPrice,clientAlgoId] of [['STOP_MARKET',stops.sl,details.slClient],['TAKE_PROFIT_MARKET',stops.tp,details.tpClient]] as const){await lease.assert();try{await futuresCall(a,'POST','/fapi/v1/algoOrder',{algoType:'CONDITIONAL',symbol:m.symbol,side:t.side==='buy'?'SELL':'BUY',positionSide:'BOTH',type,triggerPrice,closePosition:'true',workingType:'MARK_PRICE',clientAlgoId});}catch(e){console.error(withEnv(a.testnet,'Futures protection acknowledgement unavailable; verifying actual broker order'),String(e).slice(0,200));}}
   await opts.checkpoint?.('after_protection_submit');
   const p=await reload(db,t.requestId);await confirmProtections(db,p,a,m.tick);
   await lease.position(p.id,{futures_details:{...details,state:'protected',protection:'confirmed'}});
@@ -145,20 +182,20 @@ export async function openFutures(db:Admin,userId:string,t:FuturesTicket,opts:{b
    if(submitted){
     // Containment must not depend on a successful diagnostic database write.
     try{await closeLocked(db,await reload(db,positionId),a,'entry_containment',lease);}catch(recovery){
-     try{const p=await reload(db,positionId).catch(()=>({id:positionId,side:t.side,trading_pair:t.symbol} as FPosition));if(await emergencyContain(a,p,qty))console.error('Futures emergency reduce-only containment submitted; ledger recovery remains locked');}catch{console.error('Futures emergency containment unconfirmed; entries remain blocked');}
-     try{const p=await reload(db,positionId);await lease.position(positionId,{futures_details:{...detail(p),protection:'unverified',state:'recovery',recovery:`${message}; ${String(recovery)}`.slice(0,800)}});}catch{console.error('Futures recovery state write failed; original intent remains locked');}
+     try{const p=await reload(db,positionId).catch(()=>({id:positionId,side:t.side,trading_pair:t.symbol} as FPosition));if(await emergencyContain(a,p,qty))console.error(withEnv(a.testnet,'Futures emergency reduce-only containment submitted; ledger recovery remains locked'));}catch{console.error(withEnv(a.testnet,'Futures emergency containment unconfirmed; entries remain blocked'));}
+     try{const p=await reload(db,positionId);await lease.position(positionId,{futures_details:{...detail(p),protection:'unverified',state:'recovery',recovery:`${message}; ${String(recovery)}`.slice(0,800)}});}catch{console.error(withEnv(a.testnet,'Futures recovery state write failed; original intent remains locked'));}
     }
    }else{
     await lease.assert();const cancelled=await db.from('orders').update({status:'cancelled',reject_reason:message.slice(0,500)}).eq('id',claimed??'');if(cancelled.error)throw new Error('Pre-submit cancellation ledger unavailable; no order sent');
     await finalize(db,await reload(db,positionId),lease,null);
    }
   }else if(claimed&&!submitted){const r=await db.from('orders').update({status:'cancelled',reject_reason:'Position persistence failed before submit'}).eq('id',claimed);if(r.error)throw new Error('Unsubmitted entry intent retained; manual recovery required');}
-  throw new Error(`Futures entry did not complete. Original intent retained; do not resubmit. ${message}`);
+  throw new Error(withEnv(a.testnet,`Futures entry did not complete. Original intent retained; do not resubmit. ${message.replace(/^\[(TESTNET|PRODUCTION)\] /,'')}`));
  }finally{await lease.release();}
 }
 /** Fenced close/recovery, also used immediately on an entry/protection failure. */
 async function closeLocked(db:Admin,p:FPosition,a:FuturesAccount,reason:string,lease:ExecutionLease){
- if(!sameEnvironment(p.execution_environment,a.testnet))throw new Error('Immutable Futures environment does not match original account');
+ if(!sameEnvironment(p.execution_environment,a.testnet))throw new Error(withEnv(a.testnet,'Immutable Futures environment does not match original account'));
  const symbol=p.trading_pair.replace('/',''),d=detail(p),client=d['entryClient'];
  if(typeof client!=='string'||!p.entry_order_id)throw new Error('Original entry intent unavailable');
  let original:BrokerOrder;
@@ -180,9 +217,9 @@ async function closeLocked(db:Admin,p:FPosition,a:FuturesAccount,reason:string,l
   const id=crypto.randomUUID(),exitClient=`fx-${id.slice(0,28)}`,sequence=(exits.data??[]).length,key=`futures:exit:${p.id}${sequence?`:remainder:${sequence}`:''}`;
   await lease.assert();
   const r=await db.from('orders').insert({id,user_id:p.user_id,exchange:'binance',exchange_connection_id:a.connectionId,trading_pair:p.trading_pair,side:p.side==='buy'?'sell':'buy',order_type:'market',quantity:remaining,status:'pending',mode:'live',market_type:'usd_m_futures',execution_environment:a.testnet?'testnet':'production',client_order_id:exitClient,idempotency_key:key});if(r.error)throw new Error('Exit claim failed; no second order sent');
-  await lease.assert();
+  await lease.assert();await assertStoredEnvironment(db,a);
   // Once claimed, even a timeout is lookup-only on later invocations.
-  try{await futuresCall(a,'POST','/fapi/v1/order',{symbol,side:p.side==='buy'?'SELL':'BUY',positionSide:'BOTH',type:'MARKET',quantity:remaining,reduceOnly:'true',newClientOrderId:exitClient,newOrderRespType:'RESULT'});}catch(e){console.error('Futures exit submit outcome uncertain; lookup only',String(e).slice(0,200));}
+  try{await futuresCall(a,'POST','/fapi/v1/order',{symbol,side:p.side==='buy'?'SELL':'BUY',positionSide:'BOTH',type:'MARKET',quantity:remaining,reduceOnly:'true',newClientOrderId:exitClient,newOrderRespType:'RESULT'});}catch(e){console.error(withEnv(a.testnet,'Futures exit submit outcome uncertain; lookup only'),String(e).slice(0,200));}
   const fill=await settle(a,symbol,exitClient,p.side==='buy'?'SELL':'BUY',lease);known.push(fill);exitIds.push(String(fill.orderId));await saveOrder(db,lease,id,fill);
   broker=(await futuresPositions(a,symbol)).find(x=>x.positionSide==='BOTH');if(!broker)throw new Error('Broker close read-back unavailable');
   if(Math.abs(Number(broker.positionAmt))>1e-8)throw new Error('Partial exit terminal; remainder requires the next fenced recovery step');
@@ -216,7 +253,7 @@ export async function checkFutures(db:Admin,input:FPosition){
  if(!input.exchange_connection_id)throw new Error('Missing Futures connection');
  const a=await loadFuturesAccount(db,input.user_id,input.exchange_connection_id),lease=await acquireExecution(db,input.user_id,a.connectionId,'check');
  try{
-  const p=await reload(db,input.id);if(!sameEnvironment(p.execution_environment,a.testnet))throw new Error('Historical execution environment mismatch');
+  const p=await reload(db,input.id);if(!sameEnvironment(p.execution_environment,a.testnet))throw new Error(withEnv(a.testnet,'Historical execution environment mismatch'));
   const symbol=p.trading_pair.replace('/',''),d=detail(p),broker=(await futuresPositions(a,symbol)).find(x=>x.positionSide==='BOTH');if(!broker)throw new Error('Broker inventory unavailable');
   const risk=await db.from('risk_settings').select('trading_halted').eq('user_id',p.user_id).maybeSingle();if(risk.error||!risk.data)throw new Error('Risk authority unavailable');
   let reason:string|null=null;

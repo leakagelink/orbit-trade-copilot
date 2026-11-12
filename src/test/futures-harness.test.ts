@@ -6,7 +6,8 @@ import { faultPlan, INJECTED } from '@/lib/futures-faults.server';
 import { isolationProblems, fingerprint, fingerprintChanges, flatProblems, ledgerProblems, fundingMatches, verdict, type IsolationFacts } from '@/lib/futures-harness';
 import { harnessConfig } from '@/lib/futures-harness.server';
 
-const creds = { apiKey: 'k', apiSecret: 's' } as never;
+import { bindCredentials } from '@/lib/binance-futures-env';
+const creds = bindCredentials({ apiKey: 'k', apiSecret: 's' }, 'testnet') as never;
 const ok = (body: unknown) => new Response(JSON.stringify(body), { status: 200 });
 afterEach(() => vi.unstubAllGlobals());
 
