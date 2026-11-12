@@ -207,6 +207,9 @@ export async function executeResearchRun(db: Admin, userId: string, runId: strin
       sentiment: { evidence: ev.sentiment, missing: ev.sentiment.limitation },
     }, analyze, save);
     const all = await runDecisionStages(first.results, ev.snapshot, analyze, save);
+    // A cancel that landed while the final calls were with the provider still closes the run as cancelled
+    // (fail closed: an unverifiable cancel state closes it as a safety stop). Completed reports are kept.
+    if (!m.state().stoppedBy) { try { await checkCancelled(); } catch { /* the stop is recorded on the meter */ } }
     proposal = buildResearchProposal(ev.snapshot, all);
     const proposalWrite = await db.from("ai_trade_proposals").insert({ run_id: runId, user_id: userId, proposal });
     if (proposalWrite.error) throw proposalWrite.error;
@@ -245,7 +248,9 @@ export async function executeResearchRun(db: Admin, userId: string, runId: strin
   const evWrite = await untyped(db).from("ai_risk_evaluations").insert({ run_id: runId, user_id: userId, symbol, market_type: ev.marketType, proposed_direction: ev.proposedDirection, decision: ev.decision, execution_authorized: false, estimated_position_size: ev.estimatedPositionSize, estimated_risk_amount: ev.estimatedRiskAmount, available_risk_budget: ev.availableRiskBudget, account_exposure: ev.accountExposure, rejection_reasons: ev.rejectionReasons, missing_inputs: ev.missingInputs, evaluation: ev });
   if (evWrite.error && !tableMissing(evWrite.error)) console.error("Risk evaluation could not be saved", evWrite.error);
   const status = RUN_STATUS_FOR_OUTCOME[record.outcome];
-  const reasonText = failure ?? record.stopReason ?? null;
+  // A run where agents failed keeps the first provider failure as its visible reason (e.g. a disabled API key).
+  const firstAgentError = calls.find((c) => c.status === "failed")?.error ?? null;
+  const reasonText = failure ?? record.stopReason ?? (status === "failed" || status === "partial" ? firstAgentError : null);
   const completedAt = new Date(now()).toISOString();
   // Compare-and-set on status (and, with 0043, on this worker): a run already closed elsewhere is never overwritten.
   let saved = await ownRun(db.from("ai_research_runs").update({ status, ...(reasonText ? { error: reasonText } : {}), completed_at: completedAt }).eq("id", runId).eq("user_id", userId)).in("status", ["queued", "running"]).select("id");

@@ -111,3 +111,29 @@ describe("streamed replies", () => {
     await expect(runAnalyst("market", "AAPL", {})).rejects.toThrow(/ended the reply early/);
   });
 });
+
+describe("provider timeout and overload: one request, no retry, no correction", () => {
+  const env = () => { vi.stubEnv("LOVABLE_API_KEY", "test"); vi.stubEnv("UDC_AI_PRIME_TECH_API_KEY", "test"); };
+  it("an HTTP 529 overloaded reply fails the agent after exactly one request and never asks for a correction", async () => {
+    env(); const f = vi.fn(async () => new Response(JSON.stringify({ type: "error", error: { type: "overloaded_error", message: "Overloaded" } }), { status: 529 }));
+    vi.stubGlobal("fetch", f); const beforeRepair = vi.fn();
+    await expect(runAnalyst("market", "AAPL", { x: 1 }, beforeRepair)).rejects.toThrow();
+    expect(f).toHaveBeenCalledTimes(1);
+    expect(beforeRepair).not.toHaveBeenCalled();
+  });
+  it("a stream that reports overload mid-reply fails after one request", async () => {
+    env(); const sse = 'event: message_start\ndata: {"type":"message_start","message":{"id":"m","content":[],"usage":{"input_tokens":5,"output_tokens":0}}}\n\nevent: error\ndata: {"type":"error","error":{"type":"overloaded_error","message":"Overloaded"}}\n\n';
+    const f = vi.fn(async () => new Response(sse, { status: 200, headers: { "content-type": "text/event-stream" } }));
+    vi.stubGlobal("fetch", f); const beforeRepair = vi.fn();
+    await expect(runAnalyst("market", "AAPL", { x: 1 }, beforeRepair)).rejects.toThrow();
+    expect(f).toHaveBeenCalledTimes(1);
+    expect(beforeRepair).not.toHaveBeenCalled();
+  });
+  it("a timeout (aborted request) fails after one request and is not retried", async () => {
+    env(); const f = vi.fn(async () => { throw new DOMException("The operation was aborted due to timeout", "TimeoutError"); });
+    vi.stubGlobal("fetch", f); const beforeRepair = vi.fn();
+    await expect(runAnalyst("market", "AAPL", { x: 1 }, beforeRepair)).rejects.toThrow(/timeout/i);
+    expect(f).toHaveBeenCalledTimes(1);
+    expect(beforeRepair).not.toHaveBeenCalled();
+  });
+});

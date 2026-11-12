@@ -53,7 +53,9 @@ export function buildDecisionRecord(i: DecisionRecordInput) {
   const cost = costStatus(costs);
   const manager = i.agents.find((a) => a.agent === "manager"), portfolio = i.agents.find((a) => a.agent === "portfolio");
   const conclusion = (a: AgentRecord | undefined) => a ? { status: a.status, outlook: a.status === "completed" ? a.report.outlook : null, summary: a.report.summary } : null;
-  const outcome = i.failure && !i.agents.some((a) => a.status === "completed") ? "failed" as const : decisionOutcome(i.agents, i.budget?.stoppedBy ?? null);
+  // A run that hit any failure (for example its proposal could not be stored) is never reported as complete.
+  const base = decisionOutcome(i.agents, i.budget?.stoppedBy ?? null);
+  const outcome = i.failure && !i.agents.some((a) => a.status === "completed") ? "failed" as const : i.failure && base === "complete" ? "partial" as const : base;
   const rejections = [...(i.proposal?.status === "withheld" ? i.proposal.reasons : []), ...(i.riskEngineBlock ? [`Risk Engine: ${i.riskEngineBlock}`] : []), ...(i.riskPreview?.blockReason ? [`Risk preview: ${i.riskPreview.blockReason}`] : []), ...(i.riskPreview?.unavailable ?? []).map((u) => `Risk preview input unavailable: ${u}`)];
   const quality = dataQuality({
     symbol: i.symbol, now: Date.parse(i.decidedAt),

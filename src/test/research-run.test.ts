@@ -11,11 +11,12 @@ type Op = { table: string; op: string; row?: unknown };
 type RpcResult = { data: unknown; error: { code?: string; message?: string } | null };
 /** Database-side spending ledger stand-in (the real SQL is tested in PGlite and a multi-session Postgres). */
 type Ledger = (fn: string, args: Record<string, unknown>) => RpcResult | Promise<RpcResult>;
-interface Opts { budgetRow?: Record<string, unknown> | null; ledgerMissing?: boolean; usageError?: boolean; halted?: boolean; cancelled?: boolean | (() => boolean); cancelCheckFails?: boolean | (() => boolean); usageRows?: { input_tokens: number; output_tokens: number }[]; ledger?: Ledger }
+interface Opts { budgetRow?: Record<string, unknown> | null; ledgerMissing?: boolean; usageError?: boolean; halted?: boolean; cancelled?: boolean | (() => boolean); cancelCheckFails?: boolean | (() => boolean); usageRows?: { input_tokens: number; output_tokens: number }[]; ledger?: Ledger; insertFails?: string[] }
 const MISSING_FN: RpcResult = { data: null, error: { code: "PGRST202", message: "Could not find the function" } };
 function fakeDb(o: Opts = {}) {
   const ops: Op[] = []; const rpc: string[] = []; const rpcArgs: { fn: string; args: Record<string, unknown> }[] = [];
   const result = (table: string, op: string): unknown => {
+    if (op === "insert" && o.insertFails?.includes(table)) return { error: { code: "XX000", message: "write failed" } };
     if (op === "insert") return { error: table === "ai_decision_records" && o.ledgerMissing ? { code: "PGRST205", message: "Could not find the table" } : null };
     if (op === "update") return { error: null, data: [{ id: RUN }] };
     if (table === "ai_research_budget_config") return o.budgetRow === undefined ? { data: null, error: { code: "PGRST205", message: "Could not find the table" } } : { data: o.budgetRow, error: null };
@@ -308,7 +309,9 @@ describe("atomic spending reservations (database ledger)", () => {
   it("a provider failure settles the reservation in full (usage unknown, never assumed lower)", async () => {
     const l = okLedger(); const { db } = fakeDb({ ledger: l.fn }); const a = analyst(["market"]);
     await run(db, a.fn);
-    const settle = l.log.find((x) => x.fn === "settle_ai_research_budget" && (x.args["_reservations"] as string[])[0] === "res-1");
+    // Reservation ids follow request order, which varies between parallel analysts: look up the market analyst's own id.
+    const marketRes = `res-${l.log.filter((x) => x.fn === "reserve_ai_research_budget").findIndex((x) => x.args["_agent"] === "market") + 1}`;
+    const settle = l.log.find((x) => x.fn === "settle_ai_research_budget" && (x.args["_reservations"] as string[])[0] === marketRes);
     expect(settle?.args["_consumed_tokens"]).toBeNull();
   });
   it("if the ledger cannot be reached, no further AI call starts and it is not reported as a spending stop", async () => {
@@ -320,16 +323,24 @@ describe("atomic spending reservations (database ledger)", () => {
     expect(recordOf(ops)!.record["execution"].budget.stoppedBy).toBe("ledger_unavailable");
   });
   it("a reservation granted while a parallel agent stopped the run is released, never sent", async () => {
+    // Deterministic, whatever order the parallel analysts reserve in: the refusal is given only once the other two
+    // first-stage analysts (market, news; sentiment has no source) are already waiting on their reservations, and
+    // theirs are granted only after the refusal has been fully processed.
+    let refusalProcessed!: () => void; const afterRefusal = new Promise<void>((r) => (refusalProcessed = r));
+    let othersWaiting!: () => void; const bothWaiting = new Promise<void>((r) => (othersWaiting = r)); let waiting = 0;
     const l = okLedger(async (_n, args) => {
-      if (args["_agent"] === "fundamentals") return { data: { ok: false, stopped_by: "user_day_tokens", reason: "Spending limit reached: daily. No further AI calls were made." }, error: null };
-      if (args["_agent"] === "market") await new Promise((r) => setTimeout(r, 20));
+      if (args["_agent"] === "fundamentals") { await bothWaiting; setTimeout(refusalProcessed, 0); return { data: { ok: false, stopped_by: "user_day_tokens", reason: "Spending limit reached: daily. No further AI calls were made." }, error: null }; }
+      if (++waiting === 2) othersWaiting();
+      await afterRefusal;
       return null;
     });
     const { db } = fakeDb({ ledger: l.fn }); const a = analyst();
     const out = await run(db, a.fn);
     expect(a.calls).toHaveLength(0);
     expect(out.outcome).toBe("stopped_by_budget");
-    expect(l.log.filter((x) => x.fn === "release_ai_research_budget").length).toBeGreaterThanOrEqual(1);
+    const granted = l.log.filter((x) => x.fn === "reserve_ai_research_budget" && x.args["_agent"] !== "fundamentals").length;
+    expect(granted).toBe(2);
+    expect(l.log.filter((x) => x.fn === "release_ai_research_budget")).toHaveLength(2);
   });
   it("the database refusing a cancelled run is recorded as cancelled", async () => {
     const l = okLedger((n) => (n === 2 ? { data: { ok: false, stopped_by: "cancelled", reason: "Cancelled by you. No further AI calls were made; completed reports are kept." }, error: null } : null));
@@ -403,5 +414,43 @@ describe("cancellation fails closed", () => {
     expect(saved).toHaveLength(3); // completed outputs preserved
     expect(l.log.filter((x) => x.fn === "settle_ai_research_budget")).toHaveLength(3); // their usage is accounted
     expect(a.fn).toHaveBeenCalledTimes(3); // no blind restart of any provider request
+  });
+});
+
+describe("a run is never reported complete unless it really finished", () => {
+  it("all 12 agents succeed but the proposal cannot be stored: the run and its record are partial, never completed", async () => {
+    const { db, ops } = fakeDb({ insertFails: ["ai_trade_proposals"] }); const a = analyst();
+    const out = await run(db, a.fn);
+    expect(a.calls).toHaveLength(11); // every agent except Sentiment, whose source is unavailable and is never sent to the AI
+    expect(out.outcome).toBe("partial");
+    expect(out.status).toBe("partial");
+    expect(recordOf(ops)!.outcome).toBe("partial");
+    const final = ops.filter((o) => o.table === "ai_research_runs" && o.op === "update").map((o) => (o.row as { status?: string }).status).filter(Boolean);
+    expect(final).toEqual(["partial"]);
+  });
+  it("a cancel that lands while the Portfolio Manager call is with the provider closes the run as cancelled", async () => {
+    let cancelNow = false; const { db, ops } = fakeDb({ cancelled: () => cancelNow }); const a = analyst();
+    const lastCall = vi.fn(async (...args: Parameters<typeof a.fn>) => { if (args[0] === "portfolio") cancelNow = true; return a.fn(...args); });
+    const out = await run(db, lastCall);
+    expect(a.calls).toHaveLength(11); // every agent except Sentiment, whose source is unavailable and is never sent to the AI
+    expect(out.outcome).toBe("cancelled");
+    expect(out.status).toBe("cancelled");
+    expect(recordOf(ops)!.record["execution"].budget.stoppedBy).toBe("cancelled");
+  });
+  it("an unverifiable cancel state after the last call closes the run as partial (fail closed)", async () => {
+    let fail = false; const { db } = fakeDb({ cancelCheckFails: () => fail }); const a = analyst();
+    const lastCall = vi.fn(async (...args: Parameters<typeof a.fn>) => { const r = await a.fn(...args); if (args[0] === "portfolio") fail = true; return r; });
+    const out = await run(db, lastCall);
+    expect(out.outcome).toBe("partial");
+  });
+});
+
+describe("a failed run says why", () => {
+  it("when every analyst call fails, the run keeps the provider's failure reason, not a blank error", async () => {
+    const { db, ops } = fakeDb(); const a = analyst(["market", "fundamentals", "news"]);
+    const out = await run(db, a.fn);
+    expect(out.status).toBe("failed");
+    const final = ops.find((o) => o.table === "ai_research_runs" && o.op === "update" && (o.row as { status?: string }).status === "failed");
+    expect((final!.row as { error?: string }).error).toBe("provider error");
   });
 });
