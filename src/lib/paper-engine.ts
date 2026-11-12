@@ -134,7 +134,10 @@ export function stepPaperBar(i: PaperStepInput): PaperStepResult {
     s.orders.push(newOrder({ intent: "exit", kind: "market", side: "sell", qty: s.position.qty, limitPrice: null, maxNotional: null, expiresBarT: null, reason: "emergency_stop" }));
   }
 
-  // 2. Working orders against this candle, oldest first.
+  // 2. Working orders against this candle, oldest first. Entry fills re-check the ACCOUNT limits with the latest ledger
+  //    view (what other strategies hold now, and realized day loss at this candle's open) — exactly what the database
+  //    re-checks at commit — so a refused commit is never recomputed into the same refusal.
+  const dayAtOpen = s.dayNet;
   for (const o of [...s.orders]) {
     if (o.intent === "exit" && !s.position) { emit(o, "cancelled", undefined, "Position already closed"); drop(o); continue; }
     let ref: number | null = null;
@@ -143,12 +146,24 @@ export function stepPaperBar(i: PaperStepInput): PaperStepResult {
     else if (o.side === "buy" ? bar.l < o.limitPrice! : bar.h > o.limitPrice!) ref = o.side === "buy" ? Math.min(bar.o, o.limitPrice!) : Math.max(bar.o, o.limitPrice!);
     if (ref !== null) {
       let q = o.qty - o.filled;
+      let roomQty = Infinity;
       if (o.intent === "entry") {
+        const a = i.account;
         const est = limit ? ref : fillAt("buy", ref, 1, c).price;
+        const own = s.position ? s.position.qty * (s.position.buyNotional / s.position.buyQty) : 0;
+        const room = Math.min(a.maxExposure - a.otherExposure, a.maxPositionNotional) - own;
+        const blocked = !s.position && a.otherOpenPositions + 1 > a.maxOpenPositions ? "account maximum open paper positions reached"
+          : a.otherDayNet + dayAtOpen <= -a.maxDailyLoss ? "account daily paper loss stop reached"
+          : room < PAPER_MIN_NOTIONAL ? "no account exposure or position-size room left" : null;
+        if (blocked) { emit(o, "cancelled", undefined, `Account limits re-checked at fill: ${blocked}`); drop(o); continue; }
+        roomQty = room / est;
         const perUnitCash = est * (1 + c.feePct / 100);
-        q = Math.min(q, s.cash / perUnitCash, o.maxNotional === null ? Infinity : (o.maxNotional - o.filledNotional) / est);
+        q = Math.min(q, s.cash / perUnitCash, o.maxNotional === null ? Infinity : (o.maxNotional - o.filledNotional) / est, roomQty);
       } else q = Math.min(q, s.position!.qty);
+      const roomBound = q >= roomQty - EPS;
       q = capQty(q);
+      // Resized to the account room: the order is complete once that fills; it does not keep working for more.
+      if (q > EPS && roomBound && floorQty(roomQty) - q <= EPS) o.qty = o.filled + q;
       if (q > EPS) fill(o, q, ref, limit);
       else if (volumeCap - volumeUsed <= EPS) notes.push(`${o.intent} order ${o.key}: no candle volume available within the participation cap`);
     }

@@ -9,6 +9,9 @@ import type { StrategyConfig } from "./strategy";
 
 export const PAPER_MAX_BARS_PER_TICK = 30;
 export const PAPER_HISTORY_WINDOW = 300;
+/** One tick stops starting new strategies after this much time or this many commits; the rest go first next tick. */
+export const PAPER_TICK_BUDGET_MS = 20_000;
+export const PAPER_MAX_COMMITS_PER_TICK = 300;
 
 export interface PaperStrategyRow {
   id: string; user_id: string; config: StrategyConfig; costs: CostModel; risk: PaperRiskPolicy; pair: string; timeframe: string;
@@ -25,7 +28,7 @@ export interface PaperStore {
   mark(strategyId: string, fields: { data_status: string; status?: "paused"; status_reason?: string }): Promise<void>;
 }
 export type PaperCandleSource = (pair: string, timeframe: string) => Promise<{ candles: Candle[]; fetchedAt: number }>;
-export type PaperOutcome = "committed" | "up_to_date" | "stale" | "data_outage" | "data_gap" | "invalid_data" | "cursor_conflict" | "risk_recheck" | "commit_failed";
+export type PaperOutcome = "committed" | "up_to_date" | "stale" | "data_outage" | "data_gap" | "invalid_data" | "cursor_conflict" | "risk_recheck" | "commit_failed" | "deferred";
 
 export class PaperLedgerUnavailable extends Error {}
 
@@ -115,14 +118,17 @@ export async function processPaperStrategy(store: PaperStore, s: PaperStrategyRo
   return { outcome: "committed", committed };
 }
 
-export async function runPaperTick(store: PaperStore, source: PaperCandleSource, now = Date.now()) {
-  const rows = await store.listRunnable();
+export async function runPaperTick(store: PaperStore, source: PaperCandleSource, now = Date.now(), clock: () => number = Date.now) {
+  const rows = await store.listRunnable(); // least recently checked first, so deferred strategies are not starved
   const feeds = new Map<string, Promise<{ candles: Candle[]; fetchedAt: number }>>();
   const results: { id: string; outcome: PaperOutcome; committed: number; detail?: string }[] = [];
+  const started = clock();
+  let commits = 0;
   for (const s of rows) {
+    if (clock() - started >= PAPER_TICK_BUDGET_MS || commits >= PAPER_MAX_COMMITS_PER_TICK) { results.push({ id: s.id, outcome: "deferred", committed: 0 }); continue; }
     const key = `${s.pair}|${s.timeframe}`;
     const load = () => { if (!feeds.has(key)) feeds.set(key, source(s.pair, s.timeframe)); return feeds.get(key)!; };
-    try { results.push({ id: s.id, ...(await processPaperStrategy(store, s, load, now)) }); }
+    try { const r = await processPaperStrategy(store, s, load, now); commits += r.committed; results.push({ id: s.id, ...r }); }
     catch (e) { results.push({ id: s.id, outcome: "commit_failed", committed: 0, detail: e instanceof Error ? e.message : String(e) }); }
   }
   return results;
@@ -141,7 +147,7 @@ export async function supabasePaperStore(): Promise<PaperStore> {
   if (probe.error) throw new Error(probe.error.message);
   return {
     async listRunnable() {
-      const r = await db.from("paper_strategies").select("id,user_id,config,costs,risk,pair,timeframe,tf_ms,status,cursor_t,state,engine_version").in("status", ["active", "paused"]).eq("engine_version", PAPER_ENGINE_VERSION);
+      const r = await db.from("paper_strategies").select("id,user_id,config,costs,risk,pair,timeframe,tf_ms,status,cursor_t,state,engine_version").in("status", ["active", "paused"]).eq("engine_version", PAPER_ENGINE_VERSION).order("last_checked_at", { ascending: true, nullsFirst: true }).limit(1000);
       if (r.error) throw new Error(r.error.message);
       return r.data;
     },

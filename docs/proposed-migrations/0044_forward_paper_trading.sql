@@ -15,7 +15,8 @@
 --    fills while the strategy is not active or the account is halted, and re-checks account exposure, open positions,
 --    maximum position size and realized daily loss. A crash before COMMIT leaves nothing behind.
 --  * A paper strategy's identity, frozen strategy config (SHA-256 set by the database), cost assumptions, risk policy,
---    starting capital and start time can never change; its ledger columns change only inside paper_commit_bar; a
+--    starting capital and start time can never change; its ledger columns change only inside paper_commit_bar (the
+--    backend role cannot bypass this by setting the commit flag itself); a
 --    stopped strategy stays stopped; strategies and accounts can never be deleted.
 --  * Browser roles can only read their own rows (MFA-aware); they cannot write anything. service_role may create
 --    accounts/strategies and change limits, halt and status only.
@@ -193,7 +194,9 @@ BEGIN
   END IF;
   IF (NEW.cursor_t, NEW.state, NEW.state_version, NEW.cash, NEW.equity, NEW.open_exposure, NEW.open_positions, NEW.day_utc, NEW.day_net)
      IS DISTINCT FROM (OLD.cursor_t, OLD.state, OLD.state_version, OLD.cash, OLD.equity, OLD.open_exposure, OLD.open_positions, OLD.day_utc, OLD.day_net)
-     AND coalesce(current_setting('paper.commit', true), '') <> 'on' THEN
+     AND NOT (coalesce(current_setting('paper.commit', true), '') = 'on'
+              -- Any session can set the flag, so it only counts inside paper_commit_bar, which runs as its owner:
+              AND current_user NOT IN ('anon', 'authenticated', 'service_role', 'authenticator')) THEN
     RAISE EXCEPTION 'paper ledger columns change only through paper_commit_bar';
   END IF;
   IF OLD.status = 'stopped' AND NEW.status <> 'stopped' THEN RAISE EXCEPTION 'a stopped paper strategy cannot restart'; END IF;

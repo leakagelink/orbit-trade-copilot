@@ -205,6 +205,34 @@ describe("paper Risk Engine", () => {
   });
 });
 
+describe("account limits re-checked at fill", () => {
+  // Entry sized at candle 60's close (300 notional), filled at candle 61's open — after another strategy changed the account.
+  const at = (account: PaperAccountContext) => {
+    const cs = [...flat(60), bar(60, 100, 100, 100, 100), bar(61, 100, 100, 100, 100)];
+    const step = (k: number, state: PaperState, acc: PaperAccountContext) => stepPaperBar({ strategyKey: "S", history: cs.slice(0, k + 1), tfMs: TF, cfg: cfg(), costs: COSTS, policy: POLICY, entriesAllowed: true, haltedAt: null, account: acc, state });
+    const first = step(60, initialPaperState(1000), ACCOUNT);
+    expect(first.record.signal).toBe("enter_long");
+    return step(61, first.state, account);
+  };
+  it("shrinks the entry to the exposure room left and completes it (no order keeps working for more)", () => {
+    const r = at({ ...ACCOUNT, otherExposure: 800 });
+    const f = r.events.find((e) => e.event === "filled")!;
+    expect(f.qty * f.price).toBeLessThanOrEqual(200 + 1e-6);
+    expect(f.qty * f.price).toBeGreaterThan(199);
+    expect(r.record.open_exposure + 800).toBeLessThanOrEqual(1000 + 1e-6);
+    expect(r.state.orders).toHaveLength(0);
+  });
+  it("cancels the entry when the account is at its open-position or daily-loss limit", () => {
+    for (const acc of [{ ...ACCOUNT, otherOpenPositions: 3 }, { ...ACCOUNT, otherDayNet: -50 }]) {
+      const r = at(acc);
+      expect(r.events.map((e) => e.event)).toEqual(["cancelled"]);
+      expect(r.events[0]!.reason).toMatch(/Account limits re-checked at fill/);
+      expect(r.state.position).toBeNull();
+      expect(r.state.cash).toBe(1000);
+    }
+  });
+});
+
 describe("emergency paper stop", () => {
   it("cancels working entries, exits at the first open after the stop and accepts no new entry", () => {
     const st = run([...flat(60), bar(60, 100, 100, 100, 100)]).state;

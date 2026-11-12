@@ -98,6 +98,9 @@ describe("draft 0044 privileges", () => {
     await expect(as("service_role", null, `UPDATE public.paper_strategies SET risk='{}'::jsonb WHERE id='${id}'`)).rejects.toThrow(/frozen/);
     await expect(as("service_role", null, `UPDATE public.paper_strategies SET starting_capital=5000 WHERE id='${id}'`)).rejects.toThrow(/frozen/);
     await expect(as("service_role", null, `UPDATE public.paper_strategies SET cash=99999 WHERE id='${id}'`)).rejects.toThrow(/only through paper_commit_bar/);
+    // Setting the commit flag itself does not help the backend role: only the commit function (running as owner) may.
+    await expect(db.exec(`SET ROLE service_role; SELECT set_config('paper.commit','on',false); UPDATE public.paper_strategies SET cash=99999, cursor_t=cursor_t+3600000 WHERE id='${id}';`)).rejects.toThrow(/only through paper_commit_bar/);
+    await db.exec("RESET ROLE; SELECT set_config('paper.commit','off',false);");
     await expect(as("service_role", null, `DELETE FROM public.paper_strategies WHERE id='${id}'`)).rejects.toThrow(/permission denied/);
     await expect(db.exec(`DELETE FROM public.paper_strategies WHERE id='${id}'`)).rejects.toThrow(/cannot be deleted/);
   });
