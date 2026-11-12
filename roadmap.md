@@ -5,7 +5,7 @@
 - [x] Execute safe supported broker scenarios A–I; A/B pass after flat-inventory fix, C–I not fully testable on real Testnet without an approved fault harness
 - [x] Run regression tests (274 pass) and produce evidence report — decision FAIL / NOT CERTIFIED; stopped before Phase 2
 - [ ] Isolated Testnet fault harness for partial fills, protection failure, timeouts, kill switch, concurrency and restart — needs separate owner approval
-- [ ] Freshly connect AI Prime Tech after the 04:48 UTC workspace move; prior links no longer apply
+- [x] Freshly connect AI Prime Tech after the 04:48 UTC workspace move; workspace-shared connection linked; read-only models check HTTP 200; no inference or trading
 
 ## Phase 1 authorization and workspace move — 12 November 2026
 - [x] Harden Futures accounting, partial fills, protection, risk ordering, attribution, fencing and immutable environments; 271 tests pass and signed-in real/testnet trade views checked; no live orders
