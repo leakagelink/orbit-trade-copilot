@@ -11,7 +11,7 @@ import { futuresPaperCommitPayloadV3 } from "@/lib/futures-paper-ledger-v3";
 import { CFG, M, accountBudget, as, commitRaw, costOverride, freshUser, loadView, makeDb, newAccount, stepView, strategyBudget, usageOf } from "./helpers/fp-v3-harness";
 
 let db: PGlite;
-const T0 = Math.floor(Date.now() / M) * M - 2000 * M;
+const T0 = Math.floor(Date.now() / (15 * M)) * (15 * M) - 2010 * M; // aligned to 1 m, 5 m and 15 m
 type OHLC = [number, number, number, number];
 const FLAT: OHLC = [100, 100.2, 99.9, 100];
 const bar = (sym: string, t: number, tf: number, [o, h, l, c]: OHLC, v = 1e6, index: number | null = c): FPBar => ({ symbol: sym, t, tfMs: tf, trade: { o, h, l, c, v }, mark: { o, h, l, c }, index: index === null ? null : { c: index }, funding: [] });
@@ -143,9 +143,9 @@ describe("E2 — losses beyond reserved risk (liquidation) and the sub-budget le
     expect(rl.events.map((e) => e.kind)).toContain("liquidation");
     const closed = pos.margin + pos.fees;
     expect(await usageOf(db, user, "s1", null)).toBeCloseTo(closed, 6); expect(closed).toBeGreaterThan(30);
-    const r2 = await play(id, user, T0 + 3 * M, M, { BTCUSDT: FLAT, ETHUSDT: FLAT }, [intent("liq2", "ETHUSDT", T0 + 4 * M, "LONG", 99, 103, "s2"), intent("liq3", "BTCUSDT", T0 + 4 * M, "LONG", 99, 103, "s1")]);
+    const r2 = await play(id, user, T0 + 3 * M, M, { BTCUSDT: FLAT, ETHUSDT: FLAT }, [intent("liq2", "ETHUSDT", T0 + 4 * M, "LONG", 97, 106, "s2"), intent("liq3", "BTCUSDT", T0 + 4 * M, "LONG", 99, 103, "s1")]);
     const a = r2.events.find((e) => e.kind === "order_accepted")!;
-    expect(a.symbol).toBe("ETHUSDT"); expect(a.qty * 1.13).toBeLessThanOrEqual(60 - closed + 1e-9); expect(a.qty * 1.13).toBeGreaterThan(60 - closed - 0.01);
+    expect(a.symbol).toBe("ETHUSDT"); expect(a.qty * 3.13).toBeLessThanOrEqual(60 - closed + 1e-9); expect(a.qty * 3.13).toBeGreaterThan(60 - closed - 0.01); // scalping sub-budget room binds, not s2's own 30
     expect(r2.refusals.find((x) => x.proposalId === "v3prop-liq3")!.code).toBe("APPROVAL_STRATEGY_BUDGET");
     expect(await usageOf(db, user, null, "scalping")).toBeLessThanOrEqual(60 + 1e-6);
   });

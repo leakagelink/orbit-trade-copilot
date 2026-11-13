@@ -96,5 +96,6 @@ export function selectClosedCandles(bundles: RawSymbolBundle[], req: CandleReque
     bars.push({ symbol: sym, t: req.barT, tfMs: tf, trade: { o: tr.o, h: tr.h, l: tr.l, c: tr.c, v: tr.v }, mark: { o: mk.o, h: mk.h, l: mk.l, c: mk.c }, index: ix ? { c: ix.c } : null, funding: fund.sort((a, c) => a.t - c.t) });
     provenance.push({ source: FUTURES_PAPER_DATA_SOURCE, symbol: sym, timeframe: req.timeframe, openTime: req.barT, closeTime: tr.ct, fetchedAt: b.fetchedAt, closedAtFetch: true, series: { trade: true, mark: true, index: !!ix }, fundingEvents: fund.length, dedupedRows: deduped, verification: "public market data — format, sequence and timing checked; prices NOT independently verified" });
   }
-  return { ok: true, bars: bars.sort((a, c) => (a.symbol < c.symbol ? -1 : 1)), provenance };
+  const bySym = (a: { symbol: string }, c: { symbol: string }) => (a.symbol < c.symbol ? -1 : 1);
+  return { ok: true, bars: bars.sort(bySym), provenance: provenance.sort(bySym) };
 }

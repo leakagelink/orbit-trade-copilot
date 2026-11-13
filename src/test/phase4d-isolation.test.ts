@@ -58,6 +58,9 @@ describe("Phase 4D module isolation", () => {
   it("the new engine entry points (account candle, commit-refusal planner) are used only by tests — no worker exists", () => {
     const hits = walk(resolve(ROOT, "src")).filter((f) => !f.includes(join("src", "test")) && !f.endsWith("futures-paper-engine.ts"))
       .filter((f) => /stepFuturesPaperCandle|planCommitRefusal|classifyOrderSnapshot|claim_futures_order_strategy_identity/.test(readFileSync(f, "utf8")));
-    expect(hits.map((f) => relative(ROOT, f)).filter((f) => f !== "src/lib/central-risk-shadow.ts")).toEqual([]);
+    // Phase 4F (owner-approved engine alignment + disabled worker): exactly these modules may name the entry points; the
+    // Phase 4F alignment test proves nothing in the app imports them and no route, cron or schedule exists.
+    const PHASE_4F = ["src/lib/futures-paper-engine-v3.ts", "src/lib/futures-paper-worker.ts"];
+    expect(hits.map((f) => relative(ROOT, f)).filter((f) => f !== "src/lib/central-risk-shadow.ts" && !PHASE_4F.includes(f))).toEqual([]);
   });
 });

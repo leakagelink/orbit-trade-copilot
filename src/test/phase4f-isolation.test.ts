@@ -61,7 +61,10 @@ describe("Phase 4F module isolation", () => {
     for (const f of NEW) expect(readFileSync(f, "utf8"), f).not.toMatch(/fetch\(|supabase|process\.env|createServerFn|import\.meta\.env/);
   });
   it("nothing in the app imports them and no app code names the draft commit function", () => {
-    const app = walk(resolve(ROOT, "src")).filter((f) => !f.includes(join("src", "test")) && !NEW.some((n) => f.endsWith(n)));
+    // The later Phase 4F paper modules (aligned engine, disabled worker) use these modules; phase4f-alignment-isolation
+    // proves nothing in the app imports THEM, so the set as a whole stays unreachable from the app.
+    const PHASE_4F = ["src/lib/futures-paper-engine-v3.ts", "src/lib/futures-paper-worker.ts", "src/lib/futures-paper-worker-queries.ts"];
+    const app = walk(resolve(ROOT, "src")).filter((f) => !f.includes(join("src", "test")) && !NEW.some((n) => f.endsWith(n)) && !PHASE_4F.some((n) => f.endsWith(n)));
     expect(app.filter((f) => /futures-paper-ledger-v3|account-risk-budget|retention-policy/.test(readFileSync(f, "utf8"))).map((f) => relative(ROOT, f))).toEqual([]);
     expect(app.filter((f) => /futures_paper_commit_bar_v3/.test(readFileSync(f, "utf8"))).map((f) => relative(ROOT, f))).toEqual([]);
   });
