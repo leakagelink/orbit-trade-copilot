@@ -163,3 +163,112 @@ database, settings, credentials or risk limits were changed; the stored export w
 were placed. The Futures Paper Engine was not activated; no worker was started, deployed or scheduled. No AI provider
 was reconnected or called. No paid infrastructure was purchased. Central Risk Shadow remains disconnected from execution.
 Autopilot and Live Futures were not touched.
+
+---
+
+# Phase 4E follow-up — owner decisions of 13 Nov 2026 (code, documentation and isolated validation only)
+
+## F1. Summary
+
+| # | Owner instruction | Status |
+|---|---|---|
+| 1 | Do not approve/apply 0046; replacement fixing both high-risk issues | **PASS (draft)** — 0046 untouched and NOT APPROVED; replacement **draft 0049** written, tested on PGlite, real PostgreSQL and the real export; NOT APPLIED |
+| 2 | 0048 to review/validation stage; 0047 permanently superseded; do not apply 0048 | **PASS** — 0048 byte-identical, re-verified on the real export (40 PASS, 0 FAIL), not applied; register updated |
+| 3 | Decision register: 5% / 5 s / 60 s / 0.13% configurable, NOT APPROVED for execution | **PASS** — `owner-decision-register.md` §1 |
+| 4 | Account budget with Research and Scalping sub-budgets; open + pending in shared checks; no additive overflow | **PASS (code + draft)** — `src/lib/account-risk-budget.ts` and 0049; not connected to any order path |
+| 5 | Configurable retention: 2 years / 90 days / 30 days; deletion, anonymization, audit rules | **PASS (proposal + contract)** — `retention-and-deletion-policy.md`, `src/lib/retention-policy.ts`; nothing enforced |
+| 6 | Backup SHA-256 discrepancy; authoritative identity | **PASS** — two different exports, both intact; 13 Nov `448bb1c2…` is authoritative (`backup-identity.md`) |
+| 7 | Full suite, restore, up/down, RLS, concurrency, build | **PASS** — §F6 |
+| 8 | Update this report; next-phase report | **PASS** — this section; `docs/phase-4f/phase4f-next-phase-report.md` |
+
+## F2. Draft 0049 — how both high-risk issues are fixed
+
+**C6 — never trust worker risk figures.** A payload containing `risk_amount` or `fill_id` is refused outright. The
+commit stores the public candle it was computed from (`futures_paper_candles`, append-only) and recomputes from database
+data only: approval risk = qty × (|mark close − stop| + mark close × cost), fill risk = qty × stop distance + qty × fill
+price × cost (cost frozen on the approval), fee = price × qty × taker fee, margin = price × qty / approved leverage,
+funding cash from the recorded funding rate and mark open, exit P&L from the database's own average entry, liquidation
+price and loss from the database position (and the recorded mark must actually reach it). Any difference is refused.
+
+**C7 — no fill without a valid matching approval.** `order_accepted` creates a `futures_paper_risk_approvals` row only
+after the database re-runs: budget rows exist, proposal never evaluated before (unique per owner across accounts), no
+position or pending entry on the symbol, approval at the candle close, price age ≤ max, proposal age ≤ max, index basis,
+stop side, integer leverage within max, lot-size multiple above minimum notional, per-trade risk and margin maxima,
+liquidation buffer, daily loss, then strategy/sub-budget/account budgets, open + pending exposure, position count and
+free margin. Every `entry_fill` must match an OPEN approval of the same account, proposal, strategy, symbol and side,
+approved in an earlier candle, not expired (approval time + max proposal age), with Σ fills ≤ approved quantity and the
+fill price equal to the taker price of the recorded candle open. Cancelled/filled approvals cannot fill again. The
+submitted state's pending entries must equal the open approvals exactly (identity, quantities, leverage, stop distance).
+
+**Transactional, idempotent, concurrency-safe.** One call per candle; any failure rolls back the whole candle (candles,
+approvals, events, positions). Lock order: account → owner's account budget row → strategy budget rows (sorted) →
+approval rows, so two accounts of one owner serialize on the budget row. Identical retries return the original result
+without writing; fill ids are derived by the database and unique. Same object names as 0045/0046 — it fails if either
+exists (tested). Approvals, candles, events, positions and commits are read-only for every API role; configuration tables
+are writable only by service_role; all reads are owner-only and MFA-aware.
+
+Residual (documented, not hidden): candle prices are still public market data observed by the worker; the database
+checks them for internal consistency and every derived figure against them, but has no independent price source.
+
+## F3. Account budget (owner decision 4)
+`account_risk_budgets` (account total, Research and Scalping sub-budgets; CHECK research + scalping ≤ total) and
+`strategy_risk_budgets.engine` (frozen sub-budget membership; Σ strategy budgets ≤ sub-budget, serialized on the account
+row). Usage = closed losses + open reserved risk + pending approval risk, checked at strategy, sub-budget and account level
+on every approval and fill. The pure module computes the same numbers (database/TypeScript agreement test) and exposes
+`riskEngineStrategyBudget` (tightest room as the Risk Engine's `{budget, usedLoss}`) for a later, separately approved
+engine alignment.
+
+## F4. Backup identity
+See `backup-identity.md`. 12 Nov `7af87665…` (pre-0039) and 13 Nov `448bb1c2…` are two different exports; both still
+match their recorded hashes and the storage eTags. A ZIP container's checksum never equals the backup inside (shown).
+Authoritative: 13 Nov backup, preserved in `authoritative-backup.sha256` / `.json`, pinned by a test.
+
+## F5. Engine and worker alignment still required (not done — behaviour changes)
+E1 expiry-driven cancellation, E2 budgets from the database at acceptance (C1/C5), E3 classification of approval
+refusals, E4 per-instrument cost at acceptance — `owner-decision-register.md` §5. Until then 0049 refuses safely and the
+existing planner halts for review on approval-time refusals.
+
+## F6. Test results (run separately; types distinguished)
+
+| Suite | Type | Result |
+|---|---|---|
+| Draft 0049 + rollback (21 tests: recomputation, approval/fill rules, expiry, state, budgets, costs, funding/exit/liquidation, idempotency, privileges/RLS, refusal on top of 0046, database/TS agreement) | PGlite, real engine output | 21/21 PASS |
+| Draft 0049 concurrency (racing workers, joint budget race, fill vs cancellation, configuration race, crash before COMMIT) | **Real PostgreSQL 17.11, separate sessions** | 5/5 PASS ×3 |
+| `concurrency-check-4f.sh` total (0049 + 0048 + Phase 4D + 0046) | Real PostgreSQL | 18/18 PASS ×3 |
+| Other multi-session suites: 0045, Spot paper 0044, research budget 0043 | Real PostgreSQL | 2/2, 7/7, 10/10 PASS (0043 run on port 55443: port 55433 is occupied in this sandbox) |
+| Real-export restore + 0049 up/down, RLS/grants/EXECUTE, rolled-back probes, 0048 coexistence, refusal on top of 0046 | **Real PostgreSQL, real 13 Nov export** | PASS — 44 PASS, 0 FAIL (`restore-0049-real-export.md`) |
+| Real-export restore + 0048 up/down + 0046 coexistence (re-run) | Real PostgreSQL, real export | PASS — 40 PASS, 0 FAIL (`restore-0048-real-export-rerun.md`) |
+| Account budget module | Pure | 11/11 PASS |
+| Retention policy contract | Pure | 10/10 PASS |
+| Phase 4F change control + isolation + backup identity | Unit (+ spawned script) | 7/7 PASS |
+| Full regression (vitest) | Mixed: pure, PGlite, pre-existing mocked suites | **1020 passed, 37 skipped, 0 failed** (86 files passed, 7 skipped — the 37 skipped are exactly the seven real-PostgreSQL suites, run separately above) |
+| Typecheck (`tsgo -b --noEmit`) | — | PASS |
+| Production build | harness build log | PASS ("build OK", 2026-11-13 10:26:35Z) |
+
+Not executed: Lovable Cloud restore; any real/Testnet order; any worker run or schedule; any AI call; restore of 0049 on
+top of other drafts 0040–0045.
+
+## F7. Files changed in the follow-up (SHA-256)
+
+| Status | File | SHA-256 |
+|---|---|---|
+| A | `docs/proposed-migrations/0049_futures_paper_ledger_v3.sql` (DRAFT) | `fe4dd56c3f7542af6b9291d9ac33496892bca32d331821c05c2c3460a3abcd35` |
+| A | `docs/proposed-migrations/0049_futures_paper_ledger_v3.rollback.sql` (DRAFT) | `e593132115eeb6cbaafcb1f1d5011f6d508816dbfc1095f644c47e63941fb5fb` |
+| A | `src/lib/futures-paper-ledger-v3.ts` (unused payload builder) | `65be37d3a01a4cfbac5b5a9ef69676e06a1d5aa1d8135934b9b23315c3b18dbd` |
+| A | `src/lib/account-risk-budget.ts` (unused pure module) | `59375a134ba71905beafd6e0c753a899baaf2461ebc88befbe2b35f85005dbac` |
+| A | `src/lib/retention-policy.ts` (unused pure module) | `df8738f04a2ae1ed591382131605b8ee18296847149e0a9a2cca3b5611652825` |
+| A | `scripts/db-export/verify-local-restore-0049.sh` | `593f6f61d68ee01d0738d15118f2df6ca1a162e6ec62d1f8b8f88cc7f3e14b0f` |
+| A | `scripts/db-export/check-backup-identity.sh` | `14b5a68877841722225f551ed912e4f749ecb3a363a9eb0860b1cf1f7a296742` |
+| A | `scripts/futures-paper/concurrency-check-4f.sh` | `1e66990873485017c6be6d20c90dbca8f48bc2b2818aa7a6b95d20a755907ea5` |
+| A | tests: `futures-paper-ledger-v3-migration`, `futures-paper-ledger-v3-concurrency.pg`, `account-risk-budget`, `retention-policy`, `phase4f-isolation` | see git |
+| A | docs: `backup-identity.md`, `authoritative-backup.sha256`, `authoritative-backup.json`, `retention-and-deletion-policy.md`, `restore-0049-real-export.md`, `restore-0048-real-export-rerun.md`, `docs/phase-4f/phase4f-next-phase-report.md` | see git |
+| M | `docs/phase-4e/owner-decision-register.md`, this report, `src/lib/AGENTS.md` (one rule updated, one added), `roadmap.md` | — |
+
+Unchanged and verified: drafts 0045, 0046 (+rollback), 0047, 0048 (+rollback) byte-identical; `futures-paper-engine.ts`,
+`central-risk.ts`, both Central Risk shadow modules; all 174 Phase 4E protected files; applied journal ends at 0039.
+
+## F8. Confirmation
+No migration was applied anywhere except disposable local servers (deleted afterwards). No production database, setting,
+credential or risk limit changed; stored exports were only read. No real or Testnet orders. No worker started, deployed
+or scheduled; the Futures Paper Engine is inactive. No Autopilot or Live Futures change. No AI provider called. No paid
+infrastructure.

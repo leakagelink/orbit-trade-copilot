@@ -1,50 +1,73 @@
 # Owner decision register — Phase 4E (supersedes `docs/phase-4d/owner-decision-register.md`)
 
+**Update 13 Nov 2026 (owner decisions, Phase 4E follow-up).** The owner set PROPOSED paper-only values (§1), chose the
+budget structure (§2), proposed retention periods (§3), rejected 0046 and approved 0048 for the next review/validation
+stage (§4). Proposed values remain **NOT APPROVED for execution** until validation and explicit approval.
+
 Nothing here is decided. Every item is **NOT APPROVED** until the owner approves it explicitly. No value below is
 hard-coded as approved policy: the Central Risk shadow keeps reading the Phase 4A proposal object
 (`CENTRAL_RISK_POLICY_PROPOSAL`, labelled as a proposal) only to classify shadow records, and the paper engine takes
 every value as caller input. Nothing is enforced on any real or Testnet order.
 
-## 1. Policy values
+## 1. Policy values (owner proposals of 13 Nov 2026 — paper only)
 
-| Policy | Proposed | Status | Options | Consequences |
+| Policy | Owner proposal (paper only) | Status | Where it is used | Validation still needed |
 |---|---:|---|---|---|
-| Liquidation buffer (stop must sit at least this far from estimated liquidation) | 2% of entry | **NOT APPROVED** | (a) 2%; (b) higher, e.g. 3–5%; (c) per strategy; (d) leave unset (Futures sizing stays INSUFFICIENT_DATA) | Higher → lower leverage, fewer liquidations, smaller size. Lower → more size, stop closer to liquidation. (d) keeps every Futures shadow/paper sizing at INSUFFICIENT_DATA. Needs the maintenance-margin source (signed read, not on the allowlist). |
-| Maximum mark age | 5 s | **NOT APPROVED** | (a) 5 s; (b) 2 s; (c) 15–30 s; (d) per data source | Shorter → more INSUFFICIENT_DATA on slow public feeds; longer → decisions on older prices. Paper fills use the candle's own mark open (age 0, structural). |
-| Maximum proposal age | 60 s | **NOT APPROVED** | (a) 60 s; (b) 10–30 s for Engine B; (c) per engine | Shorter blocks slow pipelines (higher-timeframe research); longer admits stale signals. |
-| Round-trip cost assumption | 0.13% | **NOT APPROVED** | (a) 0.13%; (b) measured from fills (none exist — no orders authorized); (c) per symbol/venue tier | Too low under-reserves the strategy budget and over-sizes; too high under-sizes. Also see finding C6: the cost used for reserved risk is caller-supplied today. |
+| Liquidation buffer (stop at least this far from estimated liquidation, % of entry) | **5%** (replaces the earlier 2% proposal) | **PROPOSED — NOT APPROVED for execution** | Paper account config `limits.liquidationBufferPct`; draft 0049 re-checks it at approval | Maintenance-margin source is still the first bracket from config (signed bracket read not on the allowlist); replay impact on trade count |
+| Maximum price age | **5 s** | **PROPOSED — NOT APPROVED for execution** | `limits.maxDataAgeMs`; 0049 checks approval and fill price age (candle prices are age 0 by construction) | Public-feed latency measurement before any live use |
+| Risk proposal expiry | **60 s** | **PROPOSED — NOT APPROVED for execution** | `limits.maxProposalAgeMs`; 0049: proposal age at approval ≤ 60 s and approval expires 60 s after it is granted | With 1 m candles a partial remainder may fill on at most the next candle; with 5 m/15 m only at the first open (see §5 item E1) |
+| Estimated trading cost (round trip) | **0.13%**, configurable per instrument/strategy | **PROPOSED — NOT APPROVED for execution** | Account default `limits.roundTripCostPct`; overrides in `futures_paper_cost_assumptions` (exact → strategy → symbol → default), frozen on each approval | No measured fills exist (no orders authorized); overrides carry `validation_status = unvalidated` |
+
+No value is hard-coded as approved policy: the paper engine and 0049 take every value as frozen account configuration.
 
 ## 2. Budget semantics
 
-| Decision | Options | Consequences | Current draft behaviour |
-|---|---|---|---|
-| Strategy budget definition | (a) **Cumulative closed-trade loss** (each losing trade counts, wins never refill); (b) net P&L (wins refill); (c) gross loss excluding costs; (d) rolling window (e.g. 30 days) | (a) safest, budget only shrinks until raised; (b) allows continued trading after a drawdown recovers; (c) understates true cost; (d) needs a window decision | (a) in engine and 0046 — **NOT APPROVED** |
-| Reserved open risk | (a) qty × stop distance + qty × entry × cost; (b) margin at risk; (c) none | (a) conservative; (c) allows over-commitment while positions are open | (a) at fill; **not** at acceptance (finding C1) |
-| Acceptance vs fill | (a) keep: acceptance ignores reserved risk, fill refuses deterministically; (b) apply fill definitions at acceptance | (a) more accepted-then-cancelled entries; (b) changes sizing | (a) |
-| Scope | (a) per owner across all paper accounts (0046); (b) per account; (c) per environment and owner | (a) one strategy cannot escape its budget by opening more accounts | (a) |
-| Budget source | (a) table `strategy_risk_budgets` only; (b) account config | Two sources can disagree (finding C5) | both exist today |
-| Daily loss day | (a) UTC day of the candle open (both sides today); (b) UTC day of the event time; (c) owner's local day | (a) simplest and consistent; exits at 00:00 count on the earlier day | (a) — **NOT APPROVED** |
+**Owner decision (13 Nov 2026): account-level budgeting with separate Research and Scalping sub-budgets; open AND pending
+exposure in shared checks; strategy budgets may never add up past the central account budget.** Implemented as code and
+draft only (`src/lib/account-risk-budget.ts`, draft 0049); not connected to any order path.
+
+| Decision | Current draft behaviour | Status |
+|---|---|---|
+| Structure | One account budget per owner (paper); Research and Scalping sub-budgets; each strategy in exactly one sub-budget | **Owner decided** (structure) — amounts are configuration, none approved |
+| Static nesting | Σ sub-budgets ≤ account budget (table CHECK); Σ strategy budgets of a sub-budget ≤ that sub-budget (guard, serialized on the account budget row) | Implemented in draft 0049 + pure module |
+| Usage definition | Cumulative closed-trade losses (wins never refill) + reserved risk of open positions + risk of pending approval remainders | Closed-loss definition (a) still **NOT APPROVED**; open + pending inclusion is the owner's decision |
+| Checks | Every approval and fill: strategy ≤ strategy budget, sub-budget usage ≤ sub-budget, account usage ≤ account budget | Implemented (draft) |
+| Exposure / positions / margin | Open positions + pending remainders at the current candle's marks | Implemented (draft) — resolves finding C2 for the database |
+| Scope | Per owner across all paper accounts | Unchanged |
+| Single budget source (C5) | Database tables are authoritative in 0049; the engine still reads `cfg.strategyBudgets` | Engine alignment needs approval (§5 E2) |
+| Daily loss day | UTC day of the candle open | **NOT APPROVED** |
 
 ## 3. Data retention and archival
 
-| Decision | Options | Consequences |
-|---|---|---|
-| Paper ledger growth | (a) keep everything; (b) archive commit records older than N days to an export file, keep events; (c) monthly partitions | 1 m candles: ~1,440 commits/day/account (~525,600/year, roughly 60–80 MB/account-year with indexes); 5 m: 288/day; 15 m: 96/day. Deleting conflicts with the append-only triggers and needs its own reviewed migration. |
-| Allowed timeframes | 1 m / 5 m / 15 m / 1 h | Drives growth and request volume (worker design §3). |
-| Archive restorability | (a) restorable and tested; (b) evidence-only | (a) needs a restore test like the one in this phase. |
-| Attribution ledger | (a) keep forever (financial lineage); (b) archive with trades | Small (a few rows per order). |
-| Database export cadence | daily automatic backups exist (~14 days, no point-in-time recovery); manual export ≤ 1 per 24 h | Every migration approval should follow a fresh export + local restore verification (done for 13 Nov 2026). |
+**Owner proposal (13 Nov 2026), configurable — PROPOSED, NOT APPROVED, NOT ENFORCED** (details:
+`retention-and-deletion-policy.md`; contract: `src/lib/retention-policy.ts`).
 
-**Status: NOT APPROVED** (all of §3).
+| Category | Proposed period | On expiry | On account deletion |
+|---|---:|---|---|
+| Orders, fills, risk approvals, attribution, audit records | 2 years (730 days) | Archive to a restorable export, then delete | Anonymize (one-way tombstone owner ID, personal free text redacted) and keep until expiry |
+| Raw AI prompts and provider outputs | 90 days | Delete | Delete |
+| Temporary debug logs | 30 days | Delete | Delete |
+
+Legal hold overrides everything. Still open: table mappings marked "confirm", legal review (India DPDP Act 2023 / US),
+paper-ledger growth (1 m candles ≈ 525,600 commits and up to 1.05 M candle rows per account-year), archive restore test.
 
 ## 4. Other open decisions
 
 | # | Decision | Status |
 |---|---|---|
-| 1 | Approve draft 0046 + Phase 4D engine, or first ask for a 0046 successor fixing C6 (database recomputes reserved risk) and C7 (fills require an accepted order) | Owner — recommended: successor first |
-| 2 | Approve 0048 (supersedes 0047; never both) and, separately, the order-path change that captures identity in the claim transaction | Owner (two approvals) |
-| 3 | Final migration numbering for unapplied drafts 0040–0048 | Owner |
+| 1 | Draft 0046 | **NOT APPROVED (owner, 13 Nov 2026)** — never apply. Replacement draft **0049** written (database recomputes risk; fills need a valid matching unexpired approval); awaiting owner review |
+| 2 | Draft 0048 (supersedes 0047; never both) | **Approved for the next review and validation stage (owner, 13 Nov 2026) — NOT to be applied yet.** 0047 permanently superseded. The order-path change that captures identity needs its own approval |
+| 3 | Final migration numbering for unapplied drafts 0040–0049 | Owner |
 | 4 | Two-phase candle ordering (C9) and missing-mark refusal at acceptance (C3) | Owner — behaviour changes |
 | 5 | Read maintenance-margin brackets / available margin (signed reads; allowlist change) | Owner — NOT requested |
-| 6 | Paper worker implementation (design only so far) and, separately, activation/scheduling | Owner (two approvals) |
+| 6 | Paper worker implementation and, separately, activation/scheduling | Owner (two approvals) — nothing built or scheduled |
 | 7 | AI Prime Tech connection in this workspace | Not part of this phase; AI calls remain disabled by the standing rule |
+
+## 5. Engine alignment needed before any 0049 worker (each changes paper-engine behaviour → owner approval)
+
+| # | Item | Why |
+|---|---|---|
+| E1 | Engine cancels a pending remainder when its approval expires (today: after `entryTtlBars`) | Otherwise 0049 refuses the fill and the refusal planner halts for review |
+| E2 | Engine reads strategy, sub-budget and account budgets from the database and sizes acceptance with `riskEngineStrategyBudget` (closed + open + pending) | Resolves C1/C5; today 0049 can refuse an approval the engine accepted, which the planner cannot classify (halt for review) |
+| E3 | Planner classification for approval-time refusals (`approval refused: …`) | Today they are UNCLASSIFIED → halt for review (safe, but stops the account) |
+| E4 | Per-instrument/strategy cost used by the engine at acceptance | A higher database cost than the engine's makes 0049 refuse (tested) |

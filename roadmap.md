@@ -370,11 +370,12 @@ See the specification: engine integration, paper/live trading, backtesting, risk
 - [ ] Owner: approve 0046 successor scope (C6/C7), 0048, policy values, budget semantics, retention — blocked on owner
 
 ## Phase 4E follow-up (13 Nov 09:59 UTC)
-- [ ] 1. 0046 successor draft (database recomputes risk, fills need matching unexpired approval; transactional, idempotent, concurrency-safe) — 0046 not approved
-- [ ] 2. 0048 marked approved-for-validation (not applied); 0047 permanently superseded
-- [ ] 3. Decision register: 5% liq buffer, 5 s price age, 60 s expiry, 0.13% configurable cost — proposed, NOT APPROVED
-- [ ] 4. Account budget with Research/Scalping sub-budgets incl. open + pending exposure
-- [ ] 5. Configurable retention policy draft + deletion/anonymization/audit rules
-- [ ] 6. Backup SHA-256 discrepancy investigation
-- [ ] 7. Full suite, restore, up/down, RLS, concurrency, build
-- [ ] 8. Update Phase 4E report + next-phase report
+- [x] 1. 0046 not approved; replacement draft 0049 (database recomputes risk; fills need a matching unexpired approval) — tested, not applied
+- [x] 2. 0048 at review/validation stage (re-verified on the real export, not applied); 0047 permanently superseded
+- [x] 3. Decision register: 5% liq buffer, 5 s price age, 60 s expiry, 0.13% configurable cost — proposed, NOT APPROVED
+- [x] 4. Account budget with Research/Scalping sub-budgets incl. open + pending (pure module + draft 0049)
+- [x] 5. Retention policy proposal + contract module; deletion/anonymization/audit rules (not enforced)
+- [x] 6. Backup SHA-256 discrepancy: two different exports; 13 Nov 448bb1c2… authoritative and pinned
+- [x] 7. Full suite, real-export restores, up/down, RLS, real-PostgreSQL concurrency, typecheck, build
+- [x] 8. Phase 4E report updated; Phase 4F next-phase report
+- [ ] Owner: review 0049; 0048 validation outcome; budget amounts; retention confirmations; engine alignment E1–E4 — blocked on owner

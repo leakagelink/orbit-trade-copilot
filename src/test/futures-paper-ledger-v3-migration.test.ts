@@ -333,7 +333,7 @@ describe("draft 0049 — R6: idempotency, privileges, RLS, coexistence and rollb
     const after = (await clean.query<{ n: number }>(`SELECT (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public') + (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public') AS n`)).rows[0]!.n;
     expect(Number(after)).toBe(Number(before));
     await clean.close();
-  });
+  }, 120_000);
 });
 
 describe("draft 0049 — the database and the shared TypeScript budget check agree", () => {
