@@ -19,7 +19,12 @@ const ROLES = `CREATE TYPE public.app_role AS ENUM ('user','admin','super_admin'
 CREATE TABLE public.user_roles (user_id uuid NOT NULL, role public.app_role NOT NULL, UNIQUE (user_id, role));
 CREATE FUNCTION public.has_role(_user_id uuid, _role public.app_role) RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
   AS $$ SELECT EXISTS (SELECT 1 FROM public.user_roles WHERE user_id = _user_id AND role = _role) $$;`;
-async function makeIdentityDb() { const d = await makeEntryDb(); await d.exec(ROLES); await d.exec(MIGRATION_0053); return d; }
+// FP_WITH_0054=1 (Phase 4H.1) also applies successor DRAFT 0054, so this suite re-runs against the corrected lifecycle.
+async function makeIdentityDb() {
+  const d = await makeEntryDb(); await d.exec(ROLES); await d.exec(MIGRATION_0053);
+  if (process.env["FP_WITH_0054"] === "1") await d.exec(readFileSync("docs/proposed-migrations/0054_futures_paper_worker_identity_lifecycle.sql", "utf8"));
+  return d;
+}
 
 let db: PGlite;
 const ADMIN = freshUser(), WORKER = freshUser();
