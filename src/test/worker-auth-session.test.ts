@@ -13,7 +13,7 @@ function setup(steps: { signIn?: Step[]; refresh?: Step[]; signOut?: Step[] }, o
   const auth = fakeAuth(steps);
   const calls: { fn: string; token: string }[] = [];
   const data: DataTransport = async (fn, _args, token) => { calls.push({ fn, token }); return { data: 1, error: null, status: 200 }; };
-  const opts: SessionOptions = { auth, data, resolveFn: allow, limits: LIMITS, clock, ...o };
+  const opts: SessionOptions = { auth, data, resolveFn: allow, limits: LIMITS, clock, expectedUserId: WORKER, ...o };
   return { clock, auth, calls, opts };
 }
 const codes = (r: { metrics: { code: string }[] }) => r.metrics.map((m) => m.code);
@@ -90,10 +90,12 @@ describe("sign-in, verification and sign-out", () => {
     const r = await runWithWorkerSession(s.opts, async () => 1);
     expect([r.outcome, r.signedOut]).toEqual(["TOKEN_WRONG_IDENTITY", true]);
   });
-  it("sign-out failures are recorded with bounded codes; 401/403/404 count as already signed out", async () => {
+  // Phase 4H.3: 401/403/404 no longer count as signed out — they do not prove the server session ended.
+  it("sign-out failures are recorded with bounded codes; only a 2xx logout counts as signed out", async () => {
     const cases: [Step, string, string | null, boolean][] = [
-      [{ status: 401, body: null }, "SIGNED_OUT", "ALREADY_INVALID", true],
-      [{ status: 404, body: null }, "SIGNED_OUT", "ALREADY_INVALID", true],
+      [{ status: 401, body: null }, "SIGN_OUT_FAILED", "HTTP_401", false],
+      [{ status: 403, body: null }, "SIGN_OUT_FAILED", "HTTP_403", false],
+      [{ status: 404, body: null }, "SIGN_OUT_FAILED", "HTTP_404", false],
       [{ status: 429, body: null, retryAfterSec: 30 }, "SIGN_OUT_FAILED", "HTTP_429", false],
       [{ status: 500, body: { message: "boom" } }, "SIGN_OUT_FAILED", "HTTP_500", false],
       ["throw", "SIGN_OUT_FAILED", "NETWORK", false],
@@ -237,8 +239,8 @@ describe("configuration and secrecy", () => {
     expect(readTokenClaims("a.b")).toBeNull();
     expect(readTokenClaims(fakeJwt({ sub: WORKER, role: "authenticated" }))).toBeNull(); // no exp
     expect(readTokenClaims(fakeJwt({ sub: WORKER, role: "authenticated", exp: 1 }))).toMatchObject({ sub: WORKER, exp: 1 });
-    expect(verifyIssuedSession(null, T0, { minTokenLifetimeMs: 1, maxClockSkewMs: 1 })).toMatchObject({ ok: false, code: "AUTH_MALFORMED_REPLY" });
-    const v = verifyIssuedSession(issued(T0, { expiresIn: null }), T0, { minTokenLifetimeMs: 1, maxClockSkewMs: 1 });
+    expect(verifyIssuedSession(null, T0, { minTokenLifetimeMs: 1, maxClockSkewMs: 1, expectedSub: WORKER })).toMatchObject({ ok: false, code: "AUTH_MALFORMED_REPLY" });
+    const v = verifyIssuedSession(issued(T0, { expiresIn: null }), T0, { minTokenLifetimeMs: 1, maxClockSkewMs: 1, expectedSub: WORKER });
     expect(v.ok && v.token.expiryAt).toBe(T0 + 3_600_000);
   });
 });

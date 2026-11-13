@@ -54,6 +54,7 @@ const commits = (id: string) => n(db, `SELECT count(*)::int n FROM public.future
 /** Fake auth service + data API. Every request is recorded; anything outside the expected endpoints fails the test. */
 function fakeBackend(worker: string, hooks: { beforeRpc?: (fn: string) => Promise<void> | void; signIn?: () => Response | null } = {}) {
   const requests: { url: string; auth: string | null; apikey: string | null; body: string }[] = [], tokens = new Map<string, string>();
+  vi.stubEnv("FUTURES_PAPER_WORKER_USER_ID", worker); // Phase 4H.3: the binding requires the expected worker identity
   const fetchImpl = async (url: string, init: RequestInit): Promise<Response> => {
     const h = new Headers(init.headers), body = typeof init.body === "string" ? init.body : "";
     requests.push({ url, auth: h.get("authorization"), apikey: h.get("apikey"), body });

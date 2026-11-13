@@ -2,7 +2,9 @@
 // token lifecycle Phase 4H.2, DRAFT 0054 — none applied) — DISABLED. Nothing imports this file; no route, server
 // function, cron entry, scheduler or background job calls it. It refuses to run unless BOTH FUTURES_PAPER_WORKER_HOSTED
 // is exactly "enabled" and FUTURES_PAPER_WORKER_IDENTITY is exactly "signed-in" (neither is set anywhere), and its
-// credentials (FUTURES_PAPER_WORKER_EMAIL / FUTURES_PAPER_WORKER_PASSWORD, server-only secrets) exist.
+// credentials (FUTURES_PAPER_WORKER_EMAIL / FUTURES_PAPER_WORKER_PASSWORD, server-only secrets) exist, together with the
+// enrolled worker's user id (FUTURES_PAPER_WORKER_USER_ID, not a secret; Phase 4H.3): the issued token's subject and the
+// sign-in reply's user id must both equal it, otherwise the tick signs out and stops before any data call.
 //
 // It never uses the privileged server key or the admin client: it signs in with the publishable key like any user, so
 // row-level security and the 0053/0054 registry/enrollment checks apply. Phase 4H.2 replaces the earlier long-lived
@@ -17,6 +19,7 @@ import { runWithWorkerSession, type AuthReply, type DataReply, type DataTranspor
 
 type Fetch = (input: string, init: RequestInit) => Promise<Response>;
 const WRAPPERS: ReadonlySet<string> = new Set(Object.values(IDENTITY_RPC));
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export interface IdentityConfig { url: string; key: string; email: string; password: string }
 
 /** Plain-fetch transports; the credentials stay in this closure and are only ever sent to the configured auth endpoint. */
@@ -51,9 +54,10 @@ export async function runIdentityFuturesPaperTick(o: IdentityTickOptions): Promi
   if (process.env["FUTURES_PAPER_WORKER_HOSTED"] !== "enabled" || process.env["FUTURES_PAPER_WORKER_IDENTITY"] !== "signed-in") throw new WorkerIdentityError("IDENTITY_DISABLED");
   const url = process.env["SUPABASE_URL"], key = process.env["SUPABASE_PUBLISHABLE_KEY"];
   const email = process.env["FUTURES_PAPER_WORKER_EMAIL"], password = process.env["FUTURES_PAPER_WORKER_PASSWORD"];
-  if (!url || !key || !email || !password) throw new WorkerIdentityError("IDENTITY_NOT_CONFIGURED");
+  const workerUserId = process.env["FUTURES_PAPER_WORKER_USER_ID"];
+  if (!url || !key || !email || !password || !workerUserId || !UUID.test(workerUserId)) throw new WorkerIdentityError("IDENTITY_NOT_CONFIGURED");
   const { auth, data } = identityTransports({ url, key, email, password }, o.fetchImpl);
   const rpcTimeoutMs = o.hosted?.timeoutMs ?? 8_000;
-  return runWithWorkerSession({ auth, data, resolveFn: identityRpcName, clock: o.clock, limits: { ...o.session, rpcTimeoutMs } },
+  return runWithWorkerSession({ auth, data, resolveFn: identityRpcName, clock: o.clock, limits: { ...o.session, rpcTimeoutMs }, expectedUserId: workerUserId },
     (call) => runHostedFuturesPaperWorkerTick({ ...o, rpc: call as HostedRpc, hosted: { ...(o.hosted ?? {}), timeoutMs: rpcTimeoutMs } }));
 }
