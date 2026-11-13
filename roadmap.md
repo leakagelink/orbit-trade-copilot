@@ -353,8 +353,8 @@ See the specification: engine integration, paper/live trading, backtesting, risk
 
 ## Phase 4D (13 Nov)
 - [ ] A. Fresh export restore check — blocked: no new export (only 12 Nov 06:54 UTC file)
-- [ ] B. Futures paper fill-time re-validation + 16 tests
-- [ ] C. Central Risk shadow remediation (stale → INSUFFICIENT_DATA, deep freeze, error codes, post-claim design)
-- [ ] D. Strategy attribution draft migration + rollback + tests (not applied)
-- [ ] E. Owner decision register
-- [ ] Final report, full tests, commit
+- [x] B. Futures paper fill-time re-validation + 16 tests
+- [x] C. Central Risk shadow remediation (stale → INSUFFICIENT_DATA, deep freeze, error codes, post-claim design)
+- [x] D. Strategy attribution draft migration + rollback + tests (not applied)
+- [x] E. Owner decision register
+- [x] Final report, full tests, commit

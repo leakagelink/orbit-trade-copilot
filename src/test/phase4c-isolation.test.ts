@@ -34,8 +34,11 @@ describe("Phase 4C change control", () => {
     for (const p of ["src/lib/binance-futures-core.server.ts", "src/lib/futures.server.ts", "src/lib/credential-environment.server.ts", "src/lib/engine.server.ts", "src/lib/autopilot-runner.server.ts", "src/lib/central-risk-shadow.server.ts", "src/lib/futures-paper-engine.ts", "src/lib/lowfreq-research.ts", "docs/proposed-migrations/0045_futures_paper_ledger_and_strategy_budgets.sql", "drizzle/migrations/0039_futures_pass_certification_and_autopilot_fencing.sql"]) expect(paths, p).toContain(p);
     expect(MANIFEST.length).toBeGreaterThan(150);
   });
-  it("no protected file changed during Phase 4C", () => {
-    const changed = MANIFEST.filter((m) => !existsSync(m.path) || sha(m.path) !== m.hash).map((m) => m.path);
+  it("no protected file changed during Phase 4C (later changes only where a later phase explicitly authorized them)", () => {
+    // Phase 4D's brief authorized exactly these three edits (fill-time re-validation, shadow remediation); every other
+    // Phase 4C-protected file must still match. src/test/phase4d-isolation.test.ts pins the Phase 4D list.
+    const LATER_AUTHORIZED = new Set(["src/lib/futures-paper-engine.ts", "src/lib/central-risk-shadow.ts", "src/lib/central-risk-shadow.server.ts"]);
+    const changed = MANIFEST.filter((m) => !LATER_AUTHORIZED.has(m.path) && (!existsSync(m.path) || sha(m.path) !== m.hash)).map((m) => m.path);
     expect(changed).toEqual([]);
   });
   it("no new route (endpoint) file and no new applied migration exists", () => {

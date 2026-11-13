@@ -133,7 +133,7 @@ function pendingProblem(q: FPPending, sym: string): string | null {
 
 /**
  * Fill-time re-validation for ONE pending entry slice of `q` units at `price` (fee `fee`, margin `add`). Uses the same
- * definitions as draft 0046 `futures_paper_commit_bar_v2`: daily loss = today's account cash (events of the same UTC day,
+ * definitions as the draft 0046 per-candle commit function: daily loss = today's account cash (events of the same UTC day,
  * this candle included) + Σ negative unrealized at the marks; strategy budget = cumulative closed-trade losses per
  * proposal (wins not netted) + reserved open risk (qty × stop distance + qty × entry × round-trip cost) + this fill's
  * risk; exposure, position count and free margin are evaluated AFTER the fill on positions only. Returns null when every
