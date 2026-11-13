@@ -15,6 +15,10 @@ export const ROLLBACK_0049 = readFileSync("docs/proposed-migrations/0049_futures
 export async function makeGatewayDb() {
   const db = await makeDb(); await db.exec(MIGRATION_0050);
   if (process.env["FP_WITH_0051"] === "1") await db.exec(readFileSync("docs/proposed-migrations/0051_futures_paper_event_completeness.sql", "utf8"));
+  if (process.env["FP_WITH_0051"] === "1" && process.env["FP_WITH_0052"] === "1") {
+    await db.exec(`SELECT set_config('futures_paper.change_reason', 'test fixture (PGlite)', false)`);
+    await db.exec(readFileSync("docs/proposed-migrations/0052_futures_paper_entry_completeness_and_exit_only.sql", "utf8"));
+  }
   return db;
 }
 /** Test config with a one-hour data age so recorded past candles may still approve entries (a TEST INPUT). */

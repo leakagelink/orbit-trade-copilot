@@ -10,7 +10,10 @@ import { reconcileFuturesPaper, type FPBar, type FPConfig, type FPEvent, type FP
 import { runFuturesPaperWorkerTick, type CommitOutcome, type WorkerMetric } from "@/lib/futures-paper-worker";
 import type { RawSymbolBundle } from "@/lib/futures-paper-market-data";
 import { CFG, M, accountBudget, freshUser, loadView, newAccount, pglitePorts, stepView, strategyBudget } from "./helpers/fp-v3-harness";
-import { H8, commitV4, makeCompletenessDb } from "./helpers/fp-v4-harness";
+import { H8, WITH_0052, commitV4, makeCompletenessDb } from "./helpers/fp-v4-harness";
+// FP_WITH_0052=1 re-runs every replay through DRAFT 0052 (v5: entry-fill completeness) and also tallies its entry checks.
+const TAG = WITH_0052 ? "0052" : "0051";
+const entryOf = async (id: string) => WITH_0052 ? (await db.query<{ outcome: string }>(`SELECT outcome FROM public.futures_paper_entry_checks WHERE account_id=$1`, [id])).rows.map((r) => r.outcome) : [];
 
 let db: PGlite;
 beforeAll(async () => { db = await makeCompletenessDb(); }, 120_000);
@@ -74,19 +77,20 @@ async function synthetic(tf: number, N: number, seed: number) {
     }
   }
   expect(dbRefusals).toEqual([]); expect(mismatches).toEqual([]);
+  const entry = WITH_0052 ? { entryOutcomes: tally((await Promise.all(ids.map(entryOf))).flat()) } : {};
   expect(trades.length).toBe(outcomes.filter((o) => o !== "none").length);
-  return { timeframe: tfName, candles: N, accounts: ids.length, commits: N * ids.length, databaseRefusals: dbRefusals.length, events: tally(kinds), databaseOutcomes: tally(outcomes), engineExitReasons: tally(trades.map((x) => x.reason)), fundingChargesRequired: fundingRequired, reasonMismatches: mismatches.length };
+  return { timeframe: tfName, candles: N, accounts: ids.length, commits: N * ids.length, databaseRefusals: dbRefusals.length, events: tally(kinds), databaseOutcomes: tally(outcomes), engineExitReasons: tally(trades.map((x) => x.reason)), fundingChargesRequired: fundingRequired, reasonMismatches: mismatches.length, ...entry };
 }
 
 describe("synthetic long replays through 0051 (MARK and CONTRACT triggers, partial fills, gaps, shocks, grid funding)", () => {
   it("1 m: 1,200 candles × 2 accounts — zero refusals; every exit reason equals the database's outcome", async () => {
     const stats = await synthetic(M, 1200, 4242);
-    console.log("SYNTHETIC_1M", JSON.stringify(stats)); if (OUT) writeFileSync(`${OUT}/replay-0051-synthetic-1m.json`, JSON.stringify(stats, null, 2));
+    console.log(`SYNTHETIC_1M_${TAG}`, JSON.stringify(stats)); if (OUT) writeFileSync(`${OUT}/replay-${TAG}-synthetic-1m.json`, JSON.stringify(stats, null, 2));
     expect(stats.databaseOutcomes["stop"] ?? 0).toBeGreaterThan(10); expect(stats.engineExitReasons["time"] ?? 0).toBeGreaterThan(0);
   }, 600_000);
   it("5 m: 600 candles × 2 accounts (≈ 50 h, six funding times) — zero refusals; funding charged at every grid point held", async () => {
     const stats = await synthetic(5 * M, 600, 777);
-    console.log("SYNTHETIC_5M", JSON.stringify(stats)); if (OUT) writeFileSync(`${OUT}/replay-0051-synthetic-5m.json`, JSON.stringify(stats, null, 2));
+    console.log(`SYNTHETIC_5M_${TAG}`, JSON.stringify(stats)); if (OUT) writeFileSync(`${OUT}/replay-${TAG}-synthetic-5m.json`, JSON.stringify(stats, null, 2));
     expect(stats.fundingChargesRequired).toBeGreaterThan(0); expect(stats.events["funding"] ?? 0).toBe(stats.fundingChargesRequired);
   }, 600_000);
 });
@@ -127,7 +131,8 @@ describe("historical replay — 3 days of public Binance USD-M 5 m candles (real
     const funding = evs.filter((e) => e.kind === "funding").length;
     expect(checks.reduce((a, c) => a + c.funding_required, 0)).toBe(funding);
     const stats = { candles: total, timeframe: "5m", window: [new Date(fx.start).toISOString(), new Date(fx.end).toISOString()], committed, databaseRefusals: codes.filter((c) => c === "RECOMPUTE" || c === "HALT_FOR_REVIEW").length, events: tally(evs.map((e) => e.kind)), databaseOutcomes: tally(checks.map((c) => c.outcome)), fundingChargesRequired: funding, exposedSymbolCandlesChecked: checks.length };
-    console.log("HISTORICAL_0051", JSON.stringify(stats)); if (OUT) writeFileSync(`${OUT}/replay-0051-historical.json`, JSON.stringify(stats, null, 2));
+    const stats2 = WITH_0052 ? { ...stats, entryOutcomes: tally(await entryOf(id)) } : stats;
+    console.log(`HISTORICAL_${TAG}`, JSON.stringify(stats2)); if (OUT) writeFileSync(`${OUT}/replay-${TAG}-historical.json`, JSON.stringify(stats2, null, 2));
     expect(funding).toBeGreaterThan(0);
   }, 600_000);
 });
