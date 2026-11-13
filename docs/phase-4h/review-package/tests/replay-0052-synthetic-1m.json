@@ -1,0 +1,39 @@
+{
+  "timeframe": "1m",
+  "candles": 1200,
+  "accounts": 2,
+  "commits": 2400,
+  "databaseRefusals": 0,
+  "events": {
+    "order_accepted": 259,
+    "entry_fill": 338,
+    "order_rejected": 427,
+    "funding": 5,
+    "exit_fill": 255,
+    "entry_cancelled": 39,
+    "liquidation": 2
+  },
+  "databaseOutcomes": {
+    "none": 2168,
+    "stop": 172,
+    "time": 36,
+    "target": 46,
+    "liquidation_open": 2,
+    "target_open": 1
+  },
+  "engineExitReasons": {
+    "stop": 172,
+    "time": 36,
+    "target": 47,
+    "liquidation": 2
+  },
+  "fundingChargesRequired": 5,
+  "reasonMismatches": 0,
+  "entryOutcomes": {
+    "filled": 220,
+    "partial": 103,
+    "cancelled_expired": 22,
+    "cancelled_closed": 15,
+    "cancelled_refused": 2
+  }
+}
