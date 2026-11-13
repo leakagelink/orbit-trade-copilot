@@ -11,7 +11,7 @@ import { initialFuturesPaperState } from "@/lib/futures-paper-engine";
 import { CFG } from "./helpers/fp-v3-harness";
 
 const URL = process.env["FUTURES_PAPER_PG_URL"];
-const MIG = ["0049_futures_paper_ledger_v3", "0050_futures_paper_worker_gateway", "0051_futures_paper_event_completeness", "0052_futures_paper_entry_completeness_and_exit_only", "0053_futures_paper_worker_identity", "0054_futures_paper_worker_identity_lifecycle"].map((f) => readFileSync(`docs/proposed-migrations/${f}.sql`, "utf8"));
+const MIG = ["0049_futures_paper_ledger_v3", "0050_futures_paper_worker_gateway", "0051_futures_paper_event_completeness", "0052_futures_paper_entry_completeness_and_exit_only", "0053_futures_paper_worker_identity", "0054_futures_paper_worker_identity_lifecycle"].map((f) => readFileSync(f.startsWith("0054") && process.env["FP_0054_FILE"] ? process.env["FP_0054_FILE"] : `docs/proposed-migrations/${f}.sql`, "utf8"));
 const role = (r: string, extra = "") => `DO $$ BEGIN CREATE ROLE ${r} ${extra}; EXCEPTION WHEN duplicate_object THEN NULL; END $$;`;
 const STUB = `${role("anon")} ${role("authenticated")} ${role("service_role", "BYPASSRLS")}
 GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
@@ -60,7 +60,7 @@ describe.skipIf(!URL)("0054 on real PostgreSQL (throwaway, local)", () => {
     let release!: () => void; const hold = new Promise<void>((r) => { release = r; });
     let disabledAt = 0, workerDoneAt = 0;
     const worker = asUser(a, w.WORKER, async (tx) => { const f = await acquire(tx, w.ACCOUNT); await hold; workerDoneAt = Date.now(); return Number(f[0]!["f"]); });
-    expect(await waitFor(async () => Number((await mon.unsafe(`SELECT count(*)::int n FROM public.futures_paper_worker_leases`))[0]!["n"]) >= 0 && (await mon.unsafe(`SELECT 1 FROM pg_stat_activity WHERE datname=current_database() AND state='idle in transaction'`)).length > 0)).toBe(true);
+    expect(await waitFor(async () => (await mon.unsafe(`SELECT 1 FROM pg_stat_activity WHERE datname=current_database() AND state='idle in transaction'`)).length > 0)).toBe(true);
     const disable = asUser(b, w.ADMIN, (tx) => tx.unsafe(`SELECT public.fpw_admin_set_identity($1, NULL, false) AS ok`, [w.WORKER])).then((r) => { disabledAt = Date.now(); return r[0]!["ok"]; });
     expect(await waitFor(async () => (await lockWaiters(mon)) === 1)).toBe(true); // the disable is blocked by the worker's FOR SHARE lock
     release();

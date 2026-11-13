@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Multi-session tests for the Phase 4H.1: DRAFT 0054 (worker identity lifecycle) over 0049 → 0053, then
+# Multi-session tests for Phase 4H.1: DRAFT 0054 (worker identity lifecycle) over 0049 → 0053, then
 # the 0052 and 0051 suites and the Phase 4G hosted suite, then
 # every earlier real-PostgreSQL suite unchanged — against a throwaway local PostgreSQL in /tmp, never the live database.
 # Usage: scripts/futures-paper/concurrency-check-4h1.sh. Files run one after another.

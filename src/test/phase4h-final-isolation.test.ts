@@ -49,7 +49,7 @@ describe("Phase 4H finalization change control", () => {
     expect(j.entries.at(-1)!.tag).toBe("0039_futures_pass_certification_and_autopilot_fencing");
     const re = /futures_paper_commit_bar_v5|futures_paper_entry_checks|futures_paper_config_changes|fp5_|fpw_id_|fpw_admin_set_identity|fpw_owner_enroll|futures_paper_worker_identities|futures_paper_worker_enrollments/;
     const places = [...walk("drizzle", /./), ...walk("supabase", /./), ...walk("src", /\.(ts|tsx)$/).filter((f) => !f.includes(join("src", "test"))), ...walk("scripts", /\.(ts|sh|sql)$/)];
-    const allowed = new Set(["src/lib/futures-paper-worker-identity.ts", "scripts/db-export/verify-local-restore-0052.sh"]);
+    const allowed = new Set(["src/lib/futures-paper-worker-identity.ts", "scripts/db-export/verify-local-restore-0052.sh", "scripts/db-export/verify-local-restore-0054.sh"]); // 0054: Phase 4H.1 verifier
     expect(places.filter((f) => re.test(read(f))).map((f) => relative(process.cwd(), f)).filter((f) => !allowed.has(f))).toEqual([]);
   });
   it("the signed-in identity binding is disabled, never uses the service key and is imported by nothing in the app", () => {

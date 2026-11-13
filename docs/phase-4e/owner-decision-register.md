@@ -104,3 +104,13 @@ paper-ledger growth (1 m candles ≈ 525,600 commits and up to 1.05 M candle row
 | F-3 | Configuration audit trail (budgets, sub-budgets, strategy budgets, costs, account policy config, status/halt; reason required) | Implemented in draft 0052 — NOT APPROVED; approves no value |
 | F-4 | Hosted worker security | **BLOCKED** (runtime still holds the service key; stage 3 undecided) |
 | F-5 | Fresh export after 14 Nov 2026 09:19 UTC and chain restore | **BLOCKED** (not yet possible) |
+
+## 9. Phase 4H.1 security remediation (13 Nov 2026)
+
+| # | Item | Status |
+|---|---|---|
+| S-1 | Draft **0054** worker identity lifecycle (successor of 0053; 0049–0053 unchanged) — disable always possible for an MFA admin; current status re-checked on every worker call; FOR SHARE on writes; identity history | Draft only — **NOT APPROVED**; apply only after 0053, in one transaction |
+| S-2 | Token handling for the signed-in worker (sign-in per tick, sign-out, deadline vs token lifetime, auth rate limits) | **OPEN** — design recommendation only (security review F9); hosted auth settings not verified |
+| S-3 | Runtime credential isolation (worker deployment without the service-role key) | **BLOCKED** — owner decision needed (separate Lovable project plausible but unverified; external infrastructure needs approval) |
+| S-4 | Fresh export after 14 Nov 2026 09:19 UTC and full-chain restore with `verify-local-restore-0054.sh` | **BLOCKED** (not yet possible) |
+| S-5 | Timing/rounding values T1–T11, lease duration, RPC timeout, participation, liquidation buffer, budgets, costs | **NOT APPROVED** — unchanged |
