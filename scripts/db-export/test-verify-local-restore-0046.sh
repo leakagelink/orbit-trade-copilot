@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Self-test for verify-local-restore-0046.sh on SYNTHETIC local backups (not a real export). Builds tiny databases in a
 # disposable local PostgreSQL (UNIX socket only), dumps them, and checks that the verifier PASSes a well-formed
-# post-0039 archive and FAILs archives with no migration history, a wrong migration hash, or 0045 already applied.
+# post-0039 archive and FAILs archives with no migration history, a wrong migration hash, 0045 already applied, or a
+# public privilege that cannot be restored (Phase 4E).
 set -euo pipefail
 for v in DATABASE_URL PGHOST PGPORT PGUSER PGPASSWORD PGDATABASE; do unset "$v" || true; done
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
@@ -48,6 +49,9 @@ build good ""
 build nohistory "drop schema drizzle cascade;"
 build badhash "update drizzle.__drizzle_migrations set hash = repeat('0', 64) where id = 20;"
 build has0045 "$(cat "$ROOT/docs/proposed-migrations/0045_futures_paper_ledger_and_strategy_budgets.sql")"
+# Phase 4E: a grant to a role the verifier cannot recreate (quoted mixed-case name) makes a public ACL entry fail to
+# restore. That must be an UNEXPECTED error and a FAIL — the Phase 4D verifier would have reported it only as noise.
+build badrole "do \$x\$ begin create role \"WeirdRole\"; exception when duplicate_object then null; end \$x\$; grant select on public.orders to \"WeirdRole\";"
 "${AS[@]}" env -i PATH="$PATH" pg_ctl -D "$PGL" -m fast stop >/dev/null
 chmod 644 "$WORK"/*.backup
 pass=0; fail=0
@@ -55,11 +59,13 @@ expect(){ local want="$1" name="$2"; set +e; REPORT="$WORK/$name.md" DATABASE_UR
   local got=PASS; [[ $rc -ne 0 ]] && got=FAIL
   if [[ "$got" == "$want" ]]; then pass=$((pass+1)); echo "ok   $name → $got"; else fail=$((fail+1)); echo "BAD  $name → $got (wanted $want)"; cat "$WORK/$name.out"; [[ -f "$WORK/$name.md" ]] && cat "$WORK/$name.md"; fi
   grep -q "ambient connection variables ignored and unset: DATABASE_URL" "$WORK/$name.out" || { fail=$((fail+1)); echo "BAD  $name: ambient DATABASE_URL was not reported as ignored"; }
+  if [[ "$name" == badrole ]]; then grep -q "pg_restore errors classified | FAIL" "$WORK/$name.md" && grep -q "privileges | FAIL" "$WORK/$name.md" && echo "     badrole failed on error classification and privilege fidelity" || { fail=$((fail+1)); echo "BAD  badrole: not failed by error classification + privilege fidelity"; }; fi
   [[ "$name" == good && -f "$WORK/$name.md" ]] && grep "^|" "$WORK/$name.md" | sed 's/^/     /'
   return 0; }
 expect PASS good
 expect FAIL nohistory
 expect FAIL badhash
 expect FAIL has0045
+expect FAIL badrole
 echo "self-test: $pass passed, $fail failed"
 [[ $fail -eq 0 ]]

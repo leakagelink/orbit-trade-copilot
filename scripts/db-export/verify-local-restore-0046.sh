@@ -15,6 +15,13 @@
 # 0045/0046 objects absent before; fingerprint of every pre-existing public object; 0046 applied in ONE transaction;
 # RLS, policies, grants, EXECUTE privileges, constraints, triggers, SECURITY DEFINER + search_path; a malformed-input
 # probe; rollback in ONE transaction; nothing left behind; pre-existing fingerprint unchanged. Counts/hashes only.
+# Phase 4E revision (found on the first REAL export): every role the archive grants to is created first (the Phase 4D
+# version omitted `sandbox_exec`, so all 60 public-table ACL entries failed and privileges were silently not restored);
+# pg_restore errors are classified — only objects of the managed extensions that cannot exist in a plain local server
+# (pg_cron, pg_net, supabase_vault: schemas cron/net/vault) are tolerated, anything else FAILs; restored-object fidelity
+# is checked against the archive's own table of contents (tables, row counts, ACLs, RLS, policies, triggers,
+# functions, constraints); presence of drafts 0040–0047 and scheduled-job counts are reported (counts only, never
+# job commands). Parsing the archive (`pg_restore --list` / `--file=-`) never opens a database connection.
 set -euo pipefail
 refuse(){ echo "REFUSED: $*" >&2; exit 2; }
 [[ $# -eq 1 ]] || refuse "exactly one argument (a local backup file) is required; connection targets are not accepted"
@@ -50,9 +57,28 @@ env -i PATH="$PATH" PGHOST="$SOCK" PGPORT=5432 PGUSER=postgres psql -qAtX -d pos
 Q(){ local_pg psql -qAtX -v ON_ERROR_STOP=1 -c "$1"; }
 TOC="$WORK/toc.txt"; pg_restore --list "$FILE" > "$TOC" || refuse "not a readable pg_dump custom-format archive"
 DUMPED_AT=$(grep -m1 "Archive created at" "$TOC" | sed "s/.*Archive created at //" || true)
-for r in anon authenticated "service_role BYPASSRLS" authenticator supabase_admin supabase_auth_admin supabase_storage_admin dashboard_user pgbouncer supabase_realtime_admin supabase_replication_admin supabase_read_only_user; do Q "create role $r" >/dev/null 2>&1 || true; done
+# Script form of the archive, parsed as text only (no -d: pg_restore writes SQL to stdout and connects to nothing).
+SCRIPT_SQL="$WORK/archive.sql"; pg_restore --file=- "$FILE" > "$SCRIPT_SQL" || refuse "archive could not be read end to end"
+ARCHIVE_ROLES=$(grep -oE '^(GRANT|REVOKE) .* (TO|FROM) [a-z_][a-z0-9_]*( WITH GRANT OPTION)?;$' "$SCRIPT_SQL" | sed -E 's/ WITH GRANT OPTION;$/;/; s/.* (TO|FROM) ([a-z_][a-z0-9_]*);$/\2/' | sort -u | grep -vxE 'postgres|public' || true)
+for r in anon authenticated "service_role BYPASSRLS" authenticator supabase_admin supabase_auth_admin supabase_storage_admin dashboard_user pgbouncer supabase_realtime_admin supabase_replication_admin supabase_read_only_user $ARCHIVE_ROLES; do Q "create role $r" >/dev/null 2>&1 || true; done
 set +e; local_pg pg_restore --no-owner -d verify "$FILE" > "$WORK/restore.log" 2>&1; set -e
 ERRS=$(grep -c '^pg_restore: error' "$WORK/restore.log" || true)
+# Classify every error. Tolerated: objects of managed extensions unavailable in a plain local server. Reported for the
+# rest: only the TOC descriptor (object type, schema, name) — never command text or row data.
+CLASS=$(python3 - "$WORK/restore.log" <<'PY2'
+import re,sys
+lines=open(sys.argv[1],encoding="utf-8",errors="replace").read().splitlines()
+ok=re.compile(r'(schema|extension|relation|function|type) "?(cron|net|vault|pg_cron|pg_net|supabase_vault|pgsodium)\b|\b(cron|net|vault)\.[a-z_]+')
+exp=0; bad=[]; toc=""
+for l in lines:
+    if re.match(r"^\S+: from TOC entry ",l): toc=re.sub(r"^\S+: from TOC entry \d+; \d+ \d+ ","",l).rsplit(" ",1)[0]
+    elif re.match(r"^\S+: error:",l):
+        if ok.search(l): exp+=1
+        else: bad.append(toc or "(no TOC entry)")
+print(f"{exp}|{len(bad)}|{'; '.join(sorted(set(bad))[:10])}")
+PY2
+)
+ERR_EXPECTED=${CLASS%%|*}; REST=${CLASS#*|}; ERR_UNEXPECTED=${REST%%|*}; ERR_WHERE=${REST#*|}
 
 FAIL=0; ROWS=""
 row(){ ROWS+="| $1 | $2 | $3 |"$'\n'; [[ "$2" == FAIL ]] && FAIL=$((FAIL+1)); return 0; }
@@ -77,6 +103,54 @@ else row "Migration ordering" FAIL "drizzle.__drizzle_migrations not in the arch
 chk "0039 safety objects present" "select to_regclass('public.futures_certifications') is not null and exists(select 1 from pg_proc where proname='futures_live_authorized')" "export must postdate 0039"
 chk "0045/0046 objects absent before" "select to_regclass('public.futures_paper_accounts') is null and to_regclass('public.strategy_risk_budgets') is null and not exists(select 1 from pg_proc where proname like 'fp2_%')" "never apply on top of 0045"
 chk "account_mfa_allowed() exists" "select exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and proname='account_mfa_allowed')" "required by the RLS policies"
+
+if [[ "$ERR_UNEXPECTED" == 0 ]]; then row "pg_restore errors classified" PASS "$ERRS errors, all managed-extension objects (cron/net/vault) absent from a plain local server"
+else row "pg_restore errors classified" FAIL "$ERR_UNEXPECTED unexpected error(s) in: $ERR_WHERE"; fi
+# --- restored-object fidelity against the archive's own table of contents (counts only) ---
+tocn(){ grep -cE "^[0-9]+; [0-9]+ [0-9]+ $1 public " "$TOC" || true; }
+fid(){ local name="$1" want="$2" got="$3"; if [[ "$want" == "$got" ]]; then row "Fidelity: $name" PASS "archive $want = restored $got"; else row "Fidelity: $name" FAIL "archive $want ≠ restored $got"; fi; }
+fid "public tables" "$(tocn TABLE)" "$(Q "select count(*) from pg_tables where schemaname='public'")"
+fid "public views" "$(tocn VIEW)" "$(Q "select count(*) from pg_views where schemaname='public'")"
+fid "public functions" "$(tocn FUNCTION)" "$(Q "select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.prokind in ('f','p')")"
+fid "public RLS-enabled tables" "$(tocn 'ROW SECURITY')" "$(Q "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relrowsecurity")"
+fid "public policies" "$(tocn POLICY)" "$(Q "select count(*) from pg_policies where schemaname='public'")"
+fid "public triggers" "$(tocn TRIGGER)" "$(Q "select count(*) from pg_trigger t join pg_class c on c.oid=t.tgrelid join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and not t.tgisinternal")"
+fid "public PK/unique/exclusion constraints" "$(tocn CONSTRAINT)" "$(Q "select count(*) from pg_constraint k join pg_namespace n on n.oid=k.connamespace where n.nspname='public' and k.contype in ('p','u','x')")"
+fid "public foreign keys" "$(tocn 'FK CONSTRAINT')" "$(Q "select count(*) from pg_constraint k join pg_namespace n on n.oid=k.connamespace where n.nspname='public' and k.contype='f'")"
+fid "public indexes (non-constraint)" "$(tocn INDEX)" "$(Q "select count(*) from pg_indexes i where schemaname='public' and not exists(select 1 from pg_constraint k where k.conname=i.indexname and k.connamespace='public'::regnamespace)")"
+ACL_WANT=$(grep -oE "^[0-9]+; 0 0 ACL public (TABLE|VIEW) [a-z_0-9]+" "$TOC" | awk '{print $NF}' | sort -u)
+ACL_MISSING=0; for t in $ACL_WANT; do [[ "$(Q "select relacl is not null from pg_class where oid = to_regclass('public.$t')")" == t ]] || ACL_MISSING=$((ACL_MISSING+1)); done
+if [[ "$ACL_MISSING" == 0 ]]; then row "Fidelity: public table/view privileges" PASS "$(wc -w <<<"$ACL_WANT") ACL entries in the archive, all restored"; else row "Fidelity: public table/view privileges" FAIL "$ACL_MISSING of $(wc -w <<<"$ACL_WANT") ACL entries not restored"; fi
+# Row counts per public table: COPY rows in the archive vs rows restored (numbers only; no row content is printed).
+ROWDIFF=$(python3 - "$SCRIPT_SQL" <<'PY2'
+import re,sys
+cur=None; n={}
+for l in open(sys.argv[1],encoding="utf-8",errors="replace"):
+    if cur is None:
+        m=re.match(r'^COPY public\.("?[a-z_0-9]+"?) ',l)
+        if m: cur=m.group(1).strip('"'); n[cur]=0
+    elif l.rstrip("\n")=="\\.": cur=None
+    else: n[cur]+=1
+print(" ".join(f"{k}={v}" for k,v in sorted(n.items())))
+PY2
+)
+RD_BAD=0; RD_N=0; RD_ROWS=0; for kv in $ROWDIFF; do t=${kv%%=*}; want=${kv#*=}; RD_N=$((RD_N+1)); RD_ROWS=$((RD_ROWS+want)); [[ "$(Q "select count(*) from public.\"$t\"")" == "$want" ]] || RD_BAD=$((RD_BAD+1)); done
+if [[ "$RD_BAD" == 0 ]]; then row "Fidelity: public row counts" PASS "$RD_N tables in the archive data, $RD_ROWS rows; every table's restored count equals the archive"; else row "Fidelity: public row counts" FAIL "$RD_BAD of $RD_N tables differ"; fi
+# --- migration history detail and draft status (drafts 0040–0047 must be absent for this phase's assumptions) ---
+LATEST_WHEN=$(Q "select max(created_at) from drizzle.__drizzle_migrations" 2>/dev/null || echo "")
+LATEST_TAG=$(python3 -c "import json,sys;j=json.load(open(sys.argv[1]));print(next((e['tag'] for e in j['entries'] if str(e['when'])==sys.argv[2]),'unknown'))" "$JOURNAL" "$LATEST_WHEN")
+row "Latest applied migration" INFO "$LATEST_TAG (created_at $LATEST_WHEN); $(Q "select count(*) from drizzle.__drizzle_migrations" 2>/dev/null || echo '?') rows"
+draft(){ local d="$1" sql="$2" detail="$3"; if [[ "$(Q "$sql")" == t ]]; then row "Draft $d" INFO "PRESENT ($detail)"; else row "Draft $d" INFO "ABSENT ($detail)"; fi; }
+draft 0040 "select exists(select 1 from pg_trigger where tgname='futures_certifications_no_truncate')" "trigger futures_certifications_no_truncate"
+draft 0041 "select to_regclass('public.futures_harness_runs') is not null" "table futures_harness_runs"
+draft 0042 "select to_regclass('public.testnet_emergency_stops') is not null or exists(select 1 from pg_proc where proname='testnet_futures_limits')" "testnet_emergency_stops / testnet_futures_limits()"
+draft 0043 "select to_regclass('public.ai_decision_records') is not null or to_regclass('public.ai_risk_evaluations') is not null" "ai_decision_records / ai_risk_evaluations"
+draft 0044 "select to_regclass('public.paper_accounts') is not null or to_regclass('public.paper_bars') is not null" "paper_accounts / paper_bars"
+draft 0045/0046 "select to_regclass('public.futures_paper_accounts') is not null or to_regclass('public.strategy_risk_budgets') is not null or exists(select 1 from pg_proc where proname like 'fp2_%')" "futures_paper_* / strategy_risk_budgets / fp2_*"
+draft 0047/0048 "select to_regclass('public.futures_order_strategy_identity') is not null or to_regclass('public.futures_strategy_attribution_events') is not null" "futures_order_strategy_identity / futures_strategy_attribution_events"
+# Scheduled jobs in the archive (cron.job data; the cron schema itself cannot be restored locally). Counts only.
+JOBS=$(awk '/^COPY cron\.job /{f=1;next} f&&/^\\\.$/{f=0} f' "$SCRIPT_SQL")
+row "Scheduled jobs in archive" INFO "$(grep -c . <<<"$JOBS" || true) cron job rows; $(grep -ci 'paper' <<<"$JOBS" || true) mention 'paper' (commands not printed)"
 
 # --- fingerprint of every pre-existing public object (structure, policies, grants, functions, row counts) ---
 FP_SQL="select md5(string_agg(x, E'\n' order by x)) from (
@@ -114,7 +188,7 @@ else row "Rollback (single transaction)" FAIL "$(grep -m1 -i error "$WORK/rollba
 chk "Nothing left after rollback" "select not exists(select 1 from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and (relname like 'futures_paper%' or relname like 'strategy_risk%')) and not exists(select 1 from pg_proc where proname like 'fp2_%' or proname like '%futures_paper%' or proname='guard_strategy_risk_budget')" ""
 [[ "$(Q "$FP_SQL")" == "$FP0" && "$(rowcounts)" == "$RC0" && "$(Q "select count(*) from pg_tables where schemaname='public'")" == "$NT0" ]] && row "Pre-existing objects unchanged after rollback" PASS "fingerprint $FP0; $NT0 public tables" || row "Pre-existing objects unchanged after rollback" FAIL "fingerprint changed"
 
-VERDICT=PASS; [[ $FAIL -gt 0 || $ERRS -gt 0 ]] && VERDICT=FAIL
+VERDICT=PASS; [[ $FAIL -gt 0 || "${ERR_UNEXPECTED:-1}" != 0 ]] && VERDICT=FAIL
 mkdir -p "$(dirname "$OUT")"
 cat > "$OUT" <<MD
 # Local-only restore verification — draft 0046 — $(date -u +%Y-%m-%dT%H:%M:%SZ)
@@ -123,7 +197,8 @@ cat > "$OUT" <<MD
 not a Lovable Cloud restore and not proof of production readiness. Nothing was applied anywhere else.
 
 - Archive: \`$(basename "$FILE")\`, $SIZE bytes, SHA-256 \`$SHA\`, created at: ${DUMPED_AT:-unknown}
-- pg_restore errors: $ERRS (role/extension noise from managed schemas is expected; see restore log in the work dir, not kept)
+- pg_restore errors: $ERRS total — $ERR_EXPECTED tolerated (managed-extension objects: cron/net/vault), $ERR_UNEXPECTED unexpected (restore log is deleted with the work dir)
+- Roles created from the archive's grants: $(wc -w <<<"$ARCHIVE_ROLES") ($(tr '\n' ' ' <<<"$ARCHIVE_ROLES"))
 - Ambient connection variables ignored: ${AMBIENT:-none}
 - Migration \`$(basename "$MIG")\` SHA-256 \`$MIG_SHA\`; rollback SHA-256 \`$RB_SHA\`
 
