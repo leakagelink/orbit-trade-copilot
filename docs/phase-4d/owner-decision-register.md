@@ -1,5 +1,7 @@
 # Owner decision register — Phase 4D
 
+> **Superseded (13 Nov 2026) by `docs/phase-4e/owner-decision-register.md`.** Kept unchanged below for history.
+
 Nothing here is decided. Every value below is **NOT APPROVED** and is not enforced on any real or Testnet order. The
 engine, drafts and tests take these as inputs; none is hard-coded as policy except where the existing code already used
 the Phase 4A proposal (noted).

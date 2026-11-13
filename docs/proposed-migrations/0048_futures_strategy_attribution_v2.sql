@@ -151,6 +151,10 @@ BEGIN
       RAISE EXCEPTION 'reductions (% + %) would exceed the effective filled quantity %', v_reduced, NEW.qty, v_filled;
     END IF;
   ELSIF NEW.kind = 'correction' THEN
+    IF NEW.corrected_qty IS NULL OR NEW.corrected_amount IS NULL OR NEW.corrected_qty = 'NaN'::numeric OR NEW.corrected_amount = 'NaN'::numeric
+       OR NEW.corrected_qty < 0 OR NEW.corrected_qty = 'Infinity'::numeric OR abs(NEW.corrected_amount) = 'Infinity'::numeric THEN
+      RAISE EXCEPTION 'corrected values must be finite numbers and corrected quantities non-negative';
+    END IF;
     IF NEW.corrects_event_id >= NEW.id THEN RAISE EXCEPTION 'a correction must reference an earlier, existing original event'; END IF;
     SELECT * INTO o FROM public.futures_strategy_attribution_events WHERE id = NEW.corrects_event_id;
     IF NOT FOUND THEN RAISE EXCEPTION 'a correction must reference an earlier, existing original event'; END IF;

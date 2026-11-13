@@ -134,11 +134,12 @@ describe("draft 0048 — duplicate, circular, repeated and invalid corrections a
     await expect(correct(c.id, A, fee, 1, 1, -1.5)).rejects.toThrow(/restates an amount only/);
     await expect(correct(c.id, A, fund, 1, 1, 0)).rejects.toThrow(/restates an amount only/);
     await expect(correct(c.id, A, fee, 1, 0, 0.2)).rejects.toThrow(/cannot make the fee positive/);
-    await expect(correct(c.id, A, f, 1, -0.1, 0)).rejects.toThrow(/numbers|check constraint/);
-    await expect(correct(c.id, A, f, 1, "NaN", 0)).rejects.toThrow(/numbers|check constraint/);
+    await expect(correct(c.id, A, f, 1, -0.1, 0)).rejects.toThrow(/finite numbers and corrected quantities non-negative/);
+    await expect(correct(c.id, A, f, 1, "NaN", 0)).rejects.toThrow(/finite numbers and corrected quantities non-negative/);
+    await expect(correct(c.id, A, fee, 1, 0, "-Infinity")).rejects.toThrow(/finite numbers and corrected quantities non-negative/);
     await expect(correct(c.id, A, f, 1, 0.9, 0, { reason: null })).rejects.toThrow(/kind_shape/);
     await expect(correct(c.id, A, f, 1, 0.9, 0, { position: p.id })).rejects.toThrow(/kind_shape/);
-    await expect(correct(c.id, A, f, 1, null, 0)).rejects.toThrow(/kind_shape|null/);
+    await expect(correct(c.id, A, f, 1, null, 0)).rejects.toThrow(/finite numbers/);
     await expect(correct(c.id, A, f, 21, 0.9, 0)).rejects.toThrow(/next correction must be revision 1|kind_shape/);
     // Non-correction rows can never carry correction fields; reductions and fills carry no amount.
     await expect(svc(`INSERT INTO public.futures_strategy_attribution_events(user_id, execution_environment, entry_order_id, kind, qty, evidence_ref, corrected_qty) VALUES ($1, 'production', $2, 'entry_fill', 1, 'cf', 2)`, [A, c.id])).rejects.toThrow(/correction_fields/);

@@ -358,3 +358,13 @@ See the specification: engine integration, paper/live trading, backtesting, risk
 - [x] D. Strategy attribution draft migration + rollback + tests (not applied)
 - [x] E. Owner decision register
 - [x] Final report, full tests, commit
+
+## Phase 4E (13 Nov)
+- [x] A. Fresh export (13 Nov 09:19 UTC) verified and restored locally; 0046 + rollback PASS on the real export (verifier role/ACL defect fixed)
+- [ ] A1. ZIP named in the brief — not received; the same-day export object was verified instead
+- [x] B. 0047 correction review; successor draft 0048 + rollback + PGlite and real PostgreSQL tests (not applied)
+- [x] C. Paper engine accounting review (10 findings, 3 characterized)
+- [x] D. Paper worker design (design only)
+- [x] E. Owner decision register updated (all NOT APPROVED)
+- [x] F/G. Tests, final report, commit
+- [ ] Owner: approve 0046 successor scope (C6/C7), 0048, policy values, budget semantics, retention — blocked on owner
