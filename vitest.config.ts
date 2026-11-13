@@ -9,6 +9,9 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
+    // In-memory PostgreSQL (PGlite) suites create fresh databases per test; under full-suite parallel load that can take
+    // longer than the 5 s default. Tests with their own timeout keep it.
+    testTimeout: 30_000,
   },
   resolve: {
     alias: { "@": path.resolve(__dirname, "./src") },

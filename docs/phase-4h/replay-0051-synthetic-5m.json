@@ -1,0 +1,32 @@
+{
+  "timeframe": "5m",
+  "candles": 600,
+  "accounts": 2,
+  "commits": 1200,
+  "databaseRefusals": 0,
+  "events": {
+    "order_accepted": 128,
+    "entry_fill": 127,
+    "entry_cancelled": 50,
+    "order_rejected": 215,
+    "funding": 7,
+    "exit_fill": 125,
+    "liquidation": 1
+  },
+  "databaseOutcomes": {
+    "none": 1159,
+    "time": 21,
+    "stop": 79,
+    "target": 24,
+    "liquidation_open": 1,
+    "stop_open": 1
+  },
+  "engineExitReasons": {
+    "stop": 80,
+    "time": 21,
+    "target": 24,
+    "liquidation": 1
+  },
+  "fundingChargesRequired": 7,
+  "reasonMismatches": 0
+}

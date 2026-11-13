@@ -11,7 +11,12 @@ import { CFG, M, as, makeDb, rawBundle, type OHLC } from "./fp-v3-harness";
 export const MIGRATION_0050 = readFileSync("docs/proposed-migrations/0050_futures_paper_worker_gateway.sql", "utf8");
 export const ROLLBACK_0050 = readFileSync("docs/proposed-migrations/0050_futures_paper_worker_gateway.rollback.sql", "utf8");
 export const ROLLBACK_0049 = readFileSync("docs/proposed-migrations/0049_futures_paper_ledger_v3.rollback.sql", "utf8");
-export async function makeGatewayDb() { const db = await makeDb(); await db.exec(MIGRATION_0050); return db; }
+/** FP_WITH_0051=1 additionally applies DRAFT 0051 (Phase 4H) so the Phase 4G gateway suites can be re-run through it. */
+export async function makeGatewayDb() {
+  const db = await makeDb(); await db.exec(MIGRATION_0050);
+  if (process.env["FP_WITH_0051"] === "1") await db.exec(readFileSync("docs/proposed-migrations/0051_futures_paper_event_completeness.sql", "utf8"));
+  return db;
+}
 /** Test config with a one-hour data age so recorded past candles may still approve entries (a TEST INPUT). */
 export const CFG_H: FPConfig = { ...CFG, limits: { ...CFG.limits, maxDataAgeMs: 3_600_000 } };
 

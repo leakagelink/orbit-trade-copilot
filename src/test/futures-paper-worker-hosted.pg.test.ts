@@ -34,6 +34,7 @@ async function freshDb(gateway = true) {
   await admin.unsafe(`CREATE DATABASE ${name}`);
   const url = URL!.replace(/\/[^/]*$/, `/${name}`), owner = connect(url, 4);
   await owner.unsafe(STUB); await owner.unsafe(M49); if (gateway) await owner.unsafe(M50);
+  if (gateway && process.env["FP_WITH_0051"] === "1") await owner.unsafe(readFileSync("docs/proposed-migrations/0051_futures_paper_event_completeness.sql", "utf8")); // Phase 4H re-run
   return { url, owner };
 }
 const asService = <T,>(sql: Sql, f: (tx: Sql) => Promise<T>, iso?: string) => sql.begin(iso ?? "", async (tx) => { await tx.unsafe(`SET LOCAL ROLE service_role`); return f(tx as unknown as Sql); }) as Promise<T>;

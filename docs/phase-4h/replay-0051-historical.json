@@ -1,0 +1,25 @@
+{
+  "candles": 864,
+  "timeframe": "5m",
+  "window": [
+    "2026-11-10T00:00:00.000Z",
+    "2026-11-13T00:00:00.000Z"
+  ],
+  "committed": 864,
+  "databaseRefusals": 0,
+  "events": {
+    "order_accepted": 27,
+    "entry_fill": 27,
+    "order_rejected": 261,
+    "exit_fill": 27,
+    "funding": 2
+  },
+  "databaseOutcomes": {
+    "none": 372,
+    "stop": 12,
+    "time": 13,
+    "target": 2
+  },
+  "fundingChargesRequired": 2,
+  "exposedSymbolCandlesChecked": 399
+}
