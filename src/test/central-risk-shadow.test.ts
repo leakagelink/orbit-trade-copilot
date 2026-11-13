@@ -93,7 +93,8 @@ describe("Shadow ACCEPT / REJECT / INSUFFICIENT_DATA", () => {
   });
   it("detects a stale mark price", async () => {
     const r = await run(fullPorts(GOOD, { markPrice: async () => ({ markPrice: 100_000, time: NOW - 60_000 }) }).p);
-    expect(r.verdict).toBe("REJECT"); expect(r.failedChecks.map((c) => c.id)).toContain("market_data");
+    // Phase 4D: stale evidence is missing evidence → INSUFFICIENT_DATA (was REJECT in Phase 4B).
+    expect(r.verdict).toBe("INSUFFICIENT_DATA"); expect(r.missingInputs).toContain("market_data"); expect(r.failedChecks).toEqual([]);
     expect(r.marketDataTimestamp).toBe(NOW - 60_000);
   });
   it("no verified price → INSUFFICIENT_DATA before any proposal is formed", async () => {

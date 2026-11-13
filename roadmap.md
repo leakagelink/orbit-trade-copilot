@@ -347,7 +347,8 @@ See the specification: engine integration, paper/live trading, backtesting, risk
 - [x] Reconnect AI Prime Tech in this workspace and verify (done 12 Nov)
 
 ## Workspace move (13 Nov 08:54 UTC)
-- [ ] Connect AI Prime Tech in the new workspace (connection only; AI calls stay disabled per owner rule)
+- [ ] Connect AI Prime Tech in the new workspace — blocked: owner declined the connection card on 13 Nov; waiting for owner to connect
+- [x] Explain sharing: connections cannot carry across separate workspaces; within one workspace the owner shares under Sharing
 - [ ] Explain sharing: connections cannot carry across separate workspaces; within a workspace the owner shares under Sharing
 
 ## Phase 4D (13 Nov)

@@ -95,16 +95,31 @@ export interface ShadowRecord {
   proposedLeverage: number | null; proposedLiquidationBufferPct: number | null; liquidationPriceEstimate: number | null;
   /** Ticket vs. the engine's own sizing. Informational: shadow mode never resizes or refuses the ticket. */
   ticketComparison: { ticketNotional: number; ticketLeverage: number; withinEngineSize: boolean | null; withinEngineLeverage: boolean | null };
-  reads: ReadProvenance[]; contextSnapshotHash: string | null; evaluationDurationMs: number; internalError: string | null;
+  reads: ReadProvenance[]; contextSnapshotHash: string | null; evaluationDurationMs: number; internalError: ShadowErrorCode | null;
   executionAuthorized: false; affectsOrderPath: false; shadowOnly: true; note: typeof SHADOW_NOTE;
 }
 
-function deepFreeze<T>(o: T): T { if (o && typeof o === "object") { for (const v of Object.values(o)) deepFreeze(v); Object.freeze(o); } return o; }
+/** Recursively freezes every nested object and array (used for normal AND last-resort records). */
+export function deepFreeze<T>(o: T): T { if (o && typeof o === "object") { for (const v of Object.values(o)) deepFreeze(v); Object.freeze(o); } return o; }
+
+/** Bounded internal error codes. Raw exception text is never copied into a record (it can carry secrets). */
+export const SHADOW_ERROR_CODES = ["SHADOW_EVALUATION_FAILED", "SHADOW_RECORD_BUILD_FAILED"] as const;
+export type ShadowErrorCode = (typeof SHADOW_ERROR_CODES)[number];
+/** Record text must be one of the engine's own short phrases; anything else is replaced, never copied. */
+const SAFE_TEXT = /^[A-Za-z0-9 _.,:;()'\/+\-]{1,200}$/;
+const SECRETISH = /(secret|password|passwd|token|bearer|authorization|api[_-]?key|x-mbx|signature|postgres(ql)?:|sb_secret|service_role|ciphertext|BEGIN [A-Z ]*KEY)/i;
+export function safeText(x: unknown, fallback = "redacted"): string { return typeof x === "string" && SAFE_TEXT.test(x) && !SECRETISH.test(x) ? x : fallback; }
+function safeReads(rs: ReadProvenance[]): ReadProvenance[] {
+  return rs.map((r) => ({ source: safeText(r.source, "unknown_source"), ok: r.ok === true, detail: safeText(r.detail), observedAt: typeof r.observedAt === "number" && Number.isFinite(r.observedAt) ? r.observedAt : null }));
+}
+function safeChecks(cs: RiskCheck[]): RiskCheck[] { return cs.map((c) => ({ id: safeText(c.id, "check"), status: c.status, detail: safeText(String(c.detail).replace(/[^\x20-\x7e]/g, " "), "detail withheld") })); }
 
 export interface RecordInput {
   ticket: ShadowTicket; account: ShadowAccount; strategyId: string; proposalCreatedAt: number;
   startedAt: number; finishedAt: number; proposal: TradeProposal | null; decision: RiskDecision | null;
-  context: RiskContext | null; reads: ReadProvenance[]; adaptProblem: { id: string; status: "fail" | "missing"; detail: string } | null; internalError: string | null;
+  context: RiskContext | null; reads: ReadProvenance[]; adaptProblem: { id: string; status: "fail" | "missing"; detail: string } | null; internalError: ShadowErrorCode | null;
+  /** Time of the mark price that was read (also when it was refused as stale). */
+  marketDataTimestamp?: number | null;
 }
 /** Builds the frozen shadow record. Holds no credentials, keys or exchange account identifiers beyond the connection id. */
 export async function buildShadowRecord(x: RecordInput): Promise<ShadowRecord> {
@@ -112,8 +127,14 @@ export async function buildShadowRecord(x: RecordInput): Promise<ShadowRecord> {
   let checks: RiskCheck[], verdict: RiskVerdict;
   if (x.internalError) { checks = [{ id: "shadow_internal", status: "missing", detail: "Shadow evaluation failed internally; nothing is known" }]; verdict = "INSUFFICIENT_DATA"; }
   else if (x.adaptProblem) { checks = [x.adaptProblem]; verdict = x.adaptProblem.status === "fail" ? "REJECT" : "INSUFFICIENT_DATA"; }
-  else { checks = x.decision ? x.decision.checks : [{ id: "decision", status: "missing", detail: "No decision" }]; verdict = x.decision ? x.decision.verdict : "INSUFFICIENT_DATA"; }
-  const missing = [...new Set([...checks.filter((c) => c.status === "missing").map((c) => c.id), ...(x.context ? missingContextInputs(x.context) : []), ...x.reads.filter((r) => !r.ok).map((r) => r.source)])].sort();
+  else {
+    checks = x.decision ? x.decision.checks : [{ id: "decision", status: "missing", detail: "No decision" }];
+    // Missing or stale market data is missing evidence, never a proven violation: market_data is never a REJECT reason.
+    checks = checks.map((c) => (c.id === "market_data" && c.status === "fail" ? { ...c, status: "missing" as const, detail: `Stale market data treated as unavailable: ${c.detail}` } : c));
+    verdict = !x.decision ? "INSUFFICIENT_DATA" : checks.some((c) => c.status === "fail") ? "REJECT" : checks.some((c) => c.status === "missing") ? "INSUFFICIENT_DATA" : x.decision.verdict;
+  }
+  checks = safeChecks(checks);
+  const missing = [...new Set([...checks.filter((c) => c.status === "missing").map((c) => c.id), ...(x.context ? missingContextInputs(x.context) : []), ...x.reads.filter((r) => !r.ok).map((r) => safeText(r.source, "unknown_source"))])].sort();
   const s = verdict === "ACCEPT" ? x.decision?.sizing ?? null : null;
   const stop = x.proposal?.stopPrice ?? null;
   const buffer = s && s.liquidationPrice !== null && stop !== null ? ((direction === "LONG" ? stop - s.liquidationPrice : s.liquidationPrice - stop) / s.entryEstimate) * 100 : null;
@@ -122,13 +143,13 @@ export async function buildShadowRecord(x: RecordInput): Promise<ShadowRecord> {
     recordVersion: SHADOW_RECORD_VERSION, riskEngineVersion: CENTRAL_RISK_VERSION, policyVersion: SHADOW_POLICY_VERSION,
     proposalId: x.proposal?.proposalId ?? null, correlationId: `futures:${x.ticket.requestId}`, accountId: x.account.connectionId, strategyId: x.strategyId,
     environmentLabel: environmentLabel(x.account), symbol: x.ticket.symbol, direction, proposalTimestamp: x.proposalCreatedAt, evaluationTimestamp: x.finishedAt,
-    marketDataTimestamp: x.context?.market?.markTimestamp ?? null,
+    marketDataTimestamp: x.context?.market?.markTimestamp ?? x.marketDataTimestamp ?? null,
     verdict, failedChecks: checks.filter((c) => c.status === "fail"), missingInputs: missing, checks,
     sizing: s ? { qty: s.qty, notional: s.notional, margin: s.margin, riskAmount: s.riskAmount, binding: s.binding } : null,
     proposedLeverage: s ? s.leverage : null, proposedLiquidationBufferPct: buffer, liquidationPriceEstimate: s?.liquidationPrice ?? null,
     ticketComparison: { ticketNotional, ticketLeverage: x.ticket.leverage, withinEngineSize: s ? ticketNotional <= s.notional + 1e-9 : null, withinEngineLeverage: s ? x.ticket.leverage <= s.leverage : null },
-    reads: x.reads, contextSnapshotHash: x.context ? await evidenceHash(x.context) : null, evaluationDurationMs: Math.max(0, x.finishedAt - x.startedAt),
-    internalError: x.internalError, executionAuthorized: false, affectsOrderPath: false, shadowOnly: true, note: SHADOW_NOTE,
+    reads: safeReads(x.reads), contextSnapshotHash: x.context ? await evidenceHash(x.context) : null, evaluationDurationMs: Math.max(0, x.finishedAt - x.startedAt),
+    internalError: x.internalError ? ((SHADOW_ERROR_CODES as readonly string[]).includes(x.internalError) ? x.internalError : "SHADOW_EVALUATION_FAILED") : null, executionAuthorized: false, affectsOrderPath: false, shadowOnly: true, note: SHADOW_NOTE,
   };
   return deepFreeze(rec);
 }
@@ -160,4 +181,34 @@ export function maintenanceMarginRateFor(brackets: LeverageBracket[] | null, not
   if (!brackets?.length || !(notional >= 0)) return null;
   const b = brackets.find((x) => notional >= x.notionalFloor && notional < x.notionalCap);
   return b && b.maintMarginRatio > 0 && b.maintMarginRatio < 1 ? b.maintMarginRatio : null;
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Pre-claim / post-claim order snapshot semantics (Phase 4D: design + pure classifier; NOT wired to any order path).
+// Pre-claim (taken before the order path claims its intent): ANY order carrying this proposal's correlation key means
+// the proposal was already claimed → duplicate. Post-claim (taken after the claim): EXACTLY ONE order with the own key is
+// expected and is identified by that exact key — it is not silently excluded. A second own-key row is a duplicate; no
+// own-key row is an inconsistent snapshot (unknown → INSUFFICIENT_DATA); every other pending order still counts as
+// unresolved, so unrelated duplicates and unknown outcomes are never suppressed.
+// ---------------------------------------------------------------------------------------------------------------------
+export type SnapshotPhase = "pre_claim" | "post_claim";
+export interface SnapshotOrder { idempotencyKey: string | null; status: string }
+export interface SnapshotClassification {
+  phase: SnapshotPhase; ownOrders: number; sameProposalSeen: boolean | null; unresolvedOrders: number | null;
+  outcome: "CLEAN" | "DUPLICATE" | "INCONSISTENT"; detail: string;
+}
+const UNRESOLVED_STATUSES = new Set(["pending", "open", "partially_filled"]);
+export function classifyOrderSnapshot(phase: SnapshotPhase, ownCorrelationId: string, orders: SnapshotOrder[] | null): SnapshotClassification {
+  if (!Array.isArray(orders) || typeof ownCorrelationId !== "string" || !ownCorrelationId) return { phase, ownOrders: 0, sameProposalSeen: null, unresolvedOrders: null, outcome: "INCONSISTENT", detail: "Order snapshot unavailable" };
+  const own = orders.filter((o) => o.idempotencyKey === ownCorrelationId);
+  const otherUnresolved = orders.filter((o) => o.idempotencyKey !== ownCorrelationId && UNRESOLVED_STATUSES.has(o.status)).length;
+  const ownUnresolved = own.filter((o) => UNRESOLVED_STATUSES.has(o.status)).length;
+  if (phase === "pre_claim") {
+    return own.length > 0
+      ? { phase, ownOrders: own.length, sameProposalSeen: true, unresolvedOrders: otherUnresolved + ownUnresolved, outcome: "DUPLICATE", detail: "Proposal already claimed before this observation" }
+      : { phase, ownOrders: 0, sameProposalSeen: false, unresolvedOrders: otherUnresolved, outcome: "CLEAN", detail: "No order carries this proposal's key" };
+  }
+  if (own.length === 0) return { phase, ownOrders: 0, sameProposalSeen: null, unresolvedOrders: null, outcome: "INCONSISTENT", detail: "Post-claim snapshot does not contain the claimed order" };
+  if (own.length > 1) return { phase, ownOrders: own.length, sameProposalSeen: true, unresolvedOrders: otherUnresolved + ownUnresolved, outcome: "DUPLICATE", detail: "More than one order carries this proposal's key" };
+  return { phase, ownOrders: 1, sameProposalSeen: false, unresolvedOrders: otherUnresolved, outcome: "CLEAN", detail: "Exactly one claimed order matches by correlation key; all other orders are counted as usual" };
 }
