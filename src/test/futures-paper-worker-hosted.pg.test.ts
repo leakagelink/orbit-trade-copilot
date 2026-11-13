@@ -53,16 +53,19 @@ const commitsOf = (sql: Sql, id: string) => num(sql, `SELECT count(*)::int n FRO
 
 const CAST: Record<string, string> = { p_account: "::uuid", p_holder: "::uuid", p_user: "::uuid", p_fence: "::bigint", p_expected_seq: "::bigint", p_bar_t: "::bigint", p_ttl_seconds: "::integer", p_payload: "::jsonb", p_provenance: "::jsonb", p_code: "::text" };
 /** Data API emulation over a real pool: one call = one READ COMMITTED transaction; driver connection errors are thrown (no reply). */
-function pgRpc(sql: Sql, o: { cancelOnAbort?: boolean } = {}): HostedRpc {
+function pgRpc(sql: Sql, o: { cancelOnAbort?: boolean; autocommit?: boolean } = {}): HostedRpc {
   return async (fn, args, signal) => {
     const keys = Object.keys(args), params: unknown[] = [];
     const list = keys.map((k) => { params.push(args[k]); // postgres.js serializes jsonb parameters itself
       return k === "p_ids" ? `${k} => ARRAY(SELECT jsonb_array_elements_text($${params.length}::jsonb))` : `${k} => $${params.length}${CAST[k] ?? ""}`; });
     try {
-      const rows = await asService(sql, async (tx) => {
+      // autocommit: a connection whose session role is already service_role runs the call as one implicit transaction
+      // (used where the backend is killed: postgres.js 3.4.9 schedules its ROLLBACK write on the dead socket otherwise).
+      const rows = o.autocommit ? await sql.unsafe(`SELECT public.${fn}(${list.join(", ")}) AS r`, params as never[]) : await asService(sql, async (tx) => {
         const q = tx.unsafe(`SELECT public.${fn}(${list.join(", ")}) AS r`, params as never[]);
-        if (o.cancelOnAbort !== false) signal.addEventListener("abort", () => { void q.cancel(); });
-        return q;
+        const onAbort = () => { try { Promise.resolve(q.cancel()).catch(() => {}); } catch { /* connection already gone */ } };
+        if (o.cancelOnAbort !== false) signal.addEventListener("abort", onAbort, { once: true });
+        try { return await q; } finally { signal.removeEventListener("abort", onAbort); }
       });
       return { data: rows[0]!["r"] ?? null, error: null, status: 200 };
     } catch (e) {
@@ -148,7 +151,9 @@ describe.skipIf(!URL)("hosted worker connection on real PostgreSQL sessions", ()
   it("a backend killed in the middle of a commit: the transaction rolls back; no halt; the candle is committed once later", async () => {
     const { url, owner } = await freshDb(); const user = "00000000-0000-4000-8000-000000000c05"; await budgets(owner, user, 500); const id = await account(owner, user);
     const lock = holdAccountLock(owner, id); await lock.ready;
-    const running = tick(pgRpc(connect(url)), id, { timeoutMs: 3_000 });
+    const direct = postgres(url, { max: 2, onnotice: () => {}, idle_timeout: 5, connection: { role: "service_role" } }); opened.push(direct);
+    expect((await direct.unsafe(`SELECT current_user AS u, current_setting('transaction_isolation') AS i`))[0]).toEqual({ u: "service_role", i: "read committed" });
+    const running = tick(pgRpc(direct, { autocommit: true }), id, { timeoutMs: 3_000 });
     await waitFor(async () => (await num(owner, `SELECT count(*)::int n FROM pg_stat_activity WHERE query LIKE '%fpw_commit%' AND wait_event_type = 'Lock'`)) === 1);
     await owner.unsafe(`SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE query LIKE '%fpw_commit%' AND wait_event_type = 'Lock'`);
     await new Promise((res) => setTimeout(res, 200)); await lock.release();

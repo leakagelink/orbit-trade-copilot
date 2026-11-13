@@ -88,8 +88,8 @@ describe("fenced leases and the one-statement snapshot", () => {
   it("the snapshot equals the Phase 4F multi-query view and is empty without the lease", async () => {
     const { id } = await setup(); const f = await lease(id);
     const p = await prepare(id, T0, await intentAt(T0, "snap")); expect((await commit(id, f, 0, T0, p.payload, p.provenance)).error).toBeNull();
-    const s = (await callFn(db, "fpw_snapshot", { p_account: id, p_holder: HOLDER_A, p_fence: f })).data as Record<string, never>;
-    const v = viewFromRows(s["account"], s["account_budget"], s["usage"], s["costs"], s["approvals"], s["positions"]);
+    const s = (await callFn(db, "fpw_snapshot", { p_account: id, p_holder: HOLDER_A, p_fence: f })).data as { account: Record<string, unknown>; account_budget: Record<string, unknown> | null; usage: Record<string, unknown>[]; costs: Record<string, unknown>[]; approvals: Record<string, unknown>[]; positions: Record<string, unknown>[] };
+    const v = viewFromRows(s.account, s.account_budget, s.usage, s.costs, s.approvals, s.positions);
     expect(v).toEqual(await loadView(db, id));
     expect(Object.keys(v.ledger.approvals)).toEqual(["BTCUSDT"]);
     expect((await callFn(db, "fpw_snapshot", { p_account: id, p_holder: HOLDER_B, p_fence: f })).data).toBeNull();

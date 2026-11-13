@@ -71,3 +71,13 @@ paper-ledger growth (1 m candles ≈ 525,600 commits and up to 1.05 M candle row
 | E2 | Engine reads strategy, sub-budget and account budgets from the database and sizes acceptance with `riskEngineStrategyBudget` (closed + open + pending) | Resolves C1/C5; today 0049 can refuse an approval the engine accepted, which the planner cannot classify (halt for review) |
 | E3 | Planner classification for approval-time refusals (`approval refused: …`) | Today they are UNCLASSIFIED → halt for review (safe, but stops the account) |
 | E4 | Per-instrument/strategy cost used by the engine at acceptance | A higher database cost than the engine's makes 0049 refuse (tested) |
+
+## 6. Phase 4G additions (13 Nov 2026) — all NOT APPROVED
+
+| # | Item | Status |
+|---|---|---|
+| G-1 | Draft **0050** (hosted worker gateway: fenced lease rows, one-statement snapshot, READ COMMITTED guard, wall-clock entry window, candle provenance, status audit, direct 0049 commit revoked from service_role). Requires 0049; never with 0045/0046 | Draft only — awaiting owner review; apply only with/after 0049 by separate approval |
+| G-2 | Operational constants in 0050 / the hosted connection: lease 10–300 s (default 120 s), RPC deadline 8 s, provenance fetch age 2 min (connection) / 15 min (database backstop), future skew 5 s | Engineering defaults — NOT approved policy |
+| G-3 | Finding G2 (0049 does not require the exits/liquidations/funding a recorded candle implies; exit reason unverifiable) — close in a successor of 0049 or accept as a worker-trust assumption | Owner decision |
+| G-4 | Least-privilege database role: the hosted Data API offers only `service_role` for server work; a dedicated worker role needs a direct database connection or custom-role tokens | Owner decision (design only; nothing created) |
+| G-5 | Hosted connection activation (`FUTURES_PAPER_WORKER_HOSTED=enabled`) and any schedule | Separate approvals — nothing set or scheduled |

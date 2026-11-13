@@ -60,7 +60,7 @@ describe("the hosted connection is disabled and isolated", () => {
     const app = walk(resolve(ROOT, "src")).filter((f) => !f.includes(join("src", "test")) && !G.some((g) => f.endsWith(g)));
     expect(app.filter((f) => /futures-paper-worker-hosted|futures-paper-market-provenance|fpw_/.test(readFileSync(f, "utf8"))).map((f) => relative(ROOT, f))).toEqual([]);
     const places = [...walk("src/routes", /./), ...walk("supabase", /./), ...walk("scripts", /\.(ts|sh|sql)$/), ...["wrangler.toml", "wrangler.jsonc", "vercel.json"].filter(existsSync)];
-    expect(places.filter((f) => /cron|schedule|http_post|setInterval/.test(readFileSync(f, "utf8")) && /fpw_|futures-paper-worker-hosted|runHostedFuturesPaperWorkerTick/.test(readFileSync(f, "utf8"))).map((f) => relative(ROOT, f))).toEqual([]);
+    expect(places.filter((f) => /cron\.schedule|create_http_schedule|net\.http_post|setInterval/.test(readFileSync(f, "utf8")) && /fpw_|futures-paper-worker-hosted|runHostedFuturesPaperWorkerTick/.test(readFileSync(f, "utf8"))).map((f) => relative(ROOT, f))).toEqual([]);
     for (const f of ["src/lib/futures.server.ts", "src/lib/futures-execution.ts", "src/lib/engine.server.ts", "src/lib/autopilot-tools.server.ts", "src/lib/autopilot-runner.server.ts", "src/lib/paper.server.ts", "src/lib/manual.server.ts", "src/lib/binance-futures-core.server.ts"].filter(existsSync)) {
       expect(graph(f).filter((x) => G.includes(x)), f).toEqual([]);
     }

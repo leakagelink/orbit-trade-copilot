@@ -387,3 +387,12 @@ See the specification: engine integration, paper/live trading, backtesting, risk
 - [x] docs/phase-4f/phase4f-final-report.md
 - [ ] Owner: review/apply 0049, hosted adapter (snapshot load + lease functions), fresh export, activation and schedule — blocked on owner approval
 
+
+## Phase 4G — pre-activation readiness (13 Nov 2026)
+- [x] A. Independent 0049 review (G1–G12); G1/G3–G6 addressed by draft 0050; 0045/0046/0049 absent from the hosted database
+- [ ] B. Fresh export restore — blocked: no export newer than 13 Nov 09:20 UTC (next possible after 09:19 UTC 14 Nov); existing export re-verified locally with 0049 + 0050 (PASS, labelled not fresh)
+- [x] C. Hosted worker connection (draft 0050 + disabled connection module; no route/schedule)
+- [x] D. Operational failure tests (PGlite + real PostgreSQL 34/34 ×3)
+- [x] E. Market-data provenance records (prices never marked verified)
+- [x] F. docs/phase-4g/phase4g-final-report.md
+- [ ] Owner: G2 decision, review/apply 0049 + 0050, policy values, enable/schedule approvals — blocked on owner

@@ -49,7 +49,7 @@ describe("G2 (open): 0049 checks submitted events but does not require the event
   });
   it("control: an exit OUTSIDE the recorded candle range is refused (what 0049 does enforce)", async () => {
     const id = await openLong(), barT = T0 + 2 * M, v = await loadView(db, id);
-    const b = bars(barT); b[0] = { ...b[0]!, mark: { ...b[0]!.mark, l: 98.5 }, trade: { ...b[0]!.trade, l: 98.5 } };
+    const b = bars(barT); b[0] = { ...b[0]!, mark: { ...b[0]!.mark, l: 98.5 }, trade: { ...b[0]!.trade, l: 98.5 } } as (typeof b)[number];
     const s = stepView(v, b, []); // the engine exits at the stop because its bar crossed it…
     expect(s.events.map((e) => e.kind)).toContain("exit_fill");
     const p = s.payload as { candles: Record<string, { mark: { l: number }; trade: { l: number } }> };
