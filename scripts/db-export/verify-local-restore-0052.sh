@@ -240,7 +240,7 @@ rbone 0051 "$R51" "$R51_SHA"
 rbone 0050 "$R50" "$R50_SHA"
 chk "0049 grant restored after 0050 rollback" "select has_function_privilege('service_role', 'public.futures_paper_commit_bar_v3(uuid,bigint,bigint,jsonb)', 'EXECUTE') and not exists(select 1 from pg_proc where proname like 'fpw\_%')" ""
 rbone 0049 "$RB" "$RB_SHA"
-LEFT_SQL="select not exists(select 1 from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and (relname like 'futures_paper%' or relname in ('strategy_risk_budgets','account_risk_budgets'))) and not exists(select 1 from pg_proc where proname like 'fp2_%' or proname like 'fp3_%' or proname like 'fpw_%' or proname like '%futures_paper%' or proname in ('guard_strategy_risk_budget','guard_account_risk_budget'))"
+LEFT_SQL="select not exists(select 1 from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and (relname like 'futures_paper%' or relname in ('strategy_risk_budgets','account_risk_budgets'))) and not exists(select 1 from pg_proc where proname ~ '^fp[2-5]_' or proname like 'fpw_%' or proname like '%futures_paper%' or proname in ('guard_strategy_risk_budget','guard_account_risk_budget'))"
 chk "Nothing left after the five rollbacks" "$LEFT_SQL" ""
 same && row "Pre-existing objects unchanged at the end" PASS "fingerprint $FP0; $NT0 public tables" || row "Pre-existing objects unchanged at the end" FAIL "fingerprint changed"
 
@@ -256,6 +256,7 @@ not a Lovable Cloud restore and not an approval to apply any of 0049–0053. Not
 - pg_restore errors: $ERRS total — $ERR_EXPECTED tolerated (managed-extension objects: cron/net/vault), $ERR_UNEXPECTED unexpected
 - Ambient connection variables ignored: ${AMBIENT:-none}
 - 0049 SHA-256 \`$MIG_SHA\` / rollback \`$RB_SHA\`; 0050 SHA-256 \`$M50_SHA\` / rollback \`$R50_SHA\`
+- 0051 SHA-256 \`$M51_SHA\` / rollback \`$R51_SHA\`; 0052 SHA-256 \`$M52_SHA\` / rollback \`$R52_SHA\`; 0053 SHA-256 \`$M53_SHA\` / rollback \`$R53_SHA\`
 
 | Check | Result | Detail |
 |---|---|---|
