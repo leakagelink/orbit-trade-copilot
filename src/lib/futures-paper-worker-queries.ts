@@ -2,6 +2,9 @@
 // client, no connection, nothing executes here. The real-PostgreSQL tests run exactly these statements; a hosted port
 // would need them wrapped in service-only functions (not drafted: activation is a separate owner approval).
 export const FP_SQL = {
+  // account, accountBudget, usage, costs, approvals and positions must be read inside ONE snapshot, or a concurrent
+  // commit can tear the view (observed in the real-PostgreSQL race test without leases).
+  snapshotBegin: `BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY`,
   account: `SELECT id, user_id, status, halted, seq, cursor_t, tf_ms, timeframe, symbols, config, state FROM public.futures_paper_accounts WHERE id = $1`,
   accountBudget: `SELECT max_loss, research_max_loss, scalping_max_loss FROM public.account_risk_budgets WHERE user_id = $1 AND environment = 'paper'`,
   // Same definition as fp3_usage: closed losses per (account, proposal) with an exit (wins never refill) + open reserved

@@ -67,9 +67,12 @@ function pgPorts(sql: Sql, o: { intents: WorkerPorts["intents"]; noLease?: boole
       async tryAcquireLease(id) { alive(); return o.noLease ? true : (await sql.unsafe(FP_SQL.lease, [id]))[0]!["ok"] === true; },
       async releaseLease(id) { alive(); if (!o.noLease) await sql.unsafe(FP_SQL.release, [id]); },
       async load(id) {
-        alive(); const a = (await sql.unsafe(FP_SQL.account, [id]))[0]!; const user = String(a["user_id"]);
-        const [ab, u, c, ap, p] = await Promise.all([sql.unsafe(FP_SQL.accountBudget, [user]), sql.unsafe(FP_SQL.usage, [user]), sql.unsafe(FP_SQL.costs, [user]), sql.unsafe(FP_SQL.approvals, [id]), sql.unsafe(FP_SQL.positions, [id])]);
-        return viewFromRows(a, ab[0] ?? null, [...u], [...c], [...ap], [...p]);
+        alive();
+        return sql.begin("ISOLATION LEVEL REPEATABLE READ READ ONLY", async (tx) => { // one snapshot (FP_SQL.snapshotBegin)
+          const a = (await tx.unsafe(FP_SQL.account, [id]))[0]!; const user = String(a["user_id"]);
+          const ab = await tx.unsafe(FP_SQL.accountBudget, [user]), u = await tx.unsafe(FP_SQL.usage, [user]), c = await tx.unsafe(FP_SQL.costs, [user]), ap = await tx.unsafe(FP_SQL.approvals, [id]), p = await tx.unsafe(FP_SQL.positions, [id]);
+          return viewFromRows(a, ab[0] ?? null, [...u], [...c], [...ap], [...p]);
+        });
       },
       async evaluatedProposals(user, ids) { alive(); return (await sql.unsafe(FP_SQL.evaluated, [user, ids] as never[])).map((r) => String(r["proposal_id"])); },
       async commit(id, seq, barT, payload): Promise<CommitOutcome> {
@@ -112,7 +115,20 @@ describe.skipIf(!URL)("Futures paper worker on real PostgreSQL sessions", () => 
     expect(await n(owner, `SELECT count(*)::int n FROM public.futures_paper_commits WHERE account_id=$1`, [id])).toBe(N);
     const fills = await owner.unsafe(`SELECT fill_id FROM public.futures_paper_events WHERE account_id=$1 AND fill_id IS NOT NULL`, [id]);
     expect(new Set(fills.map((r) => r["fill_id"])).size).toBe(fills.length);
-    expect(workers.flatMap((w) => w.metrics.map((m) => m.code)).filter((c) => c === "HALT_FOR_REVIEW")).toEqual([]);
+    expect(workers.flatMap((w) => w.metrics).filter((m) => m.code === "HALT_FOR_REVIEW").map((m) => m.detailCode)).toEqual([]);
+  }, 120_000);
+
+  it("a torn (non-snapshot) load is re-read once instead of pausing the account; a persistent mismatch still halts", async () => {
+    const { url, owner } = await freshDb(); const user = "00000000-0000-4000-8000-000000000a08"; await budgets(owner, user, 500); const id = await account(owner, user);
+    const w = pgPorts(connect(url), { intents: intentsFor("tr") });
+    await tick(w.ports, id, "T", 1); // an open approval exists now
+    const load = w.ports.db.load; let first = true;
+    w.ports.db.load = async (x) => { const v = await load(x); if (first) { first = false; v.ledger.approvals = {}; } return v; }; // one torn read
+    const r = await tick(w.ports, id, "T", 1);
+    expect(r.metrics.map((m) => m.code)).toEqual(["LEDGER_STATE_MISMATCH", "COMMITTED", "CATCH_UP_LIMIT"]);
+    w.ports.db.load = async (x) => { const v = await load(x); v.ledger.approvals = {}; v.ledger.positions = {}; return v; }; // never consistent
+    const r2 = await tick(w.ports, id, "T", 5);
+    expect(r2.metrics.map((m) => m.code)).toEqual(["LEDGER_STATE_MISMATCH", "LEDGER_STATE_MISMATCH", "LEDGER_STATE_MISMATCH", "HALT_FOR_REVIEW"]);
   }, 120_000);
 
   it("crash BEFORE COMMIT (backend killed inside the transaction): nothing is written, the lease dies with the session, another worker continues", async () => {

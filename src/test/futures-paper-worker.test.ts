@@ -169,6 +169,6 @@ describe("database refusals: classified, bounded, never an ambiguous retry", () 
     const { id: id2 } = await setup();
     await runFuturesPaperWorkerTick(p.ports, { enabled: true, holder: "a", accounts: [id2], maxCandlesPerAccount: 1 });
     const load = p.ports.db.load; p.ports.db.load = async (x) => { const v = await load(x); v.ledger.approvals = {}; return v; }; // ledger lost the approval
-    expect((await runFuturesPaperWorkerTick(p.ports, { enabled: true, holder: "a", accounts: [id2] })).metrics.map((m) => m.code)).toEqual(["LEDGER_STATE_MISMATCH", "HALT_FOR_REVIEW"]);
+    expect((await runFuturesPaperWorkerTick(p.ports, { enabled: true, holder: "a", accounts: [id2] })).metrics.map((m) => m.code)).toEqual(["LEDGER_STATE_MISMATCH", "LEDGER_STATE_MISMATCH", "LEDGER_STATE_MISMATCH", "HALT_FOR_REVIEW"]); // re-read twice (maxReloads), then halt
   });
 });

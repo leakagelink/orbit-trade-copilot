@@ -379,3 +379,11 @@ See the specification: engine integration, paper/live trading, backtesting, risk
 - [x] 7. Full suite, real-export restores, up/down, RLS, real-PostgreSQL concurrency, typecheck, build
 - [x] 8. Phase 4E report updated; Phase 4F next-phase report
 - [ ] Owner: review 0049; 0048 validation outcome; budget amounts; retention confirmations; engine alignment E1–E4 — blocked on owner
+
+## Phase 4F — engine alignment & disabled worker (13 Nov 2026)
+- [x] E1 expiry cancellation · E2 database budgets (riskEngineStrategyBudget) · E3 bounded refusal codes · E4 0049 cost precedence
+- [x] Worker behind a disabled flag (lease, CAS cursor, idempotent replay, crash recovery, bounded retries, monitoring)
+- [x] Validation (PGlite, real PostgreSQL, synthetic + historical replays, zero unexplained refusals) and market-data provenance
+- [x] docs/phase-4f/phase4f-final-report.md
+- [ ] Owner: review/apply 0049, hosted adapter (snapshot load + lease functions), fresh export, activation and schedule — blocked on owner approval
+

@@ -297,7 +297,7 @@ describe("E3 — bounded deterministic classification of every 0049 refusal", ()
       expect(plan, msg).toMatchObject({ action: "recompute", code, rejected: { "v3prop-real": code } });
       // Applying the plan: the intent becomes a rejection with that code and the database accepts the candle.
       if (code === "APPROVAL_BASIS") {
-        const again = stepView(v, [bar("BTCUSDT", T0, M, FLAT), bar("ETHUSDT", T0, M, FLAT)], [intent("real", "BTCUSDT", T0 + M, "LONG", 99, 103)], [], { rejected: (plan as { rejected: Record<string, never> }).rejected });
+        const again = stepView(v, [bar("BTCUSDT", T0, M, FLAT), bar("ETHUSDT", T0, M, FLAT)], [intent("real", "BTCUSDT", T0 + M, "LONG", 99, 103)], [], { rejected: (plan as unknown as { rejected: Record<string, never> }).rejected });
         expect(again.events.map((e) => e.kind)).toEqual(["order_rejected"]); expect(again.events[0]!.reason).toMatch(/^\[APPROVAL_BASIS\]/);
         expect(await commitRaw(db, id, v.seq, T0, again.payload)).toBe(again.state.seq);
       }

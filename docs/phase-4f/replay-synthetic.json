@@ -1,0 +1,21 @@
+{
+  "candles": 1200,
+  "accounts": 2,
+  "commits": 2400,
+  "databaseRefusals": 0,
+  "budgetEqualityChecks": 7200,
+  "maxBudgetDifference": 2.5579538487363607e-13,
+  "events": {
+    "order_accepted": 297,
+    "entry_fill": 383,
+    "order_rejected": 389,
+    "entry_cancelled": 43,
+    "exit_fill": 295,
+    "funding": 13
+  },
+  "engineRefusals": {
+    "approval:APPROVAL_BUDGET_MISSING:engine-v3": 172,
+    "expiry:APPROVAL_EXPIRED:engine-v3": 26,
+    "approval:APPROVAL_STRATEGY_BUDGET:engine-v3": 99
+  }
+}

@@ -29,6 +29,7 @@ export interface WorkerPorts {
   db: {
     tryAcquireLease(accountId: string, holder: string): Promise<boolean>;
     releaseLease(accountId: string, holder: string): Promise<void>;
+    /** Must read every row from ONE snapshot (e.g. a REPEATABLE READ, READ ONLY transaction). */
     load(accountId: string): Promise<WorkerAccountView>;
     evaluatedProposals(userId: string, proposalIds: string[]): Promise<string[]>;
     commit(accountId: string, expectedSeq: number, barT: number, payload: unknown): Promise<CommitOutcome>;
@@ -86,7 +87,12 @@ async function runAccount(ports: WorkerPorts, o: typeof D & WorkerOptions, accou
     if (barT + tf + o.closeGraceMs > now) { rec({ code: "WAIT_CANDLE_NOT_CLOSED", accountId, barT, lagMs: now - (v.cursorT + tf) }); return; }
     if (v.state.accountCursor !== undefined && v.state.accountCursor > v.cursorT) { await halt(barT, "STATE_CURSOR_AHEAD"); return; }
     const problems = ledgerStateProblems(v.state, v.ledger);
-    if (problems.length) { rec({ code: "LEDGER_STATE_MISMATCH", accountId, barT, detailCode: "LEDGER_STATE_MISMATCH" }); await halt(barT, "LEDGER_STATE_MISMATCH"); return; }
+    if (problems.length) {
+      // A load that is not one snapshot can tear while another worker commits: re-read once (bounded) before halting.
+      rec({ code: "LEDGER_STATE_MISMATCH", accountId, barT, detailCode: "LEDGER_STATE_MISMATCH" });
+      if (++reloads <= o.maxReloads) { n--; continue; }
+      await halt(barT, "LEDGER_STATE_MISMATCH"); return;
+    }
 
     // Public market data: bounded attempts with backoff; nothing is ever forward-filled.
     let bundles: RawSymbolBundle[] | null = null;

@@ -1,0 +1,29 @@
+{
+  "candles": 864,
+  "timeframe": "5m",
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT"
+  ],
+  "window": [
+    "2026-11-10T00:00:00.000Z",
+    "2026-11-13T00:00:00.000Z"
+  ],
+  "committed": 864,
+  "databaseRefusals": 0,
+  "workerCodes": {
+    "COMMITTED": 864,
+    "CATCH_UP_LIMIT": 28,
+    "WAIT_CANDLE_NOT_CLOSED": 3
+  },
+  "events": {
+    "order_accepted": 22,
+    "entry_fill": 22,
+    "order_rejected": 266,
+    "exit_fill": 22
+  },
+  "engineRefusals": {
+    "approval:APPROVAL_STRATEGY_BUDGET:engine-v3": 173
+  },
+  "finalWallet": 919.2336157815594
+}
