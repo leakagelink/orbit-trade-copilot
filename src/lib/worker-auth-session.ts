@@ -129,7 +129,7 @@ const isPlainObject = (x: unknown): x is Record<string, unknown> => typeof x ===
  * Checks an issued session (sign-in or refresh) against the local clock; never returns token text in a failure.
  * Phase 4H.3: the reply's `user` object is MANDATORY and its `id` must be a UUID equal to the token subject, which must
  * equal the expected enrolled worker. Decoded claims are NOT signature verification — the data API verifies the
- * signature on every call, and the database (`fpw_id_check`, draft 0054) independently re-checks the caller's current
+ * signature on every call, and the database (the per-call identity check of draft 0054) independently re-checks the caller's current
  * identity status, roles and enrollment on every worker call.
  */
 export function verifyIssuedSession(body: unknown, now: number, o: { minTokenLifetimeMs: number; maxClockSkewMs: number; expectedSub: string }): Verified {

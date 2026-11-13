@@ -103,7 +103,7 @@ describe("1. sign-out is attempted exactly once after ANY unexpected exception o
     }
   });
   it("exception during monitoring (throws on every record, on sign-in only, or rejects asynchronously) never changes the tick", async () => {
-    const monitors: SessionOptions["monitor"][] = [
+    const monitors: NonNullable<SessionOptions["monitor"]>[] = [
       { record: () => { throw new Error(SECRET); } },
       { record: (m: SessionMetric) => { if (m.code === "SIGNED_IN" || m.code === "SIGNED_OUT") throw new Error(SECRET); } },
       { record: () => Promise.reject(new Error(SECRET)) as unknown as void },
@@ -285,6 +285,11 @@ describe("5. the disabled binding requires the expected worker identity", () => 
       await expect(runIdentityFuturesPaperTick(opts(fetchImpl as never))).rejects.toThrow(/IDENTITY_NOT_CONFIGURED/);
       expect(fetchImpl).not.toHaveBeenCalled();
     }
+  });
+  it("the expected worker id is configured nowhere in the repository and is unset in this environment", async () => {
+    const { existsSync, readFileSync } = await import("node:fs");
+    expect(process.env["FUTURES_PAPER_WORKER_USER_ID"]).toBeUndefined();
+    for (const f of [".env", ".env.example", "wrangler.jsonc", "wrangler.toml", "supabase/config.toml"].filter((x) => existsSync(x))) expect(readFileSync(f, "utf8"), f).not.toMatch(/FUTURES_PAPER_WORKER_USER_ID/);
   });
   it("a sign-in that returns a different identity is signed out once and never reaches a worker function", async () => {
     env(WORKER);
