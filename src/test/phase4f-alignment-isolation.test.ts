@@ -59,7 +59,9 @@ describe("Phase 4F module isolation", () => {
     for (const f of NEW) expect(readFileSync(f, "utf8"), f).not.toMatch(/\bfetch\(|supabase|process\.env|import\.meta\.env|createServerFn|new WebSocket|setTimeout|setInterval|\/fapi\//);
   });
   it("nothing in the app imports them; the real Futures order paths, Autopilot and the Spot paper path cannot reach them", () => {
-    const app = walk(resolve(ROOT, "src")).filter((f) => !f.includes(join("src", "test")) && !NEW.some((n) => f.endsWith(n)));
+    // Phase 4G's disabled hosted-connection modules build on these and are covered by phase4g-isolation.test.ts.
+    const PHASE_4G = ["src/lib/futures-paper-worker-hosted.ts", "src/lib/futures-paper-worker-hosted.server.ts", "src/lib/futures-paper-market-provenance.ts"];
+    const app = walk(resolve(ROOT, "src")).filter((f) => !f.includes(join("src", "test")) && ![...NEW, ...PHASE_4G].some((n) => f.endsWith(n)));
     expect(app.filter((f) => /futures-paper-engine-v3|futures-paper-market-data|futures-paper-worker/.test(readFileSync(f, "utf8"))).map((f) => relative(ROOT, f))).toEqual([]);
     for (const f of ["src/lib/futures.server.ts", "src/lib/futures-execution.ts", "src/lib/engine.server.ts", "src/lib/autopilot-tools.server.ts", "src/lib/paper.server.ts", "src/lib/manual.server.ts"].filter(existsSync)) {
       expect(graph(f).filter((x) => NEW.includes(x)), f).toEqual([]);
