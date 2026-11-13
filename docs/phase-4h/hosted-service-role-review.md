@@ -35,3 +35,47 @@ Scope: the disabled hosted Futures-paper worker connection (Phase 4G: `src/lib/f
 | 3 | Run the paper worker as a separate deployment that holds only the stage-2 credential, not the service key | Removes full service-role power from the paper code path entirely | Depends on platform deployment options; unverified |
 
 **Recommendation.** Do stage 1 and stage 2 before any activation. Until then, the connection must stay disabled.
+
+## 4. Phase 4H finalization update (13 Nov 2026)
+
+**Verdict: hosted worker security is BLOCKED.** No hosted change was made, nothing was enabled, and no user or secret was created.
+
+### Checked read-only against the hosted database catalog
+
+These facts are on the hosted database; nothing was written:
+- `auth.uid()` exists.
+- `public.has_role(uuid, app_role)` exists, with roles `user` / `admin` / `super_admin`.
+- `public.account_mfa_allowed()` exists.
+- No `futures_paper_*` object exists (all drafts are unapplied).
+- PostgreSQL is 17.11.
+- No custom paper database role exists.
+
+So the authorization model needed for a signed-in worker is available. That means a dedicated auth user calling `authenticated`-granted security-definer functions that check `auth.uid()`.
+
+### Stage 1 (configuration audit): implemented in draft 0052
+
+- **What it records.** Every budget, sub-budget, strategy budget and cost-assumption write is recorded with old/new value, actor, reason, version and hash chain. So are account creation (the frozen policy config) and account status/halt changes.
+- **What it refuses.** A budget, cost or account write without a reason.
+
+### Stage 2 (machine identity): drafted as 0053 and tested locally
+
+- **Registry.** An identity registry that only an admin can write.
+- **Enrollment.** Each account owner enrolls the worker explicitly for each of their accounts.
+- **Wrappers.** Six `fpw_id_*` wrappers, granted only to signed-in users, check the identity and the enrollment.
+- **Audit.** Each worker action leaves a bounded-code audit row.
+- **Service role locked out.** EXECUTE on the 0050 gateway is revoked from `service_role`.
+- **Connection code.** A disabled server binding (`futures-paper-worker-identity.server.ts`) signs in with the publishable key and never touches the service key.
+- **Tests.** PGlite tests, a stubbed `auth.uid()` and a synthetic-archive chain restore all pass.
+
+### Why it is still BLOCKED
+
+1. **Not verified on the hosted service.** That needs owner-approved production actions:
+   - creating the worker auth user;
+   - storing its password as a server secret;
+   - applying 0049–0053;
+   - checking token refresh during long ticks in the Workers runtime.
+   None is authorized in this phase.
+2. **Runtime isolation is not achieved.** The worker would still run in the same server runtime that holds the service key for the rest of the app. A compromise of that runtime still yields full service-role power. Code-level allowlisting does not make that key least-privileged. Removing the key from the paper path needs a separate deployment that holds only the worker credential (stage 3), and its feasibility on the platform is unverified.
+3. **Ordinary signed-in rights remain.** An enrolled worker identity still has every right an ordinary signed-in user has elsewhere in the app. It owns no data, so row-level security returns nothing it does not own.
+
+The connection stays disabled. Stage 2 should be applied and verified, and stage 3 decided, before any activation review.

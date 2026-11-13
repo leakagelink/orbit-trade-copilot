@@ -91,3 +91,16 @@ paper-ledger growth (1 m candles ≈ 525,600 commits and up to 1.05 M candle row
 | H-2 | 0051 engineering constants: 8 h funding grid, 1 s funding jitter, 1e-9 ambiguity band, 100,000-candle hold ceiling | NOT APPROVED |
 | H-3 | R2 (entry fills not required) and R5 (stopped account with open position freezes exits) | Owner decision |
 | H-4 | Least-privilege path: configuration audit (stage 1) and worker machine identity replacing service_role for the gateway (stage 2) | Design only — NOT APPROVED; nothing created |
+
+## 8. Phase 4H finalization (13 Nov 2026)
+
+| # | Item | Status |
+|---|---|---|
+| F-A | Entry-fill completeness | **Owner decision: REQUIRED.** Implemented in draft **0052** (database derives fills, partials, remainders and cancellations; claimed refusals verified by a rolled-back trial). Draft only — NOT APPROVED for application |
+| F-B | Stopped/halted account with open positions | **Owner decision: EXIT ONLY.** Implemented in draft 0052 and the (disabled) worker; engine already compliant. Stopped stays stopped; halt lifted only by an explicit audited change |
+| F-C | Timing and rounding | **Owner decision: CONSERVATIVE.** Register `docs/phase-4h/timing-and-rounding-register.md` (T1–T11); every value **NOT APPROVED** until individually confirmed |
+| F-1 | Draft **0052** (and rollback) — apply after 0049/0050/0051 only | Draft only — awaiting review and a fresh export |
+| F-2 | Draft **0053** worker identity (stage 2; revokes the gateway from service_role) | Draft only — NOT APPROVED; hosted verification needs a worker user and secret (production actions) |
+| F-3 | Configuration audit trail (budgets, sub-budgets, strategy budgets, costs, account policy config, status/halt; reason required) | Implemented in draft 0052 — NOT APPROVED; approves no value |
+| F-4 | Hosted worker security | **BLOCKED** (runtime still holds the service key; stage 3 undecided) |
+| F-5 | Fresh export after 14 Nov 2026 09:19 UTC and chain restore | **BLOCKED** (not yet possible) |
