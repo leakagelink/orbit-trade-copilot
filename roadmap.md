@@ -396,3 +396,11 @@ See the specification: engine integration, paper/live trading, backtesting, risk
 - [x] E. Market-data provenance records (prices never marked verified)
 - [x] F. docs/phase-4g/phase4g-final-report.md
 - [ ] Owner: G2 decision, review/apply 0049 + 0050, policy values, enable/schedule approvals — blocked on owner
+
+## Phase 4H — G2 database invariant remediation (13 Nov 2026)
+- [x] Successor draft 0051 (required funding and exits, frozen terms, no gaps, ambiguity refused) + rollback; 0049/0050 unchanged
+- [x] Tests: G2 regressions, adversarial cases, replays (0 refusals), real PostgreSQL concurrency 46/46 ×3
+- [x] Hosted service-role security review (docs/phase-4h/hosted-service-role-review.md)
+- [x] docs/phase-4h/phase4h-final-report.md
+- [ ] Fresh export after 14 Nov 09:19 UTC + restore with 0049→0050→0051 — blocked: export not yet possible
+- [ ] Owner: review 0051 and constants, decide R2/R5, least-privilege stages, apply approvals — blocked on owner

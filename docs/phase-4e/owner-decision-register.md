@@ -81,3 +81,13 @@ paper-ledger growth (1 m candles ≈ 525,600 commits and up to 1.05 M candle row
 | G-3 | Finding G2 (0049 does not require the exits/liquidations/funding a recorded candle implies; exit reason unverifiable) — close in a successor of 0049 or accept as a worker-trust assumption | Owner decision |
 | G-4 | Least-privilege database role: the hosted Data API offers only `service_role` for server work; a dedicated worker role needs a direct database connection or custom-role tokens | Owner decision (design only; nothing created) |
 | G-5 | Hosted connection activation (`FUTURES_PAPER_WORKER_HOSTED=enabled`) and any schedule | Separate approvals — nothing set or scheduled |
+
+## 7. Phase 4H (13 Nov 2026)
+
+| # | Item | Status |
+|---|---|---|
+| H-0 | Finding G2 | **Owner decision: MUST be fixed in a successor migration; not accepted as a paper limitation.** Implemented as draft **0051** |
+| H-1 | Draft **0051** (event completeness: required funding and exits derived by the database, frozen protection terms, no gaps while exposed, ambiguity refused; gateway commits via v4). Apply after 0049 and 0050 only | Draft only — NOT APPROVED; awaiting review and a fresh export |
+| H-2 | 0051 engineering constants: 8 h funding grid, 1 s funding jitter, 1e-9 ambiguity band, 100,000-candle hold ceiling | NOT APPROVED |
+| H-3 | R2 (entry fills not required) and R5 (stopped account with open position freezes exits) | Owner decision |
+| H-4 | Least-privilege path: configuration audit (stage 1) and worker machine identity replacing service_role for the gateway (stage 2) | Design only — NOT APPROVED; nothing created |
