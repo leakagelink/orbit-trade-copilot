@@ -81,7 +81,11 @@ async function runAccount(ports: WorkerPorts, o: typeof D & WorkerOptions, accou
   for (let n = 0; n < o.maxCandlesPerAccount; n++) {
     let v: WorkerAccountView;
     try { v = await ports.db.load(accountId); } catch { rec({ code: "LOAD_FAILED", accountId, barT: null }); return; }
-    if (v.status === "stopped") { rec({ code: "ACCOUNT_STOPPED", accountId, barT: null }); return; }
+    // Owner decision B (Phase 4H finalization, draft 0052): a stopped account with a position or a pending entry keeps
+    // processing candles EXIT-ONLY (no intents; the engine cancels pending remainders and runs stops, targets, time
+    // limits, liquidation and funding). A flat stopped account is finished: nothing more is processed.
+    const stopped = v.status === "stopped";
+    if (stopped && Object.keys(v.ledger.positions).length === 0 && Object.keys(v.ledger.approvals).length === 0) { rec({ code: "ACCOUNT_STOPPED", accountId, barT: null }); return; }
     const tf = FP_TIMEFRAMES[v.timeframe], barT = v.cursorT + tf, now = ports.clock.now();
     if (tf !== v.tfMs) { await halt(barT, "TIMEFRAME_MISMATCH"); return; }
     if (barT + tf + o.closeGraceMs > now) { rec({ code: "WAIT_CANDLE_NOT_CLOSED", accountId, barT, lagMs: now - (v.cursorT + tf) }); return; }
@@ -104,7 +108,7 @@ async function runAccount(ports: WorkerPorts, o: typeof D & WorkerOptions, accou
     const chk = selectClosedCandles(bundles, { symbols: v.symbols, timeframe: v.timeframe, barT, now: ports.clock.now(), closeGraceMs: o.closeGraceMs, maxFutureSkewMs: o.maxFutureSkewMs });
     if (!chk.ok) { rec({ code: chk.code === "CANDLE_NOT_CLOSED" ? "WAIT_CANDLE_NOT_CLOSED" : "DATA_INVALID", accountId, barT, detailCode: chk.code satisfies MarketDataCode }); return; }
 
-    const intents = await ports.intents.forCandle(accountId, barT);
+    const intents = stopped ? [] : await ports.intents.forCandle(accountId, barT);
     const ledger: FPV3Ledger = { ...v.ledger, evaluatedProposals: intents.length ? await ports.db.evaluatedProposals(v.userId, intents.map((i) => i.proposal.proposalId)) : [] };
     const prev: FPState = { ...v.state, accountCursor: v.cursorT };
     let refused: Record<string, V3FillCode> = {}, rejected: Record<string, V3ApprovalCode> = {};

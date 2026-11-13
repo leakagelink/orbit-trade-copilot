@@ -30,7 +30,9 @@ const G = ["src/lib/futures-paper-worker-hosted.ts", "src/lib/futures-paper-work
 describe("Phase 4G change control", () => {
   it("Phase 4F modules are byte-identical to the Phase 4F commit", () => {
     const pins: Record<string, string> = {
-      "src/lib/futures-paper-worker.ts": "1e88149683c5e06459db7e07ba4c7ad8ccef3f055d938d2013ba1fb792435947",
+      // Re-pinned in the Phase 4H finalization (owner decision B: stopped accounts with exposure are processed exit-only;
+      // the Phase 4F hash was 1e88149683c5e06459db7e07ba4c7ad8ccef3f055d938d2013ba1fb792435947).
+      "src/lib/futures-paper-worker.ts": "4f6bac8308915282eb4b77e10aa36e32d19f788018e466cc22b26dad143ac7e4",
       "src/lib/futures-paper-engine-v3.ts": "4e507828bfb32110399c755b840863a0392fb27eeecc471064478bd42267c313",
       "src/lib/futures-paper-market-data.ts": "3ab8edacaa167186e82ed741d4069efe66b9ca4f31fcd1242d0aa10e5eb971cb",
       "src/lib/futures-paper-worker-queries.ts": "fca2f3b0f78ef9a685dd87d5e926e8dd1a03684186c38ed9dc043c2f1c9dd0de",
