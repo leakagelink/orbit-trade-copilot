@@ -21,6 +21,12 @@
 //    configured basis limit or the index is missing. A candle without mark prices is invalid (the caller pauses).
 //  * Daily loss = today's realized cash flows (fees, funding, PnL) + negative unrealized PnL at mark; it blocks new
 //    entries (via the Risk Engine) but never force-closes positions — protective orders keep running.
+//  * Fill-time re-validation (Phase 4D): before ANY pending entry fill the engine re-checks, with the same definitions
+//    as draft 0046's commit function, the account status/halt, pending validity, strategy/environment identity, the
+//    eligible marks of every held symbol, daily loss, cumulative strategy budget (closed losses + reserved open risk +
+//    this fill's risk), exposure, position count and free margin — on the ACTUAL fill quantity. A refused fill is never
+//    executed: the unfilled remainder is cancelled with a reason code (an `entry_cancelled` event, which the ledger
+//    contract permits), so the account cannot stall on a fill the database would refuse.
 import { evaluateProposal, type RiskDecision, type RiskLimits, type TradeProposal } from "./central-risk";
 
 export const FUTURES_PAPER_VERSION = "futures-paper-v1" as const;
@@ -47,17 +53,42 @@ export interface FPBar { symbol: string; t: number; tfMs: number; trade: OHLC & 
 export interface FPIntent { proposal: TradeProposal; maxHoldBars: number }
 
 export interface FPPosition { symbol: string; side: PerpSide; qty: number; entryPrice: number; leverage: number; margin: number; stop: number; target: number | null; stopDist: number; targetDist: number | null; openedAt: number; bars: number; maxHoldBars: number; strategyId: string; proposalId: string; fees: number; funding: number }
-export interface FPPending { symbol: string; side: PerpSide; qtyTotal: number; qtyFilled: number; leverage: number; stopDist: number; targetDist: number | null; strategyId: string; proposalId: string; maxHoldBars: number; barsWaited: number; ttlBars: number }
+export interface FPPending { symbol: string; side: PerpSide; qtyTotal: number; qtyFilled: number; leverage: number; stopDist: number; targetDist: number | null; strategyId: string; proposalId: string; maxHoldBars: number; barsWaited: number; ttlBars: number; environment: "paper" }
 export interface FPState {
   version: typeof FUTURES_PAPER_VERSION; wallet: number; seq: number; day: number; dayCash: number; halted: boolean;
   positions: Record<string, FPPosition>; pending: Record<string, FPPending>; strategyLoss: Record<string, number>; seen: string[];
   /** Last processed candle open time per symbol. A candle at or before it is refused (duplicate / out of order). */
   cursors?: Record<string, number>;
+  /** Account-wide cursor (last committed candle open time), set only by `stepFuturesPaperCandle`. */
+  accountCursor?: number;
 }
 export type FPEventKind = "funding" | "entry_fill" | "entry_cancelled" | "exit_fill" | "liquidation" | "order_accepted" | "order_rejected";
 export interface FPEvent { seq: number; t: number; symbol: string; kind: FPEventKind; side: PerpSide | null; qty: number; price: number | null; fee: number; pnl: number; walletDelta: number; marginDelta: number; reason: string; proposalId: string | null }
 export interface FPTrade { symbol: string; side: PerpSide; strategyId: string; proposalId: string; entryT: number; exitT: number; entry: number; exit: number; qty: number; leverage: number; pnl: number; fees: number; funding: number; net: number; reason: "stop" | "target" | "time" | "liquidation" }
-export interface FPStepResult { state: FPState; events: FPEvent[]; trades: FPTrade[]; decisions: RiskDecision[] }
+/** Reason codes for a refused pending entry fill (bounded; no free text from outside the engine). */
+export const FILL_REFUSAL_CODES = [
+  "ACCOUNT_HALTED", "ACCOUNT_NOT_ACTIVE", "PENDING_INVALID", "ENVIRONMENT_MISMATCH", "STRATEGY_IDENTITY_MISMATCH",
+  "MARK_MISSING", "MARK_STALE", "MARK_INVALID", "LIMIT_MISSING", "DAILY_LOSS_LIMIT", "STRATEGY_BUDGET_MISSING",
+  "STRATEGY_USAGE_UNKNOWN", "STRATEGY_BUDGET_EXCEEDED", "EXPOSURE_LIMIT", "POSITION_LIMIT", "FREE_MARGIN",
+] as const;
+export type FPRefusalCode = (typeof FILL_REFUSAL_CODES)[number];
+export interface FPRefusal { t: number; symbol: string; proposalId: string | null; strategyId: string | null; code: FPRefusalCode; source: "engine" | "ledger"; detail: string }
+/**
+ * Facts only the ledger (draft 0046 database view) knows, required for ledger-bound fill re-validation. Every value is
+ * mandatory: a missing per-strategy usage or mark refuses the fill (never a default of zero).
+ */
+export interface FPFillContext {
+  accountStatus: "active" | "paused" | "stopped";
+  accountHalted: boolean;
+  /** Closed-trade losses and reserved open risk of each strategy in the owner's OTHER paper accounts. */
+  externalStrategy: Record<string, { closedLoss: number; reservedRisk: number }>;
+  /** Latest eligible mark (price and its time) of every symbol the fill check needs — the marks the payload carries. */
+  marks: Record<string, { price: number; t: number }>;
+  maxMarkAgeMs: number;
+  /** Proposals whose fill the ledger refused at commit (from `planCommitRefusal`): cancelled, never re-attempted. */
+  refused?: Record<string, FPRefusalCode>;
+}
+export interface FPStepResult { state: FPState; events: FPEvent[]; trades: FPTrade[]; decisions: RiskDecision[]; refusals: FPRefusal[] }
 
 export class FuturesPaperDataError extends Error {}
 
@@ -80,6 +111,81 @@ export const unrealizedAt = (p: FPPosition, mark: number) => dir(p.side) * (mark
 const usedMargin = (s: FPState) => Object.values(s.positions).reduce((a, p) => a + p.margin, 0);
 const reservedMargin = (s: FPState, marks: Record<string, number>) => Object.values(s.pending).reduce((a, q) => a + ((q.qtyTotal - q.qtyFilled) * (marks[q.symbol] ?? 0)) / q.leverage, 0);
 
+function validateFillContext(f: FPFillContext) {
+  const obj = (x: unknown) => !!x && typeof x === "object" && !Array.isArray(x);
+  if (!obj(f) || !["active", "paused", "stopped"].includes(f.accountStatus) || typeof f.accountHalted !== "boolean" || !obj(f.externalStrategy) || !obj(f.marks)
+    || !fin(f.maxMarkAgeMs) || f.maxMarkAgeMs < 0 || (f.refused !== undefined && !obj(f.refused))) {
+    throw new FuturesPaperDataError("fill context is malformed: account status, halt flag, strategy usage, marks and mark age are all required");
+  }
+  if (f.refused) for (const c of Object.values(f.refused)) if (!(FILL_REFUSAL_CODES as readonly string[]).includes(c)) throw new FuturesPaperDataError("fill context: unknown refusal code");
+}
+
+/** Structural validity of a pending entry before anything is computed from it. */
+function pendingProblem(q: FPPending, sym: string): string | null {
+  if (q.symbol !== sym) return "pending entry is filed under another symbol";
+  if (q.side !== "LONG" && q.side !== "SHORT") return "pending side is invalid";
+  if (typeof q.proposalId !== "string" || !q.proposalId || typeof q.strategyId !== "string" || !q.strategyId) return "pending entry has no proposal or strategy identity";
+  if (![q.qtyTotal, q.qtyFilled, q.leverage, q.stopDist, q.barsWaited, q.ttlBars, q.maxHoldBars].every(fin)) return "pending numbers are not finite";
+  if (!(q.qtyTotal > 0) || q.qtyFilled < 0 || q.qtyFilled >= q.qtyTotal || !(q.leverage >= 1) || !(q.stopDist > 0) || (q.targetDist !== null && !(fin(q.targetDist) && q.targetDist > 0))) return "pending quantities, leverage or protection are out of range";
+  if (q.barsWaited > q.ttlBars) return "pending entry is past its time limit";
+  return null;
+}
+
+/**
+ * Fill-time re-validation for ONE pending entry slice of `q` units at `price` (fee `fee`, margin `add`). Uses the same
+ * definitions as draft 0046 `futures_paper_commit_bar_v2`: daily loss = today's account cash (events of the same UTC day,
+ * this candle included) + Σ negative unrealized at the marks; strategy budget = cumulative closed-trade losses per
+ * proposal (wins not netted) + reserved open risk (qty × stop distance + qty × entry × round-trip cost) + this fill's
+ * risk; exposure, position count and free margin are evaluated AFTER the fill on positions only. Returns null when every
+ * check passes. Without a ledger context (offline replay) usage outside this state is not known and marks have no age.
+ */
+function fillRefusal(s: FPState, cfg: FPConfig, bar: FPBar, pend: FPPending, q: number, price: number, fee: number, add: number, legacy: Record<string, number>, fill: FPFillContext | undefined): { code: FPRefusalCode; detail: string } | null {
+  const no = (code: FPRefusalCode, detail: string) => ({ code, detail });
+  const sym = bar.symbol, pos = s.positions[sym];
+  if (pend.environment !== "paper") return no("ENVIRONMENT_MISMATCH", "pending entry is not a paper-environment entry");
+  if (pos && (pos.side !== pend.side || pos.strategyId !== pend.strategyId || pos.proposalId !== pend.proposalId)) return no("STRATEGY_IDENTITY_MISMATCH", `fill does not match the open ${sym} position`);
+  const mk: Record<string, number> = {};
+  for (const x of [...new Set([...Object.keys(s.positions), sym])].sort()) {
+    if (fill) {
+      const m = fill.marks[x];
+      if (!m) return no("MARK_MISSING", `no eligible mark for ${x}`);
+      if (!fin(m.price) || !(m.price > 0) || !fin(m.t)) return no("MARK_INVALID", `mark for ${x} is not a positive timestamped number`);
+      const age = bar.t - m.t;
+      if (age < 0) return no("MARK_INVALID", `mark for ${x} is later than the fill time`);
+      if (age > fill.maxMarkAgeMs) return no("MARK_STALE", `mark for ${x} is ${age} ms old (max ${fill.maxMarkAgeMs} ms)`);
+      mk[x] = m.price;
+    } else {
+      const v = x === sym ? bar.mark!.o : legacy[x];
+      if (!fin(v) || !(v > 0)) return no("MARK_MISSING", `no mark for ${x}`);
+      mk[x] = v;
+    }
+  }
+  const L = cfg.limits;
+  if (!fin(L.maxDailyLoss) || !fin(L.maxExposure) || !fin(L.maxPositions) || !fin(L.roundTripCostPct) || L.roundTripCostPct < 0) return no("LIMIT_MISSING", "daily loss, exposure, position or cost limit is not configured");
+  const positions = Object.values(s.positions);
+  const unreal = positions.reduce((a, p) => a + Math.min(0, unrealizedAt(p, mk[p.symbol]!)), 0);
+  const dayLeft = L.maxDailyLoss + Math.min(0, s.dayCash + unreal);
+  if (!(dayLeft > 0)) return no("DAILY_LOSS_LIMIT", `daily loss ${(-(s.dayCash + unreal)).toFixed(6)} reached the limit ${L.maxDailyLoss}`);
+  const budget = cfg.strategyBudgets[pend.strategyId];
+  if (!fin(budget) || !(budget > 0)) return no("STRATEGY_BUDGET_MISSING", `no paper risk budget for strategy ${pend.strategyId}`);
+  let extLoss = 0, extReserved = 0;
+  if (fill) {
+    const e = fill.externalStrategy[pend.strategyId];
+    if (!e || !fin(e.closedLoss) || !fin(e.reservedRisk) || e.closedLoss < 0 || e.reservedRisk < 0) return no("STRATEGY_USAGE_UNKNOWN", `strategy ${pend.strategyId} usage in other paper accounts is unknown`);
+    extLoss = e.closedLoss; extReserved = e.reservedRisk;
+  }
+  const rtc = L.roundTripCostPct / 100;
+  const reserved = positions.filter((p) => p.strategyId === pend.strategyId).reduce((a, p) => a + p.qty * p.stopDist + p.qty * p.entryPrice * rtc, 0) + extReserved;
+  const used = (s.strategyLoss[pend.strategyId] ?? 0) + extLoss, fillRisk = q * pend.stopDist + q * price * rtc;
+  if (used + reserved + fillRisk > budget) return no("STRATEGY_BUDGET_EXCEEDED", `strategy ${pend.strategyId}: used ${used.toFixed(6)} + reserved ${reserved.toFixed(6)} + fill risk ${fillRisk.toFixed(6)} > budget ${budget}`);
+  const exposure = positions.reduce((a, p) => a + p.qty * mk[p.symbol]!, 0) + q * mk[sym]!;
+  if (exposure > L.maxExposure) return no("EXPOSURE_LIMIT", `exposure ${exposure.toFixed(6)} after the fill would exceed ${L.maxExposure}`);
+  const count = positions.length + (pos ? 0 : 1);
+  if (count > L.maxPositions) return no("POSITION_LIMIT", `${count} positions after the fill would exceed ${L.maxPositions}`);
+  if (add + fee > s.wallet - usedMargin(s) + EPS) return no("FREE_MARGIN", `margin ${add.toFixed(6)} + fee ${fee.toFixed(6)} exceeds free margin ${(s.wallet - usedMargin(s)).toFixed(6)}`);
+  return null;
+}
+
 function validateBar(b: FPBar) {
   const ok = (x: OHLC | null) => !!x && [x.o, x.h, x.l, x.c].every((v) => fin(v) && v > 0) && x.h >= Math.max(x.o, x.c) - EPS && x.l <= Math.min(x.o, x.c) + EPS;
   if (!ok(b.trade) || !fin(b.trade.v) || b.trade.v < 0) throw new FuturesPaperDataError(`${b.symbol} ${b.t}: invalid trade candle`);
@@ -93,14 +199,17 @@ function validateBar(b: FPBar) {
  * close by the Central Risk Engine (fills start next candle). `marks` gives the latest mark of every symbol for
  * account-wide margin and exposure.
  */
-export function stepFuturesPaper(prev: FPState, cfg: FPConfig, bar: FPBar, intents: FPIntent[], marks: Record<string, number> = {}): FPStepResult {
+export function stepFuturesPaper(prev: FPState, cfg: FPConfig, bar: FPBar, intents: FPIntent[], marks: Record<string, number> = {}, fill?: FPFillContext): FPStepResult {
   validateBar(bar);
+  if (fill !== undefined) validateFillContext(fill);
   const last = prev.cursors?.[bar.symbol];
   if (last !== undefined && bar.t <= last) throw new FuturesPaperDataError(`${bar.symbol} ${bar.t}: duplicate or out-of-order candle (last processed ${last})`);
   const spec = cfg.specs[bar.symbol];
   if (!spec) throw new FuturesPaperDataError(`${bar.symbol}: no symbol specification`);
   const s: FPState = structuredClone(prev);
-  const events: FPEvent[] = [], trades: FPTrade[] = [], decisions: RiskDecision[] = [];
+  // The ledger's halt flag is authoritative (the database refuses a state whose flag differs from the account's).
+  if (fill) s.halted = fill.accountHalted;
+  const events: FPEvent[] = [], trades: FPTrade[] = [], decisions: RiskDecision[] = [], refusals: FPRefusal[] = [];
   const mark = bar.mark!, sym = bar.symbol, closeT = bar.t + bar.tfMs;
   const emit = (e: Omit<FPEvent, "seq" | "symbol">) => {
     const ev = { seq: ++s.seq, symbol: sym, ...e }; events.push(ev);
@@ -118,40 +227,54 @@ export function stepFuturesPaper(prev: FPState, cfg: FPConfig, bar: FPBar, inten
     emit({ t: f.t, kind: "funding", side: pos.side, qty: pos.qty, price: mark.o, fee: 0, pnl: 0, walletDelta: cash, marginDelta: cash, reason: `funding rate ${f.rate}`, proposalId: pos.proposalId });
   }
 
-  // Pending (partially filled) entries continue at this candle's open.
+  // Pending (partially filled) entries continue at this candle's open — only after fill-time re-validation.
   const pend = s.pending[sym];
+  const refuse = (q: FPPending, code: FPRefusalCode, detail: string, source: FPRefusal["source"] = "engine") => {
+    delete s.pending[sym];
+    const left = fin(q.qtyTotal) && fin(q.qtyFilled) ? Math.max(0, q.qtyTotal - q.qtyFilled) : 0;
+    const proposalId = typeof q.proposalId === "string" && q.proposalId ? q.proposalId : null;
+    refusals.push({ t: bar.t, symbol: sym, proposalId, strategyId: typeof q.strategyId === "string" && q.strategyId ? q.strategyId : null, code, source, detail });
+    emit({ t: bar.t, kind: "entry_cancelled", side: q.side === "LONG" || q.side === "SHORT" ? q.side : null, qty: left, price: null, fee: 0, pnl: 0, walletDelta: 0, marginDelta: 0, reason: `fill refused [${code}]: ${detail}; unfilled entry cancelled`, proposalId });
+  };
+  const bad = pend ? pendingProblem(pend, sym) : null;
   if (pend && s.halted) {
     // Emergency paper stop: no new exposure. The unfilled remainder is cancelled; exits below still run.
-    delete s.pending[sym];
-    emit({ t: bar.t, kind: "entry_cancelled", side: pend.side, qty: pend.qtyTotal - pend.qtyFilled, price: null, fee: 0, pnl: 0, walletDelta: 0, marginDelta: 0, reason: "emergency paper stop: unfilled entry cancelled", proposalId: pend.proposalId });
+    refuse(pend, "ACCOUNT_HALTED", "emergency paper stop");
+  } else if (pend && fill && fill.accountStatus !== "active") {
+    refuse(pend, "ACCOUNT_NOT_ACTIVE", `paper account is ${fill.accountStatus}`);
+  } else if (pend && bad) {
+    refuse(pend, "PENDING_INVALID", bad);
+  } else if (pend && fill?.refused?.[pend.proposalId]) {
+    refuse(pend, fill.refused[pend.proposalId]!, "the ledger refused this fill at commit", "ledger");
   } else if (pend) {
     pend.barsWaited++;
     const left = pend.qtyTotal - pend.qtyFilled;
     const cap = cfg.costs.maxParticipationPct === null ? left : (bar.trade.v * cfg.costs.maxParticipationPct) / 100;
-    let q = Math.floor(Math.min(left, cap) / spec.stepSize + EPS) * spec.stepSize;
+    const q = Math.floor(Math.min(left, cap) / spec.stepSize + EPS) * spec.stepSize; // ACTUAL fill quantity
     const action = pend.side === "LONG" ? "buy" : "sell";
-    let fill = takerFill(action, bar.trade.o, q, cfg.costs);
-    const free = s.wallet - usedMargin(s);
-    if (q > 0 && (fill.price * q) / pend.leverage + fill.fee > free + EPS) q = 0; // not enough simulated margin: no fill
-    if (q > 0) {
-      fill = takerFill(action, bar.trade.o, q, cfg.costs);
-      const add = (fill.price * q) / pend.leverage;
+    const fillPx = q > 0 ? takerFill(action, bar.trade.o, q, cfg.costs) : null;
+    const add = fillPx ? (fillPx.price * q) / pend.leverage : 0;
+    const no = fillPx ? fillRefusal(s, cfg, bar, pend, q, fillPx.price, fillPx.fee, add, marks, fill) : null;
+    if (no) refuse(pend, no.code, no.detail);
+    else if (fillPx) {
       if (!pos) {
-        pos = { symbol: sym, side: pend.side, qty: 0, entryPrice: fill.price, leverage: pend.leverage, margin: 0, stop: 0, target: null, stopDist: pend.stopDist, targetDist: pend.targetDist, openedAt: bar.t, bars: 0, maxHoldBars: pend.maxHoldBars, strategyId: pend.strategyId, proposalId: pend.proposalId, fees: 0, funding: 0 };
+        pos = { symbol: sym, side: pend.side, qty: 0, entryPrice: fillPx.price, leverage: pend.leverage, margin: 0, stop: 0, target: null, stopDist: pend.stopDist, targetDist: pend.targetDist, openedAt: bar.t, bars: 0, maxHoldBars: pend.maxHoldBars, strategyId: pend.strategyId, proposalId: pend.proposalId, fees: 0, funding: 0 };
         s.positions[sym] = pos;
       }
-      pos.entryPrice = (pos.entryPrice * pos.qty + fill.price * q) / (pos.qty + q);
-      pos.qty += q; pos.margin += add; pos.fees += fill.fee; pend.qtyFilled += q;
+      pos.entryPrice = (pos.entryPrice * pos.qty + fillPx.price * q) / (pos.qty + q);
+      pos.qty += q; pos.margin += add; pos.fees += fillPx.fee; pend.qtyFilled += q;
       // Exchange-style close-position protection is re-anchored to the average entry and covers the whole position.
       pos.stop = pos.entryPrice - dir(pos.side) * pos.stopDist;
       pos.target = pos.targetDist === null ? null : pos.entryPrice + dir(pos.side) * pos.targetDist;
-      emit({ t: bar.t, kind: "entry_fill", side: pend.side, qty: q, price: fill.price, fee: fill.fee, pnl: 0, walletDelta: -fill.fee, marginDelta: add, reason: pend.qtyFilled + EPS < pend.qtyTotal ? "partial fill (volume cap)" : "filled", proposalId: pend.proposalId });
+      emit({ t: bar.t, kind: "entry_fill", side: pend.side, qty: q, price: fillPx.price, fee: fillPx.fee, pnl: 0, walletDelta: -fillPx.fee, marginDelta: add, reason: pend.qtyFilled + EPS < pend.qtyTotal ? "partial fill (volume cap)" : "filled", proposalId: pend.proposalId });
     }
-    const rest = pend.qtyTotal - pend.qtyFilled;
-    if (rest <= spec.stepSize / 2) delete s.pending[sym];
-    else if (pend.barsWaited >= pend.ttlBars) {
-      delete s.pending[sym];
-      emit({ t: bar.t, kind: "entry_cancelled", side: pend.side, qty: rest, price: null, fee: 0, pnl: 0, walletDelta: 0, marginDelta: 0, reason: "unfilled remainder cancelled at its time limit", proposalId: pend.proposalId });
+    if (s.pending[sym]) {
+      const rest = pend.qtyTotal - pend.qtyFilled;
+      if (rest <= spec.stepSize / 2) delete s.pending[sym];
+      else if (pend.barsWaited >= pend.ttlBars) {
+        delete s.pending[sym];
+        emit({ t: bar.t, kind: "entry_cancelled", side: pend.side, qty: rest, price: null, fee: 0, pnl: 0, walletDelta: 0, marginDelta: 0, reason: "unfilled remainder cancelled at its time limit", proposalId: pend.proposalId });
+      }
     }
   }
 
@@ -202,6 +325,8 @@ export function stepFuturesPaper(prev: FPState, cfg: FPConfig, bar: FPBar, inten
     const p = it.proposal;
     const reject = (reason: string) => emit({ t: closeT, kind: "order_rejected", side: p.side ?? null, qty: 0, price: null, fee: 0, pnl: 0, walletDelta: 0, marginDelta: 0, reason, proposalId: typeof p.proposalId === "string" ? p.proposalId : null });
     if (p.environment !== "paper" || p.market !== "usdm_futures" || p.symbol.replace("/", "") !== sym) { reject("Futures paper accepts only paper USD-M proposals for this symbol"); continue; }
+    // The ledger refuses an accepted order on an inactive account; refuse it here so the candle still commits.
+    if (fill && fill.accountStatus !== "active") { reject(`ACCOUNT_NOT_ACTIVE: paper account is ${fill.accountStatus}; entry refused`); continue; }
     if (!bar.index || !(bar.index.c > 0)) { reject("Index price unavailable: entry refused"); continue; }
     const basis = (Math.abs(mark.c - bar.index.c) / bar.index.c) * 100;
     if (basis > cfg.maxBasisPct) { reject(`Mark/index basis ${basis.toFixed(3)}% exceeds ${cfg.maxBasisPct}%: entry refused`); continue; }
@@ -221,11 +346,11 @@ export function stepFuturesPaper(prev: FPState, cfg: FPConfig, bar: FPBar, inten
     if (typeof p.proposalId === "string") s.seen.push(p.proposalId);
     if (d.verdict !== "ACCEPT" || !d.sizing) { reject(`${d.verdict}: ${d.checks.filter((c) => c.status === "fail" || c.status === "missing").map((c) => c.detail).join("; ")}`); continue; }
     const stopDist = Math.abs(mark.c - p.stopPrice!), targetDist = p.takeProfitPrice === null ? null : Math.abs(p.takeProfitPrice - mark.c);
-    s.pending[sym] = { symbol: sym, side: p.side, qtyTotal: d.sizing.qty, qtyFilled: 0, leverage: d.sizing.leverage, stopDist, targetDist, strategyId: p.strategyId, proposalId: p.proposalId, maxHoldBars: it.maxHoldBars, barsWaited: 0, ttlBars: cfg.entryTtlBars };
+    s.pending[sym] = { symbol: sym, side: p.side, qtyTotal: d.sizing.qty, qtyFilled: 0, leverage: d.sizing.leverage, stopDist, targetDist, strategyId: p.strategyId, proposalId: p.proposalId, maxHoldBars: it.maxHoldBars, barsWaited: 0, ttlBars: cfg.entryTtlBars, environment: "paper" };
     emit({ t: closeT, kind: "order_accepted", side: p.side, qty: d.sizing.qty, price: null, fee: 0, pnl: 0, walletDelta: 0, marginDelta: 0, reason: `Risk Engine sized ${d.sizing.qty} at ${d.sizing.leverage}× (limited by ${d.sizing.binding}); fills from the next open`, proposalId: p.proposalId });
   }
   s.cursors = { ...(s.cursors ?? {}), [sym]: bar.t };
-  return { state: s, events, trades, decisions };
+  return { state: s, events, trades, decisions, refusals };
 }
 
 /**
@@ -262,4 +387,93 @@ export function futuresPaperCommitPayload(state: FPState, events: FPEvent[]) {
     wallet: state.wallet, state,
     events: events.map((e) => ({ seq: e.seq, t: e.t, symbol: e.symbol, kind: e.kind, side: e.side, qty: e.qty, price: e.price, fee: e.fee, pnl: e.pnl, wallet_delta: e.walletDelta, margin_delta: e.marginDelta, reason: e.reason, proposal_id: e.proposalId })),
   };
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Account-wide candle (Phase 4D). One candle for EVERY symbol of the account under one account-wide cursor, producing
+// one result for one ledger commit. All inputs are validated before any symbol is stepped and the function is pure, so a
+// failure leaves nothing half-applied: either the whole multi-symbol candle is returned or an error is thrown.
+// ---------------------------------------------------------------------------------------------------------------------
+
+/** Ledger facts for one candle. Marks are NOT supplied: they are the candle's own mark opens (eligible at fill time). */
+export type FPCandleContext = Omit<FPFillContext, "marks" | "maxMarkAgeMs">;
+export interface FPCandleResult extends FPStepResult {
+  barT: number;
+  /** The exact marks the fill checks used; a ledger payload must carry these (draft 0046 re-checks with them). */
+  marks: Record<string, number>;
+}
+
+export function stepFuturesPaperCandle(prev: FPState, cfg: FPConfig, bars: FPBar[], intents: FPIntent[], ctx: FPCandleContext): FPCandleResult {
+  if (!Array.isArray(bars) || bars.length === 0) throw new FuturesPaperDataError("account candle: at least one symbol candle is required");
+  const t = bars[0]!.t, tf = bars[0]!.tfMs;
+  if (!fin(t) || !fin(tf) || !(tf > 0) || t % tf !== 0) throw new FuturesPaperDataError("account candle: candle time is not aligned to its timeframe");
+  const syms = bars.map((b) => b.symbol);
+  if (new Set(syms).size !== syms.length) throw new FuturesPaperDataError("account candle: a symbol appears twice");
+  for (const b of bars) {
+    if (b.t !== t || b.tfMs !== tf) throw new FuturesPaperDataError(`account candle: ${b.symbol} is not the same candle (${b.t} vs ${t})`);
+    if (!cfg.specs[b.symbol]) throw new FuturesPaperDataError(`${b.symbol}: no symbol specification`);
+    validateBar(b);
+  }
+  if (prev.accountCursor !== undefined && t <= prev.accountCursor) throw new FuturesPaperDataError(`account candle ${t}: duplicate or out-of-order (account cursor ${prev.accountCursor})`);
+  for (const held of [...Object.keys(prev.positions), ...Object.keys(prev.pending)]) {
+    if (!syms.includes(held)) throw new FuturesPaperDataError(`account candle ${t}: no candle for held symbol ${held}; nothing is applied`);
+  }
+  for (const it of intents) if (!syms.includes(it.proposal.symbol.replace("/", ""))) throw new FuturesPaperDataError(`account candle ${t}: intent for ${it.proposal.symbol} has no candle`);
+  const ordered = [...bars].sort((a, b) => (a.symbol < b.symbol ? -1 : 1));
+  const marks: Record<string, number> = Object.fromEntries(ordered.map((b) => [b.symbol, b.mark!.o]));
+  const fill: FPFillContext = { ...ctx, marks: Object.fromEntries(ordered.map((b) => [b.symbol, { price: b.mark!.o, t: b.t }])), maxMarkAgeMs: 0 };
+  validateFillContext(fill);
+  const closes: Record<string, number> = Object.fromEntries(ordered.map((b) => [b.symbol, b.mark!.c]));
+  let s = prev; const out: FPCandleResult = { state: prev, events: [], trades: [], decisions: [], refusals: [], barT: t, marks };
+  for (const b of ordered) {
+    const r = stepFuturesPaper(s, cfg, b, intents.filter((i) => i.proposal.symbol.replace("/", "") === b.symbol), closes, fill);
+    s = r.state; out.events.push(...r.events); out.trades.push(...r.trades); out.decisions.push(...r.decisions); out.refusals.push(...r.refusals);
+  }
+  out.state = { ...s, accountCursor: t };
+  return out;
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Ledger commit refusal → deterministic next step (Phase 4D). The database message is classified into a bounded code
+// and is never stored. A refused fill is recomputed as a cancellation; the same refusal twice, or anything unclassified,
+// halts for review instead of looping. A lost response is NOT a refusal: resend the identical payload (idempotent).
+// ---------------------------------------------------------------------------------------------------------------------
+export type CommitRefusalPlan =
+  | { action: "recompute"; refused: Record<string, FPRefusalCode>; code: FPRefusalCode }
+  | { action: "reload_account"; code: "SEQUENCE_MOVED" | "ACCOUNT_STATE_CHANGED" | "CANDLE_ALREADY_COMMITTED" }
+  | { action: "wait"; code: "CANDLE_NOT_CLOSED" }
+  | { action: "halt_for_review"; code: "REFUSAL_REPEATED" | "UNCLASSIFIED_REFUSAL" };
+
+const FILL_REFUSALS: [RegExp, FPRefusalCode][] = [
+  [/daily loss limit reached: entry fill refused/, "DAILY_LOSS_LIMIT"],
+  [/no paper risk budget for strategy (\S+): entry fill refused/, "STRATEGY_BUDGET_MISSING"],
+  [/strategy (\S+) budget \S+ would be exceeded at fill/, "STRATEGY_BUDGET_EXCEEDED"],
+  [/exposure \S+ would exceed \S+ at fill/, "EXPOSURE_LIMIT"],
+  [/position limit \S+ exceeded at fill/, "POSITION_LIMIT"],
+  [/free margin would be negative at fill/, "FREE_MARGIN"],
+  [/entry fill does not match the open/, "STRATEGY_IDENTITY_MISMATCH"],
+];
+
+/**
+ * @param prev    the state the refused attempt started from (its pending entries carry the strategy ids)
+ * @param attempt the refused candle result
+ * @param message the database error message (classified only; never persisted)
+ * @param alreadyRefused refusals already applied to this candle
+ */
+export function planCommitRefusal(prev: FPState, attempt: Pick<FPStepResult, "events">, message: string, alreadyRefused: Record<string, FPRefusalCode> = {}): CommitRefusalPlan {
+  const m = String(message ?? "").slice(0, 500);
+  if (/already committed with a different payload/.test(m)) return { action: "reload_account", code: "CANDLE_ALREADY_COMMITTED" };
+  if (/sequence moved|is not after the cursor/.test(m)) return { action: "reload_account", code: "SEQUENCE_MOVED" };
+  if (/entries are refused while the account is not active or is halted|account is stopped/.test(m)) return { action: "reload_account", code: "ACCOUNT_STATE_CHANGED" };
+  if (/has not closed yet/.test(m)) return { action: "wait", code: "CANDLE_NOT_CLOSED" };
+  for (const [re, code] of FILL_REFUSALS) {
+    const hit = re.exec(m);
+    if (!hit) continue;
+    const strategy = code === "STRATEGY_BUDGET_MISSING" || code === "STRATEGY_BUDGET_EXCEEDED" ? hit[1] ?? null : null;
+    const targets = attempt.events.filter((e) => e.kind === "entry_fill" && e.proposalId && !(e.proposalId in alreadyRefused)
+      && (strategy === null || prev.pending[e.symbol]?.strategyId === strategy)).map((e) => e.proposalId!);
+    if (targets.length === 0) return { action: "halt_for_review", code: "REFUSAL_REPEATED" };
+    return { action: "recompute", refused: { ...alreadyRefused, ...Object.fromEntries(targets.map((p) => [p, code])) }, code };
+  }
+  return { action: "halt_for_review", code: "UNCLASSIFIED_REFUSAL" };
 }
