@@ -8,6 +8,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { PGlite } from "@electric-sql/pglite";
 import { initialFuturesPaperState, reconcileFuturesPaper, stepFuturesPaperCandle, type FPBar, type FPConfig, type FPEvent, type FPIntent, type FPState } from "@/lib/futures-paper-engine";
 import { futuresPaperCommitPayloadV3 } from "@/lib/futures-paper-ledger-v3";
+import { checkAdditionalRisk } from "@/lib/account-risk-budget";
 
 export const MIGRATION_0049 = readFileSync("docs/proposed-migrations/0049_futures_paper_ledger_v3.sql", "utf8");
 const ROLLBACK = readFileSync("docs/proposed-migrations/0049_futures_paper_ledger_v3.rollback.sql", "utf8");
@@ -34,7 +35,7 @@ const T0 = Math.floor(Date.now() / M) * M - 100 * M;
 type OHLC = [number, number, number, number];
 const FLAT: OHLC = [100, 100.2, 99.9, 100];
 const bar = (sym: string, k: number, [o, h, l, c]: OHLC, v = 1e6, funding: FPBar["funding"] = []): FPBar => ({ symbol: sym, t: T0 + k * M, tfMs: M, trade: { o, h, l, c, v }, mark: { o, h, l, c }, index: { c }, funding });
-const intent = (id: string, sym: string, k: number, side: "LONG" | "SHORT", stop: number, tp: number, strategyId = "s1"): FPIntent => ({ maxHoldBars: 30, proposal: { proposalId: id, engine: "scalp_intraday", strategyId, symbol: sym, market: "usdm_futures", environment: "paper", side, referencePrice: null, stopPrice: stop, takeProfitPrice: tp, createdAt: T0 + (k + 1) * M } });
+const intent = (id: string, sym: string, k: number, side: "LONG" | "SHORT", stop: number, tp: number, strategyId = "s1"): FPIntent => ({ maxHoldBars: 30, proposal: { proposalId: `prop-${id}`, engine: "scalp_intraday", strategyId, symbol: sym, market: "usdm_futures", environment: "paper", side, referencePrice: null, stopPrice: stop, takeProfitPrice: tp, createdAt: T0 + (k + 1) * M } });
 const CTX = { accountStatus: "active" as const, accountHalted: false, externalStrategy: { s1: { closedLoss: 0, reservedRisk: 0 }, s2: { closedLoss: 0, reservedRisk: 0 }, r1: { closedLoss: 0, reservedRisk: 0 } } };
 const A = "00000000-0000-4000-8000-00000000000a", B = "00000000-0000-4000-8000-00000000000b";
 let uidN = 0x100;
@@ -62,9 +63,9 @@ async function standardBudgets(user: string) { await accountBudget(user, 100, 40
 const commit = (id: string, seq: number, barT: number, payload: unknown) => as<{ seq: string }>("service_role", null, `SELECT public.futures_paper_commit_bar_v3($1, $2, $3, $4::jsonb) AS seq`, [id, seq, barT, JSON.stringify(payload)]);
 
 type Px = Record<string, OHLC | { px: OHLC; v?: number; funding?: FPBar["funding"] }>;
-function step(prev: FPState, k: number, px: Px, intents: FPIntent[] = [], cfg: FPConfig = CFG) {
+function step(prev: FPState, k: number, px: Px, intents: FPIntent[] = [], cfg: FPConfig = CFG, ctx: Parameters<typeof stepFuturesPaperCandle>[4] = CTX) {
   const bars = Object.entries(px).map(([sym, p]) => (Array.isArray(p) ? bar(sym, k, p) : bar(sym, k, p.px, p.v, p.funding)));
-  const r = stepFuturesPaperCandle(prev, cfg, bars, intents, CTX);
+  const r = stepFuturesPaperCandle(prev, cfg, bars, intents, ctx);
   return { ...r, payload: futuresPaperCommitPayloadV3(prev, r.state, r.events, bars, intents) };
 }
 type Run = { id: string; state: FPState; all: FPEvent[] };
@@ -93,7 +94,7 @@ describe("draft 0049 — happy path with real engine output", () => {
     const fill = run.all.find((e) => e.kind === "entry_fill")!;
     const row = (await db.query<{ risk_amount: string; fill_id: string }>(`SELECT risk_amount, fill_id FROM public.futures_paper_events WHERE account_id=$1 AND kind='entry_fill'`, [id])).rows[0]!;
     expect(Number(row.risk_amount)).toBeCloseTo(fill.qty * 1 + fill.qty * fill.price! * COST / 100, 9);
-    expect(row.fill_id).toBe(`ok-1:entry:${T0 + M}`);
+    expect(row.fill_id).toBe(`prop-ok-1:entry:${T0 + M}`);
     expect((await db.query<{ status: string }>(`SELECT status FROM public.futures_paper_risk_approvals WHERE account_id=$1`, [id])).rows[0]!.status).toBe("filled");
     await play(run, 2, { BTCUSDT: [100.2, 103, 100.1, 102.5], ETHUSDT: FLAT }); // target
     expect(await num(`SELECT count(*) FROM public.futures_paper_positions WHERE account_id='${id}'`)).toBe(0);
@@ -164,6 +165,15 @@ describe("draft 0049 — R2/R3: no fill without a valid, matching, unexpired app
     const f1 = step(run.state, 1, { BTCUSDT: FLAT, ETHUSDT: FLAT });
     const over = tamper(f1.payload, "entry_fill", { qty: acc.qty + 0.001, fee: f1.payload.events[0]!.fee * (acc.qty + 0.001) / acc.qty, wallet_delta: -f1.payload.events[0]!.fee * (acc.qty + 0.001) / acc.qty, margin_delta: f1.payload.events[0]!.margin_delta * (acc.qty + 0.001) / acc.qty });
     await expect(commit(id, run.state.seq, T0 + M, over)).rejects.toThrow(/exceeds the approved remainder/);
+    // Cancellation (the engine cancels a fill the ledger refused), then a forged re-fill of the cancelled approval.
+    const before = run.state;
+    const cancelled = step(before, 1, { BTCUSDT: FLAT, ETHUSDT: FLAT }, [], CFG, { ...CTX, refused: { "prop-same-1": "STRATEGY_BUDGET_EXCEEDED" } });
+    expect(cancelled.events.map((e) => e.kind)).toEqual(["entry_cancelled"]);
+    await commit(id, before.seq, T0 + M, cancelled.payload);
+    expect((await db.query<{ status: string }>(`SELECT status FROM public.futures_paper_risk_approvals WHERE account_id=$1`, [id])).rows[0]!.status).toBe("cancelled");
+    const revived = step({ ...cancelled.state, pending: before.pending }, 2, { BTCUSDT: FLAT, ETHUSDT: FLAT });
+    expect(revived.events.some((e) => e.kind === "entry_fill")).toBe(true);
+    await expect(commit(id, cancelled.state.seq, T0 + 2 * M, revived.payload)).rejects.toThrow(/risk approval prop-same-1 is cancelled and cannot fill/);
   });
   it("an approval past its expiry (approval time + 60 s) can no longer fill; partial fills before it are kept", async () => {
     const user = freshUser(); await standardBudgets(user);
@@ -175,7 +185,7 @@ describe("draft 0049 — R2/R3: no fill without a valid, matching, unexpired app
     await play(run, 2, { BTCUSDT: thin, ETHUSDT: FLAT }, [], cfg); // t = approval + 60 s (= expiry, still valid)
     const r3 = step(run.state, 3, { BTCUSDT: thin, ETHUSDT: FLAT }, [], cfg);
     expect(r3.events.some((e) => e.kind === "entry_fill")).toBe(true);
-    await expect(commit(id, run.state.seq, T0 + 3 * M, r3.payload)).rejects.toThrow(/risk approval exp-1 expired/);
+    await expect(commit(id, run.state.seq, T0 + 3 * M, r3.payload)).rejects.toThrow(/risk approval prop-exp-1 expired/);
     expect(await num(`SELECT filled_qty FROM public.futures_paper_risk_approvals WHERE account_id='${id}'`)).toBeCloseTo(4, 9);
   });
   it("the submitted state may carry exactly the open approvals: a missing or altered pending entry is refused", async () => {
@@ -219,13 +229,13 @@ describe("draft 0049 — R4: account budget with Research and Scalping sub-budge
     const user = freshUser(); await accountBudget(user, 100, 15, 60); await strategyBudget(user, "r1", "research", 15);
     // Test-only, as the table owner: bypass the static guard to simulate a corrupted configuration.
     await db.exec(`ALTER TABLE public.strategy_risk_budgets DISABLE TRIGGER strategy_risk_budgets_guard; INSERT INTO public.strategy_risk_budgets(user_id,strategy_id,environment,engine,max_loss) VALUES ('${user}','r2','paper','research',15); ALTER TABLE public.strategy_risk_budgets ENABLE TRIGGER strategy_risk_budgets_guard;`);
-    const id = await newAccount(user);
-    await commit(id, 0, T0, step(initialFuturesPaperState(1000), 0, { BTCUSDT: FLAT, ETHUSDT: FLAT }, [intent("dd-1", "BTCUSDT", 0, "LONG", 99, 102, "r1")]).payload);
-    const run = step(initialFuturesPaperState(1000), 0, { BTCUSDT: FLAT, ETHUSDT: FLAT }, [intent("dd-1", "BTCUSDT", 0, "LONG", 99, 102, "r1")]);
-    const id2 = await newAccount(user);
-    const r2 = step(initialFuturesPaperState(1000), 0, { BTCUSDT: FLAT, ETHUSDT: FLAT }, [intent("dd-2", "ETHUSDT", 0, "LONG", 99, 102, "r2")]);
+    const cfg: FPConfig = { ...CFG, strategyBudgets: { ...CFG.strategyBudgets, r1: 15, r2: 15 } };
+    const id = await newAccount(user, cfg), id2 = await newAccount(user, cfg);
+    await commit(id, 0, T0, step(initialFuturesPaperState(1000), 0, { BTCUSDT: FLAT, ETHUSDT: FLAT }, [intent("dd-1", "BTCUSDT", 0, "LONG", 99, 102, "r1")], cfg).payload);
+    const r2 = step(initialFuturesPaperState(1000), 0, { BTCUSDT: FLAT, ETHUSDT: FLAT }, [intent("dd-2", "ETHUSDT", 0, "LONG", 99, 102, "r2")], cfg);
+    expect(r2.events.some((e) => e.kind === "order_accepted")).toBe(true); // r2's own budget (15) has room
     await expect(commit(id2, 0, T0, r2.payload)).rejects.toThrow(/strategy r2 budget research-sub-budget:15 would be exceeded at approval/);
-    expect(run.events.length).toBeGreaterThan(0);
+    expect(await num(`SELECT public.fp3_usage('${user}', NULL, 'research')`)).toBeLessThanOrEqual(15);
   });
   it("pending exposure and pending positions count at approval", async () => {
     const user = freshUser(); await standardBudgets(user);
@@ -233,7 +243,7 @@ describe("draft 0049 — R4: account budget with Research and Scalping sub-budge
     const r = step(initialFuturesPaperState(1000), 0, { BTCUSDT: FLAT, ETHUSDT: FLAT }, [intent("ex-1", "BTCUSDT", 0, "LONG", 99, 102), intent("ex-2", "ETHUSDT", 0, "LONG", 99, 102, "s2")], cfgE);
     const eth = r.payload.events.find((e) => e.kind === "order_accepted" && e.symbol === "ETHUSDT")!;
     expect(eth.qty * 100).toBeLessThanOrEqual(1200 - 885 + 1); // the engine sized ETH into the remaining room
-    const inflated = { ...r.payload, events: r.payload.events.map((e) => (e === eth ? { ...e, qty: 5 } : e)) };
+    const inflated = { ...r.payload, events: r.payload.events.map((e) => (e === eth ? { ...e, qty: 4, leverage: 10 } : e)) };
     await expect(commit(idE, 0, T0, inflated)).rejects.toThrow(/exposure .* would exceed 1200 at approval/);
     const user2 = freshUser(); await standardBudgets(user2);
     const cfgP: FPConfig = { ...CFG, limits: { ...CFG.limits, maxPositions: 1 } }; const idP = await newAccount(user2, cfgP);
@@ -325,3 +335,25 @@ describe("draft 0049 — R6: idempotency, privileges, RLS, coexistence and rollb
     await clean.close();
   });
 });
+
+describe("draft 0049 — the database and the shared TypeScript budget check agree", () => {
+  it("usage after an open position and a pending approval equals the pure module's open + pending usage, and both refuse the same next risk", async () => {
+    const user = freshUser(); await accountBudget(user, 100, 40, 60); await strategyBudget(user, "s1", "scalping", 25); await strategyBudget(user, "s2", "scalping", 35);
+    const cfg: FPConfig = { ...CFG, strategyBudgets: { s1: 25, s2: 35 } }; const id = await newAccount(user, cfg);
+    const run: Run = { id, state: initialFuturesPaperState(1000), all: [] };
+    await play(run, 0, { BTCUSDT: FLAT, ETHUSDT: FLAT }, [intent("par-1", "BTCUSDT", 0, "LONG", 99, 102)], cfg);
+    await play(run, 1, { BTCUSDT: FLAT, ETHUSDT: FLAT }, [intent("par-2", "ETHUSDT", 1, "LONG", 99, 102, "s2")], cfg);
+    const pos = run.state.positions["BTCUSDT"]!, pend = run.state.pending["ETHUSDT"]!;
+    const openRisk = pos.qty * pos.stopDist + pos.qty * pos.entryPrice * COST / 100;
+    const pendingRisk = (pend.qtyTotal - pend.qtyFilled) * (pend.stopDist + 100 * COST / 100);
+    expect(await num(`SELECT public.fp3_usage('${user}', 's1', NULL)`)).toBeCloseTo(openRisk, 9);
+    expect(await num(`SELECT public.fp3_usage('${user}', 's2', NULL)`)).toBeCloseTo(pendingRisk, 9);
+    expect(await num(`SELECT public.fp3_usage('${user}', NULL, 'scalping')`)).toBeCloseTo(openRisk + pendingRisk, 9);
+    const usage = { s1: { closedLoss: 0, openRisk, pendingRisk: 0 }, s2: { closedLoss: 0, openRisk: 0, pendingRisk } };
+    const strats = [{ strategyId: "s1", engine: "scalping" as const, maxLoss: 25 }, { strategyId: "s2", engine: "scalping" as const, maxLoss: 35 }];
+    const room = checkAdditionalRisk({ maxLoss: 100, research: 40, scalping: 60 }, strats, usage, "s2", 0).room;
+    expect(room).toBeCloseTo(35 - pendingRisk, 9);
+    expect(checkAdditionalRisk({ maxLoss: 100, research: 40, scalping: 60 }, strats, usage, "s2", room + 0.01).ok).toBe(false);
+  });
+});
+

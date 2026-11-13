@@ -1,0 +1,22 @@
+{
+  "status": "AUTHORITATIVE for Phase 4E/4F local restore verification (not a Lovable Cloud restore-readiness claim)",
+  "object": "database_export_13_11_26/orbit-trade-copilot_261113.backup",
+  "sizeBytes": 2525322,
+  "sha256": "448bb1c2f5631321565a292b7b8b4aef7a38a5ab5b978449102633818fc0b6a5",
+  "md5": "5db5e5d9a1d90cf799631f3e0b206bf7",
+  "storageETag": "a10797fb0a42e8e28ffa8b7fc8e2b242-1",
+  "storageETagRecomputed": "md5(md5(file)) + '-1' = a10797fb0a42e8e28ffa8b7fc8e2b242-1 (matches the storage eTag)",
+  "storageCreatedAt": "2026-11-13T09:20:40.860Z",
+  "archiveCreatedAt": "2026-11-13 09:19:04 UTC",
+  "format": "PostgreSQL custom-format dump (PGDMP), zstd, 1256 TOC entries, PostgreSQL 17.11, pg_dump 18.6",
+  "latestAppliedMigration": "0039_futures_pass_certification_and_autopilot_fencing",
+  "superseded": {
+    "object": "database_export_12_11_26/orbit-trade-copilot_261112.backup",
+    "sizeBytes": 2092954,
+    "sha256": "7af876652ee97596afea1736f11f170cc23d11c474c0927a077e776da3276634",
+    "storageETag": "f26af7704ac429bf917f402b0d0864fb-1",
+    "archiveCreatedAt": "2026-11-12 06:52:44 UTC",
+    "reason": "different, older export taken before migration 0039 — not a corrupted copy of the 13 Nov export"
+  },
+  "verifiedAt": "2026-11-13T10:30:00Z"
+}
