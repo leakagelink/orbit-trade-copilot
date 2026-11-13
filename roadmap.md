@@ -345,3 +345,14 @@ See the specification: engine integration, paper/live trading, backtesting, risk
 - [x] Connect AI Prime Tech in the new workspace (done 12 Nov)
 
 - [x] Reconnect AI Prime Tech in this workspace and verify (done 12 Nov)
+
+## Workspace move (13 Nov 08:54 UTC)
+- [ ] Connect AI Prime Tech in the new workspace (connection only; AI calls stay disabled per owner rule)
+
+## Phase 4D (13 Nov)
+- [ ] A. Fresh export restore check — blocked: no new export (only 12 Nov 06:54 UTC file)
+- [ ] B. Futures paper fill-time re-validation + 16 tests
+- [ ] C. Central Risk shadow remediation (stale → INSUFFICIENT_DATA, deep freeze, error codes, post-claim design)
+- [ ] D. Strategy attribution draft migration + rollback + tests (not applied)
+- [ ] E. Owner decision register
+- [ ] Final report, full tests, commit
