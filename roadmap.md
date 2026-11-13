@@ -368,3 +368,13 @@ See the specification: engine integration, paper/live trading, backtesting, risk
 - [x] E. Owner decision register updated (all NOT APPROVED)
 - [x] F/G. Tests, final report, commit
 - [ ] Owner: approve 0046 successor scope (C6/C7), 0048, policy values, budget semantics, retention — blocked on owner
+
+## Phase 4E follow-up (13 Nov 09:59 UTC)
+- [ ] 1. 0046 successor draft (database recomputes risk, fills need matching unexpired approval; transactional, idempotent, concurrency-safe) — 0046 not approved
+- [ ] 2. 0048 marked approved-for-validation (not applied); 0047 permanently superseded
+- [ ] 3. Decision register: 5% liq buffer, 5 s price age, 60 s expiry, 0.13% configurable cost — proposed, NOT APPROVED
+- [ ] 4. Account budget with Research/Scalping sub-budgets incl. open + pending exposure
+- [ ] 5. Configurable retention policy draft + deletion/anonymization/audit rules
+- [ ] 6. Backup SHA-256 discrepancy investigation
+- [ ] 7. Full suite, restore, up/down, RLS, concurrency, build
+- [ ] 8. Update Phase 4E report + next-phase report
