@@ -64,7 +64,7 @@ function fakeBackend(worker: string, hooks: { beforeRpc?: (fn: string) => Promis
       const pre = hooks.signIn?.(); if (pre) return pre;
       const b = JSON.parse(body) as { email: string; password: string };
       if (b.email !== EMAIL || b.password !== PASSWORD) return new Response(JSON.stringify({ error_code: "invalid_credentials" }), { status: 400 });
-      const now = Math.floor(Date.now() / 1000), access = fakeJwt({ sub: worker, role: "authenticated", exp: now + 3600, iat: now });
+      const now = Math.floor(Date.now() / 1000), access = fakeJwt({ sub: worker, role: "authenticated", exp: now + 3600, iat: now, session_id: "00000000-0000-4000-a000-0000000005e5" }); // Phase 4H.5: session id
       tokens.set(access, worker);
       return new Response(JSON.stringify({ access_token: access, refresh_token: `rt-${Math.random()}`, expires_in: 3600, user: { id: worker } }), { status: 200 });
     }
@@ -90,6 +90,7 @@ function enableFlags() {
 const tickOpts = (id: string, fetchImpl: IdentityTickOptions["fetchImpl"] | undefined): IdentityTickOptions => ({
   enabled: true, holder: HOLDER_A, accounts: [id], maxCandlesPerAccount: 50, market: marketFrom(T0), intents: intentsFrom(T0, `l${Math.random().toString(36).slice(2, 7)}`),
   clock: { now: () => NOW, sleep: async () => {} }, hosted: { timeoutMs: 5_000 }, session: { tickBudgetMs: 60_000 }, ...(fetchImpl ? { fetchImpl } : {}),
+  gateway: "0054", // Phase 4H.5: these suites run the binding over drafts 0049–0054 (0055 envelope path: phase4h5-*.test.ts)
 });
 // The session clock is the real clock (token timing); the worker's candle clock stays at NOW.
 const run = (id: string, fetchImpl: IdentityTickOptions["fetchImpl"]) => runIdentityFuturesPaperTick({ ...tickOpts(id, fetchImpl), clock: { now: () => Date.now(), sleep: async () => {} } } as IdentityTickOptions);
@@ -126,7 +127,7 @@ describe("B. the signed-in binding: disabled by default, allowlisted requests on
   });
   it("the data transport itself refuses anything but the six wrappers (defence in depth behind the session allowlist)", async () => {
     const seen: string[] = [];
-    const { data } = identityTransports({ url: URL_, key: KEY, email: EMAIL, password: PASSWORD }, async (u) => { seen.push(u); return new Response("1", { status: 200 }); });
+    const { data } = identityTransports({ url: URL_, key: KEY, email: EMAIL, password: PASSWORD }, async (u) => { seen.push(u); return new Response("1", { status: 200 }); }, "0054");
     for (const fn of ["fpw_commit", "fpw_admin_set_identity", "fpw_owner_enroll", "wallet_apply", "fpw_id_commit; drop"]) await expect(data(fn, {}, "t", new AbortController().signal), fn).rejects.toThrow(/IDENTITY_DISABLED/);
     expect(seen).toEqual([]);
     for (const fn of Object.values(IDENTITY_RPC)) expect((await data(fn, {}, "t", new AbortController().signal)).data).toBe(1);

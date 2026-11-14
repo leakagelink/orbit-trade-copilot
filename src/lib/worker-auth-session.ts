@@ -20,6 +20,15 @@
 //     local sign-out is attempted exactly once, even after an unexpected exception (reported as TICK_INTERNAL_ERROR with
 //     the stage). The first failure is the outcome; a failed sign-out is reported separately (SIGN_OUT_FAILED) and never
 //     replaces it. Only a 2xx logout reply counts as signed out. The expected worker identity is mandatory.
+//   - Phase 4H.5 (L7): every data call arms its OWN time limit before the transport starts (a timer fault refuses the
+//     call: nothing is sent) and passes the transport one abort signal combining that limit, the caller's signal and
+//     the end of the tick; with injected timers a platform timer backs the limit up. A cancelled call answers "outcome
+//     unknown" and its late reply is ignored. An identical request still in flight is never sent twice (the second
+//     caller shares the first reply), and at most MAX_IN_FLIGHT requests are in flight at once.
+//   - Phase 4H.5 (L2–L5, local part): the token must carry a session id, be freshly issued (iat), and a refresh must keep
+//     the same session id. A sign-out that is not acknowledged reports the local token expiry as `residualTokenUntil`.
+//     None of this proves the signature or the server-side session state: draft 0055 re-checks the live session in
+//     the database on every call.
 
 export const SESSION_CODES = [
   "CONFIG_INVALID", "AUTH_INVALID_CREDENTIALS", "AUTH_RATE_LIMITED", "AUTH_UNAVAILABLE", "AUTH_TIMEOUT", "AUTH_MALFORMED_REPLY",
@@ -28,6 +37,8 @@ export const SESSION_CODES = [
   "CALL_REFUSED_DEADLINE", "CALL_REFUSED_SESSION_CLOSED", "CALL_REFUSED_NOT_ALLOWLISTED",
   "TICK_COMPLETED", "TICK_DEADLINE_EXCEEDED", "TICK_BODY_FAILED", "TICK_INTERNAL_ERROR",
   "SIGNED_OUT", "SIGN_OUT_FAILED",
+  // Phase 4H.5
+  "TOKEN_STALE", "CALL_REFUSED_TIMER", "CALL_REFUSED_IN_FLIGHT_LIMIT", "CALL_ABORTED", "CALL_COALESCED",
 ] as const;
 export type SessionCode = (typeof SESSION_CODES)[number];
 /** `detail` is a bounded code (HTTP status, allowlisted auth error code or a fixed word) — never free text. */
@@ -62,6 +73,8 @@ export const SESSION_DEFAULTS = Object.freeze({
   authTimeoutMs: 3_000, signOutTimeoutMs: 2_000, tokenSafetyMs: 60_000, minTokenLifetimeMs: 120_000,
   maxClockSkewMs: 30_000, maxRefreshes: 1 as 0 | 1, rateLimitCooldownMs: Object.freeze({ min: 60_000, max: 900_000 }),
 });
+/** Phase 4H.5 engineering constants — NOT APPROVED (register W3/W4 in docs/phase-4h5/phase4h5-final-report.md); not S1–S8. */
+export const SESSION_GUARDS = Object.freeze({ maxTokenAgeMs: 300_000, maxInFlight: 4 });
 
 type Timers = { setTimeout: (f: () => void, ms: number) => unknown; clearTimeout: (h: unknown) => void };
 export interface SessionOptions {
@@ -89,6 +102,8 @@ export interface SessionResult<T> {
   internalError: SessionStage | null;
   /** Monitor records that threw or rejected (ignored; they never affect the tick). */
   monitorFailures: number;
+  /** Phase 4H.5: when the sign-out was NOT acknowledged, the local expiry of the last token (the server may keep the session until then or longer). */
+  residualTokenUntil: number | null;
   metrics: SessionMetric[];
 }
 
@@ -104,12 +119,13 @@ function b64urlJson(part: string): unknown {
   return JSON.parse(globalThis.atob(s + pad));
 }
 /** Reads timing/identity claims WITHOUT verifying the signature (the data API verifies it); returns null when malformed. */
-export function readTokenClaims(token: string): { sub: string; role: string; exp: number; iat: number | null; anonymous: boolean } | null {
+export function readTokenClaims(token: string): { sub: string; role: string; exp: number; iat: number | null; anonymous: boolean; sid: string | null } | null {
   if (typeof token !== "string" || token.length > 8192 || !JWT.test(token)) return null;
   try {
     const p = b64urlJson(token.split(".")[1]!) as Record<string, unknown>;
     if (typeof p["sub"] !== "string" || typeof p["role"] !== "string" || typeof p["exp"] !== "number" || !Number.isFinite(p["exp"])) return null;
-    return { sub: p["sub"], role: p["role"], exp: p["exp"], iat: typeof p["iat"] === "number" && Number.isFinite(p["iat"]) ? p["iat"] : null, anonymous: p["is_anonymous"] === true };
+    return { sub: p["sub"], role: p["role"], exp: p["exp"], iat: typeof p["iat"] === "number" && Number.isFinite(p["iat"]) ? p["iat"] : null, anonymous: p["is_anonymous"] === true,
+      sid: typeof p["session_id"] === "string" ? p["session_id"] : null };
   } catch { return null; }
 }
 const errorCode = (body: unknown): string | null => {
@@ -122,7 +138,7 @@ export function cooldownMs(retryAfterSec: number | null | undefined, bounds: { m
   return Math.min(bounds.max, Math.max(bounds.min, ms));
 }
 
-type Token = { access: string; refresh: string; sub: string; expiryAt: number };
+type Token = { access: string; refresh: string; sub: string; sid: string; expiryAt: number };
 type Verified = { ok: true; token: Token } | { ok: false; code: SessionCode; detail?: string | null };
 const isPlainObject = (x: unknown): x is Record<string, unknown> => typeof x === "object" && x !== null && !Array.isArray(x);
 /**
@@ -132,7 +148,7 @@ const isPlainObject = (x: unknown): x is Record<string, unknown> => typeof x ===
  * signature on every call, and the database (the per-call identity check of draft 0054) independently re-checks the caller's current
  * identity status, roles and enrollment on every worker call.
  */
-export function verifyIssuedSession(body: unknown, now: number, o: { minTokenLifetimeMs: number; maxClockSkewMs: number; expectedSub: string }): Verified {
+export function verifyIssuedSession(body: unknown, now: number, o: { minTokenLifetimeMs: number; maxClockSkewMs: number; expectedSub: string; expectedSid?: string | null; maxTokenAgeMs?: number }): Verified {
   if (!isPlainObject(body)) return { ok: false, code: "AUTH_MALFORMED_REPLY", detail: "BODY" };
   const access = body["access_token"], refresh = body["refresh_token"], expiresIn = body["expires_in"], user = body["user"];
   if (typeof access !== "string" || typeof refresh !== "string" || refresh.length < 8 || refresh.length > 4096) return { ok: false, code: "AUTH_MALFORMED_REPLY", detail: "TOKENS" };
@@ -143,12 +159,17 @@ export function verifyIssuedSession(body: unknown, now: number, o: { minTokenLif
   if (c.role !== "authenticated") return { ok: false, code: "TOKEN_NOT_WORKER_ROLE", detail: AUTH_ERROR_CODE.test(c.role) ? c.role : "OTHER" };
   if (c.anonymous || user["is_anonymous"] === true) return { ok: false, code: "TOKEN_NOT_WORKER_ROLE", detail: "anonymous" };
   if (typeof o.expectedSub !== "string" || !UUID.test(o.expectedSub) || c.sub.toLowerCase() !== o.expectedSub.toLowerCase()) return { ok: false, code: "TOKEN_WRONG_IDENTITY" };
-  if (c.iat !== null && c.iat * 1000 > now + o.maxClockSkewMs) return { ok: false, code: "CLOCK_SKEW", detail: "IAT_IN_FUTURE" };
+  // Phase 4H.5: a session id is mandatory (draft 0055 binds every call to it) and a refresh must keep it.
+  if (c.sid === null || !UUID.test(c.sid)) return { ok: false, code: "AUTH_MALFORMED_REPLY", detail: "SESSION" };
+  if (o.expectedSid != null && c.sid.toLowerCase() !== o.expectedSid.toLowerCase()) return { ok: false, code: "TOKEN_WRONG_IDENTITY", detail: "SESSION_CHANGED" };
+  if (c.iat === null) return { ok: false, code: "AUTH_MALFORMED_REPLY", detail: "IAT" };
+  if (c.iat * 1000 > now + o.maxClockSkewMs) return { ok: false, code: "CLOCK_SKEW", detail: "IAT_IN_FUTURE" };
+  if (c.iat * 1000 < now - (o.maxTokenAgeMs ?? SESSION_GUARDS.maxTokenAgeMs) - o.maxClockSkewMs) return { ok: false, code: "TOKEN_STALE" };
   const byClaim = c.exp * 1000, byReply = typeof expiresIn === "number" && Number.isFinite(expiresIn) && expiresIn > 0 ? now + expiresIn * 1000 : Number.POSITIVE_INFINITY;
   const expiryAt = Math.min(byClaim, byReply);
   if (expiryAt <= now) return { ok: false, code: "TOKEN_EXPIRED" };
   if (expiryAt - now < o.minTokenLifetimeMs) return { ok: false, code: "TOKEN_LIFETIME_TOO_SHORT" };
-  return { ok: true, token: { access, refresh, sub: c.sub, expiryAt } };
+  return { ok: true, token: { access, refresh, sub: c.sub, sid: c.sid.toLowerCase(), expiryAt } };
 }
 
 export function validateLimits(l: SessionLimits): Required<SessionLimits> | null {
@@ -167,6 +188,7 @@ const FAILURE_CODES: ReadonlySet<SessionCode> = new Set<SessionCode>([
   "CONFIG_INVALID", "AUTH_INVALID_CREDENTIALS", "AUTH_RATE_LIMITED", "AUTH_UNAVAILABLE", "AUTH_TIMEOUT", "AUTH_MALFORMED_REPLY",
   "TOKEN_NOT_WORKER_ROLE", "TOKEN_WRONG_IDENTITY", "TOKEN_EXPIRED", "TOKEN_LIFETIME_TOO_SHORT", "CLOCK_SKEW",
   "TOKEN_REFRESH_FAILED", "TOKEN_REJECTED", "TICK_DEADLINE_EXCEEDED", "TICK_BODY_FAILED", "TICK_INTERNAL_ERROR",
+  "TOKEN_STALE", "CALL_REFUSED_TIMER",
 ]);
 
 /**
@@ -192,9 +214,10 @@ export async function runWithWorkerSession<T>(o: SessionOptions, body: (call: Gu
     } catch { monitorFailures++; /* monitoring never blocks or fails the tick */ }
   };
   const internal = (stage: SessionStage) => { internalError ??= stage; rec({ code: "TICK_INTERNAL_ERROR", detail: stage }); };
-  const finish = (x: { result?: T; retryAfterMs?: number }, signedIn: boolean, signOut: SignOutStatus, refreshes: number, callDeadlineAt: number | null): SessionResult<T> => {
+  const finish = (x: { result?: T; retryAfterMs?: number }, signedIn: boolean, signOut: SignOutStatus, refreshes: number, callDeadlineAt: number | null, residualTokenUntil: number | null = null): SessionResult<T> => {
     sealed = true;
-    const out: SessionResult<T> = { outcome: firstFailure ?? "TICK_COMPLETED", signedIn, signedOut: signOut === "SIGNED_OUT", signOut, refreshes, callDeadlineAt, internalError, monitorFailures, metrics: [...metrics] };
+    const out: SessionResult<T> = { outcome: firstFailure ?? "TICK_COMPLETED", signedIn, signedOut: signOut === "SIGNED_OUT", signOut, refreshes, callDeadlineAt, internalError, monitorFailures,
+      residualTokenUntil: signOut === "SIGN_OUT_FAILED" ? residualTokenUntil : null, metrics: [...metrics] };
     if (x.result !== undefined) out.result = x.result;
     if (x.retryAfterMs !== undefined) out.retryAfterMs = x.retryAfterMs;
     return out;
@@ -204,7 +227,10 @@ export async function runWithWorkerSession<T>(o: SessionOptions, body: (call: Gu
   try { L = validateLimits(o.limits); expected = typeof o.expectedUserId === "string" && UUID.test(o.expectedUserId) ? o.expectedUserId : null; } catch { L = null; }
   if (!L || !expected) { rec({ code: "CONFIG_INVALID", detail: L ? "EXPECTED_USER" : "LIMITS" }); return finish({}, false, "NOT_REQUIRED", 0, null); }
   const lim = L, expectedSub = expected;
-  const timers: Timers = o.timers ?? { setTimeout: (f, ms) => globalThis.setTimeout(f, ms), clearTimeout: (h) => globalThis.clearTimeout(h as ReturnType<typeof globalThis.setTimeout>) };
+  const platformTimers: Timers = { setTimeout: (f, ms) => globalThis.setTimeout(f, ms), clearTimeout: (h) => globalThis.clearTimeout(h as ReturnType<typeof globalThis.setTimeout>) };
+  const timers: Timers = o.timers ?? platformTimers;
+  /** Phase 4H.5: with injected timers, each call limit is also armed on the platform timer (either one firing cancels the call). */
+  const backstop: Timers | null = o.timers ? platformTimers : null;
   const now = () => o.clock.now();
   const safeNow = (): number | null => { try { const t = now(); return typeof t === "number" && Number.isFinite(t) ? t : null; } catch { return null; } };
   const httpDetail = (st: unknown) => `HTTP_${typeof st === "number" && Number.isSafeInteger(st) && st >= 100 && st <= 599 ? st : "XXX"}`;
@@ -229,7 +255,8 @@ export async function runWithWorkerSession<T>(o: SessionOptions, body: (call: Gu
   let token: Token | null = null, issued: string | null = null, closed = false, refreshes = 0, callDeadlineAt: number | null = null;
   let stage: SessionStage = "SIGN_IN";
   const tickCtl = new AbortController();
-  const vopts = (sub: string) => ({ minTokenLifetimeMs: lim.minTokenLifetimeMs, maxClockSkewMs: lim.maxClockSkewMs, expectedSub: sub });
+  const vopts = (sub: string, sid: string | null = null) => ({ minTokenLifetimeMs: lim.minTokenLifetimeMs, maxClockSkewMs: lim.maxClockSkewMs, expectedSub: sub, expectedSid: sid });
+  const inFlight = new Map<string, Promise<DataReply>>();
 
   async function signInAndRun(): Promise<{ result?: T; retryAfterMs?: number }> {
     const t0 = now(), bodyEnd = t0 + lim.tickBudgetMs - lim.signOutTimeoutMs; // the sign-out reserve keeps the whole tick inside its budget
@@ -270,7 +297,7 @@ export async function runWithWorkerSession<T>(o: SessionOptions, body: (call: Gu
           const detail = r.timedOut ? "TIMEOUT" : r.thrown || !r.reply ? "NETWORK" : rs === 429 ? "HTTP_429" : errorCode(r.reply.body) ?? httpDetail(rs);
           rec({ code: "TOKEN_REFRESH_FAILED", detail, latencyMs: r.latencyMs }); closed = true; return false;
         }
-        const nv = verifyIssuedSession(r.reply.body, now(), vopts(cur.sub));
+        const nv = verifyIssuedSession(r.reply.body, now(), vopts(cur.sub, cur.sid));
         if (!nv.ok) { rec({ code: "TOKEN_REFRESH_FAILED", detail: nv.code }); closed = true; return false; }
         token = nv.token; issued = token.access; callDeadlineAt = deadlineFor(token);
         rec({ code: "TOKEN_REFRESHED", latencyMs: r.latencyMs });
@@ -282,7 +309,7 @@ export async function runWithWorkerSession<T>(o: SessionOptions, body: (call: Gu
     const refuse = (code: SessionCode): DataReply => { rec({ code }); return { data: null, error: { code: null, message: `worker session: call not started (${code})` }, status: LOCAL_REFUSAL_STATUS }; };
     const call: GuardedCall = async (fn, args, signal) => {
       // Before the transport is invoked nothing can have been written, so an internal fault is answered as "not started".
-      let target: string, access: string;
+      let target: string, access: string, key: string;
       try {
         try { target = o.resolveFn(fn); } catch { return refuse("CALL_REFUSED_NOT_ALLOWLISTED"); }
         if (closed || !token || tickCtl.signal.aborted) return refuse("CALL_REFUSED_SESSION_CLOSED");
@@ -294,18 +321,51 @@ export async function runWithWorkerSession<T>(o: SessionOptions, body: (call: Gu
           if (!ok || now() + lim.rpcTimeoutMs > (callDeadlineAt ?? 0)) return refuse("CALL_REFUSED_DEADLINE");
         }
         access = token.access;
+        key = `${target}\u0000${JSON.stringify(args)}`;
+        const same = inFlight.get(key);
+        if (same) { rec({ code: "CALL_COALESCED" }); return same; } // an identical request is still in flight: never sent twice
+        if (inFlight.size >= SESSION_GUARDS.maxInFlight) return refuse("CALL_REFUSED_IN_FLIGHT_LIMIT");
       } catch { internal("CALL"); closed = true; return refuse("CALL_REFUSED_SESSION_CLOSED"); }
-      // The transport may have written: its own exceptions reach the body unchanged (the hosted classifier treats a
-      // thrown call as an UNKNOWN outcome and never resends a commit).
-      const r = await o.data(target, args, access, signal);
-      try {
-        const code = r?.error?.code ?? null;
-        if (r && (r.status === 401 || code === "PGRST301" || code === "PGRST302" || code === "PGRST303")) {
-          if (!closed) rec({ code: "TOKEN_REJECTED", detail: typeof code === "string" && /^PGRST30[1-3]$/.test(code) ? code : httpDetail(r.status ?? 0) });
-          closed = true;
+      // Phase 4H.5 (L7): the call's own limit is armed BEFORE the transport starts and outside a Promise executor, so a
+      // timer fault refuses the call with nothing sent. The transport gets ONE signal: own limit, caller, tick end.
+      const own = new AbortController();
+      let why: "TIMEOUT" | "TICK_END" | "CALLER" | null = null, h: unknown = null, hb: unknown = null;
+      const stopper = (w: "TIMEOUT" | "TICK_END" | "CALLER") => () => { if (!own.signal.aborted) { why ??= w; try { own.abort(); } catch { /* */ } } };
+      try { h = timers.setTimeout(stopper("TIMEOUT"), Math.max(1, lim.rpcTimeoutMs)); } catch { closed = true; return refuse("CALL_REFUSED_TIMER"); }
+      if (backstop) { try { hb = backstop.setTimeout(stopper("TIMEOUT"), Math.max(1, lim.rpcTimeoutMs)); } catch { hb = null; } }
+      const onCaller = stopper("CALLER"), onTick = stopper("TICK_END"), k = key;
+      const pending = (async (): Promise<DataReply> => {
+        try {
+          if (signal?.aborted) onCaller(); else signal?.addEventListener?.("abort", onCaller, { once: true });
+          if (tickCtl.signal.aborted) onTick(); else tickCtl.signal.addEventListener("abort", onTick, { once: true });
+          const cancelled = new Promise<{ cancelled: true }>((res) => { if (own.signal.aborted) res({ cancelled: true }); else own.signal.addEventListener("abort", () => res({ cancelled: true }), { once: true }); });
+          let tp: Promise<DataReply>;
+          try { tp = Promise.resolve(o.data(target, args, access, own.signal)); } catch (e) { tp = Promise.reject(e); }
+          tp.then(undefined, () => undefined); // a late failure after cancellation is ignored
+          const r = await Promise.race([tp.then((v) => ({ v }), (e: unknown) => ({ e })), cancelled]);
+          // Cancelled after the request was sent: the outcome is unknown (status 0); the late reply is never used.
+          if ("cancelled" in r) { rec({ code: "CALL_ABORTED", detail: why ?? "TIMEOUT" }); return { data: null, error: { code: null, message: "worker session: call cancelled after it was sent (outcome unknown)" }, status: 0 }; }
+          // The transport may have written: its own exceptions reach the body unchanged (the hosted classifier treats a
+          // thrown call as an UNKNOWN outcome).
+          if ("e" in r) throw r.e;
+          const reply = r.v;
+          try {
+            const code = reply?.error?.code ?? null;
+            if (reply && (reply.status === 401 || code === "PGRST301" || code === "PGRST302" || code === "PGRST303")) {
+              if (!closed) rec({ code: "TOKEN_REJECTED", detail: typeof code === "string" && /^PGRST30[1-3]$/.test(code) ? code : httpDetail(reply.status ?? 0) });
+              closed = true;
+            }
+          } catch { internal("CALL"); closed = true; }
+          return reply;
+        } finally {
+          try { timers.clearTimeout(h); } catch { /* */ }
+          try { if (backstop && hb !== null) backstop.clearTimeout(hb); } catch { /* */ }
+          try { signal?.removeEventListener?.("abort", onCaller); tickCtl.signal.removeEventListener("abort", onTick); } catch { /* */ }
+          inFlight.delete(k);
         }
-      } catch { internal("CALL"); closed = true; }
-      return r;
+      })();
+      inFlight.set(k, pending);
+      return pending;
     };
 
     // ---------- body, stopped at the body deadline ----------
@@ -352,7 +412,7 @@ export async function runWithWorkerSession<T>(o: SessionOptions, body: (call: Gu
   }
 
   let run: { result?: T; retryAfterMs?: number } = {};
-  let signOut: SignOutStatus = "NOT_REQUIRED", signedIn = false;
+  let signOut: SignOutStatus = "NOT_REQUIRED", signedIn = false, residual: number | null = null;
   try { run = await signInAndRun(); }
   catch { internal(stage); run = {}; }
   finally {
@@ -360,9 +420,10 @@ export async function runWithWorkerSession<T>(o: SessionOptions, body: (call: Gu
     closed = true;
     try { if (!tickCtl.signal.aborted) tickCtl.abort(); } catch { /* */ }
     const access = issued;
+    residual = token?.expiryAt ?? null;
     token = null; issued = null;
     signedIn = access !== null;
     if (access !== null) signOut = await signOutOnce(access);
   }
-  return finish(run, signedIn, signOut, refreshes, callDeadlineAt);
+  return finish(run, signedIn, signOut, refreshes, callDeadlineAt, residual);
 }

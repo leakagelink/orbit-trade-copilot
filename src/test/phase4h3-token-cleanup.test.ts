@@ -3,7 +3,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { runIdentityFuturesPaperTick, type IdentityTickOptions } from "@/lib/futures-paper-worker-identity.server";
 import { runWithWorkerSession, SESSION_CODES, verifyIssuedSession, type DataTransport, type SessionLimits, type SessionMetric, type SessionOptions, type SessionResult } from "@/lib/worker-auth-session";
-import { fakeAuth, fakeJwt, issued, noContent, ok, WORKER, type Step } from "./helpers/fake-auth";
+import { fakeAuth, fakeJwt, issued, noContent, ok, SESSION, WORKER, type Step } from "./helpers/fake-auth";
 
 const T0 = 1_800_000_000_000;
 const LIMITS: SessionLimits = { tickBudgetMs: 20_000, rpcTimeoutMs: 2_000, authTimeoutMs: 1_000, signOutTimeoutMs: 1_000 };
@@ -246,7 +246,7 @@ describe("4. token verification: mandatory user object matched to the subject an
     expect(verifyIssuedSession({ ...base, user: { id: WORKER.toUpperCase() } }, T0, V).ok).toBe(true); // UUID case is not identity
   });
   it("anonymous sessions and any identity other than the expected worker are refused", () => {
-    const anonClaim = { ...issued(T0), access_token: fakeJwt({ sub: WORKER, role: "authenticated", exp: T0 / 1000 + 3600, is_anonymous: true }) };
+    const anonClaim = { ...issued(T0), access_token: fakeJwt({ sub: WORKER, role: "authenticated", exp: T0 / 1000 + 3600, iat: T0 / 1000, session_id: SESSION, is_anonymous: true }) };
     expect(verifyIssuedSession(anonClaim, T0, V)).toMatchObject({ ok: false, code: "TOKEN_NOT_WORKER_ROLE", detail: "anonymous" });
     expect(verifyIssuedSession({ ...issued(T0), user: { id: WORKER, is_anonymous: true } }, T0, V)).toMatchObject({ ok: false, code: "TOKEN_NOT_WORKER_ROLE" });
     const other = "00000000-0000-4000-8000-00000000beef";

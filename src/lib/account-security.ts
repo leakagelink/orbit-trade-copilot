@@ -8,7 +8,14 @@ export const accountSecurityMiddleware = createMiddleware({type:"function"}).ser
   if(!url||!key)throw new Error("Account security unavailable");
   const db=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false},global:{headers:{Authorization:`Bearer ${token}`},fetch:(input,init)=>{const h=new Headers(init?.headers);if(key.startsWith("sb_")&&h.get("Authorization")===`Bearer ${key}`)h.delete("Authorization");h.set("apikey",key);return fetch(input,{...init,headers:h});}}});
   const {data,error}=await db.auth.getUser(token);if(error||!data.user)throw new Error("Sign in again");
-  const allowed=await db.rpc("account_mfa_allowed");if(allowed.error||allowed.data!==true)throw new Error("Verify your authenticator code to continue");
+  const allowed=await db.rpc("account_mfa_allowed");
+  if(allowed.error||allowed.data!==true){
+    // Draft 0055 (Phase 4H.5, F15): account_mfa_allowed() is false for a registered paper-worker identity, so it is
+    // refused here like an unverified session. This lookup only chooses the message; the refusal never depends on it.
+    const worker=await db.rpc("fpw_caller_is_worker" as never).then((r)=>r,()=>({data:null,error:true}));
+    if(!worker.error&&worker.data===true)throw new Error("This account is a background worker identity and cannot use the app");
+    throw new Error("Verify your authenticator code to continue");
+  }
   const claims=await db.auth.getClaims(token);const sessionId=claims.data?.claims.session_id;
   if(typeof sessionId==="string"){
     const {supabaseAdmin}=await import("@/integrations/supabase/client.server");

@@ -13,17 +13,21 @@
 // refresh, no retries, sign out (local scope) at the end. Requests are plain `fetch` calls with redirects refused and
 // no library timers. It never reads back, returns, logs or forwards a credential or token, and can call ONLY the six
 // 0053 wrappers (mapped from the Phase 4G allowlist).
+// Phase 4H.5: by default it calls the six envelope wrappers of DRAFT 0055 instead (`gateway: "0055"`), which record
+// refused calls in the database and bind every call to a live, young auth session; `gateway: "0054"` keeps the 0053
+// names for the older suites. Either way only six allowlisted names can ever be requested.
 import { runHostedFuturesPaperWorkerTick, type HostedRpc, type HostedTickOptions } from "./futures-paper-worker-hosted";
-import { IDENTITY_RPC, identityRpcName, WorkerIdentityError } from "./futures-paper-worker-identity";
+import { decodeIdentityEnvelope, IDENTITY_RPC, IDENTITY_RPC_V2, identityRpcName, identityRpcNameV2, WorkerIdentityError } from "./futures-paper-worker-identity";
 import { runWithWorkerSession, type AuthReply, type DataReply, type DataTransport, type SessionLimits, type SessionResult, type WorkerAuthTransport } from "./worker-auth-session";
 
 type Fetch = (input: string, init: RequestInit) => Promise<Response>;
-const WRAPPERS: ReadonlySet<string> = new Set(Object.values(IDENTITY_RPC));
+export type IdentityGateway = "0054" | "0055";
+const WRAPPERS: Readonly<Record<IdentityGateway, ReadonlySet<string>>> = Object.freeze({ "0054": new Set(Object.values(IDENTITY_RPC)), "0055": new Set(Object.values(IDENTITY_RPC_V2)) });
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export interface IdentityConfig { url: string; key: string; email: string; password: string }
 
 /** Plain-fetch transports; the credentials stay in this closure and are only ever sent to the configured auth endpoint. */
-export function identityTransports(cfg: IdentityConfig, fetchImpl: Fetch = (i, init) => globalThis.fetch(i, init)): { auth: WorkerAuthTransport; data: DataTransport } {
+export function identityTransports(cfg: IdentityConfig, fetchImpl: Fetch = (i, init) => globalThis.fetch(i, init), gateway: IdentityGateway = "0055"): { auth: WorkerAuthTransport; data: DataTransport } {
   if (!/^https:\/\/[a-z0-9.-]+(:\d+)?$/i.test(cfg.url)) throw new WorkerIdentityError("IDENTITY_NOT_CONFIGURED");
   const base = cfg.url, json = { "Content-Type": "application/json", Accept: "application/json" };
   const read = async (r: Response): Promise<unknown> => { const t = await r.text(); if (!t) return null; try { return JSON.parse(t) as unknown; } catch { return null; } };
@@ -38,17 +42,17 @@ export function identityTransports(cfg: IdentityConfig, fetchImpl: Fetch = (i, i
     signOut: (accessToken, signal) => post("/auth/v1/logout?scope=local", undefined, { Authorization: `Bearer ${accessToken}` }, signal),
   };
   const data: DataTransport = async (fn, args, accessToken, signal): Promise<DataReply> => {
-    if (!WRAPPERS.has(fn)) throw new WorkerIdentityError("IDENTITY_DISABLED"); // only the six 0053 wrappers
+    if (!WRAPPERS[gateway].has(fn)) throw new WorkerIdentityError("IDENTITY_DISABLED"); // only the six wrappers of the chosen draft
     const r = await fetchImpl(`${base}/rest/v1/rpc/${fn}`, { method: "POST", headers: { ...json, apikey: cfg.key, Authorization: `Bearer ${accessToken}` }, body: JSON.stringify(args), signal, redirect: "error" });
     const b = await read(r);
-    if (r.ok) return { data: b, error: null, status: r.status };
+    if (r.ok) return gateway === "0055" ? decodeIdentityEnvelope(b) : { data: b, error: null, status: r.status };
     const e = (b && typeof b === "object" ? b : {}) as Record<string, unknown>;
     return { data: null, error: { code: typeof e["code"] === "string" ? e["code"] : null, message: typeof e["message"] === "string" ? e["message"] : null }, status: r.status };
   };
   return { auth, data };
 }
 
-export type IdentityTickOptions = Omit<HostedTickOptions, "rpc"> & { session: Omit<SessionLimits, "rpcTimeoutMs">; fetchImpl?: Fetch };
+export type IdentityTickOptions = Omit<HostedTickOptions, "rpc"> & { session: Omit<SessionLimits, "rpcTimeoutMs">; fetchImpl?: Fetch; gateway?: IdentityGateway };
 /** One signed-in hosted tick: sign in → hosted tick over the six wrappers → sign out. Disabled unless both flags are set. */
 export async function runIdentityFuturesPaperTick(o: IdentityTickOptions): Promise<SessionResult<Awaited<ReturnType<typeof runHostedFuturesPaperWorkerTick>>>> {
   if (process.env["FUTURES_PAPER_WORKER_HOSTED"] !== "enabled" || process.env["FUTURES_PAPER_WORKER_IDENTITY"] !== "signed-in") throw new WorkerIdentityError("IDENTITY_DISABLED");
@@ -56,8 +60,9 @@ export async function runIdentityFuturesPaperTick(o: IdentityTickOptions): Promi
   const email = process.env["FUTURES_PAPER_WORKER_EMAIL"], password = process.env["FUTURES_PAPER_WORKER_PASSWORD"];
   const workerUserId = process.env["FUTURES_PAPER_WORKER_USER_ID"];
   if (!url || !key || !email || !password || !workerUserId || !UUID.test(workerUserId)) throw new WorkerIdentityError("IDENTITY_NOT_CONFIGURED");
-  const { auth, data } = identityTransports({ url, key, email, password }, o.fetchImpl);
+  const gateway: IdentityGateway = o.gateway === "0054" ? "0054" : "0055";
+  const { auth, data } = identityTransports({ url, key, email, password }, o.fetchImpl, gateway);
   const rpcTimeoutMs = o.hosted?.timeoutMs ?? 8_000;
-  return runWithWorkerSession({ auth, data, resolveFn: identityRpcName, clock: o.clock, limits: { ...o.session, rpcTimeoutMs }, expectedUserId: workerUserId },
+  return runWithWorkerSession({ auth, data, resolveFn: gateway === "0055" ? identityRpcNameV2 : identityRpcName, clock: o.clock, limits: { ...o.session, rpcTimeoutMs }, expectedUserId: workerUserId },
     (call) => runHostedFuturesPaperWorkerTick({ ...o, rpc: call as HostedRpc, hosted: { ...(o.hosted ?? {}), timeoutMs: rpcTimeoutMs } }));
 }

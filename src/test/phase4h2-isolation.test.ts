@@ -46,7 +46,11 @@ describe("Phase 4H.2 change control", () => {
       "0054_futures_paper_worker_identity_lifecycle.rollback.sql": "4e78cebeedf8794859206013b22b178aabb08e375dd52478a97cc0ec12d34569",
     };
     for (const [f, h] of Object.entries(pins)) expect(sha(D + f), f).toBe(h);
-    expect(readdirSync(D).filter((f) => /^(\d{4})_/.test(f) && Number(f.slice(0, 4)) > 54)).toEqual([]);
+    // Phase 4H.5 adds exactly the successor drafts 0055 and 0056 (pinned in phase4h5-isolation.test.ts); nothing else.
+    expect(readdirSync(D).filter((f) => /^(\d{4})_/.test(f) && Number(f.slice(0, 4)) > 54).sort()).toEqual([
+      "0055_futures_paper_worker_security_remediation.rollback.sql", "0055_futures_paper_worker_security_remediation.sql",
+      "0056_worker_identity_api_boundary.rollback.sql", "0056_worker_identity_api_boundary.sql",
+    ]);
     const j = JSON.parse(read("drizzle/migrations/meta/_journal.json")) as { entries: { tag: string }[] };
     expect(j.entries.at(-1)!.tag).toBe("0039_futures_pass_certification_and_autopilot_fencing");
   });

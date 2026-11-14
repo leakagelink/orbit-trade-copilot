@@ -5,9 +5,11 @@ import type { AuthReply, WorkerAuthTransport } from "@/lib/worker-auth-session";
 const b64 = (o: unknown) => Buffer.from(JSON.stringify(o)).toString("base64url");
 export const fakeJwt = (claims: Record<string, unknown>) => `${b64({ alg: "HS256", typ: "JWT" })}.${b64(claims)}.${Buffer.from("sig-" + Math.random()).toString("base64url")}`;
 export const WORKER = "00000000-0000-4000-8000-0000000c0de1";
-export function issued(now: number, o: { sub?: string; role?: string; lifeSec?: number; expiresIn?: number | null; iatSec?: number; access?: string; refresh?: string } = {}) {
+/** Phase 4H.5: tokens carry a session id (draft 0055 binds every worker call to it); a refresh keeps it. */
+export const SESSION = "00000000-0000-4000-a000-0000000005e5";
+export function issued(now: number, o: { sub?: string; role?: string; lifeSec?: number; expiresIn?: number | null; iatSec?: number; access?: string; refresh?: string; sid?: string | null } = {}) {
   const life = o.lifeSec ?? 3600, sub = o.sub ?? WORKER;
-  const access = o.access ?? fakeJwt({ sub, role: o.role ?? "authenticated", exp: Math.floor(now / 1000) + life, iat: o.iatSec ?? Math.floor(now / 1000), aud: "authenticated" });
+  const access = o.access ?? fakeJwt({ sub, role: o.role ?? "authenticated", exp: Math.floor(now / 1000) + life, iat: o.iatSec ?? Math.floor(now / 1000), aud: "authenticated", ...(o.sid === null ? {} : { session_id: o.sid ?? SESSION }) });
   return { access_token: access, refresh_token: o.refresh ?? `rt-${Math.random().toString(36).slice(2, 14)}`, token_type: "bearer", expires_in: o.expiresIn === null ? undefined : (o.expiresIn ?? life), user: { id: sub } };
 }
 export type Step = AuthReply | "throw" | "hang" | ((signal: AbortSignal) => Promise<AuthReply>);
