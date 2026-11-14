@@ -1,0 +1,28 @@
+Throwaway PostgreSQL 17.11 on 127.0.0.1:55475
+S1	DETECTED	ignore a timer fault and send the call without its own limit
+S2	DETECTED	give the transport the caller's signal instead of the combined one
+S3	DETECTED	do not cancel in-flight calls at the end of the tick
+S4	DETECTED	no platform backup timer for injected timers
+S5	DETECTED	send an identical in-flight request again
+S6	DETECTED	no limit on requests in flight
+S7	DETECTED	use the late reply after cancellation
+S8	DETECTED	accept a token without a session id
+S9	DETECTED	accept a refresh that changes the session id
+S10	DETECTED	accept a stale token
+S11	DETECTED	do not report the residual token lifetime after a failed sign-out
+Q1	DETECTED	no role guard for registered worker identities
+Q2	DETECTED	no account-ownership guard
+Q3	DETECTED	accept a signed-out (unknown) session
+Q4	DETECTED	no maximum session age
+Q5	DETECTED	no session id required
+Q6	DETECTED	refused acquire not recorded
+Q7	DETECTED	account_mfa_allowed() without the worker condition
+Q8	DETECTED	no restrictive worker guard on tables
+Q9	DETECTED	checkpoint hash skips a column (code) of the worker audit
+Q10	DETECTED	old 0053/0054 wrappers stay reachable
+Q11	DETECTED	checkpoints open to any signed-in user
+P1	DETECTED	worker calls do not hold the shared identity lock
+P2	DETECTED	worker reads take no row locks (snapshot)
+P3	DETECTED	registration does not take the identity lock (write skew with promotion)
+detected 25/25 run; 0 not run
+EXIT 0

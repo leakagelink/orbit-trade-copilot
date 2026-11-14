@@ -1,0 +1,26 @@
+Throwaway PostgreSQL 17.11 on 127.0.0.1:55475
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m/dev-server[39m
+
+ [32m✓[39m src/test/phase4h5-worker-security.pg.test.ts [2m([22m[2m15 tests[22m[2m)[22m[33m 6130[2mms[22m[39m
+     [33m[2m✓[22m[39m F4 flipped (admin_promotion, in-flight acquire): the change WAITS for the in-flight call, then is REFUSED; the worker never holds the privilege [33m 468[2mms[22m[39m
+     [33m[2m✓[22m[39m F4 flipped (super_admin_promotion, in-flight acquire): the change WAITS for the in-flight call, then is REFUSED; the worker never holds the privilege [33m 351[2mms[22m[39m
+     [33m[2m✓[22m[39m F4 flipped (worker_owned_account, in-flight acquire): the change WAITS for the in-flight call, then is REFUSED; the worker never holds the privilege [33m 494[2mms[22m[39m
+     [33m[2m✓[22m[39m a disable waits for an in-flight acquire (reads lock too under 0055), then every later call is refused [33m 393[2mms[22m[39m
+     [33m[2m✓[22m[39m a revoke waits for an in-flight acquire (reads lock too under 0055), then every later call is refused [33m 409[2mms[22m[39m
+     [33m[2m✓[22m[39m F4 flipped (admin_promotion, in-flight snapshot): the change WAITS for the in-flight call, then is REFUSED; the worker never holds the privilege [33m 414[2mms[22m[39m
+     [33m[2m✓[22m[39m F4 flipped (worker_owned_account, in-flight snapshot): the change WAITS for the in-flight call, then is REFUSED; the worker never holds the privilege [33m 423[2mms[22m[39m
+     [33m[2m✓[22m[39m a disable waits for an in-flight snapshot (reads lock too under 0055), then every later call is refused [33m 326[2mms[22m[39m
+     [33m[2m✓[22m[39m a revoke waits for an in-flight snapshot (reads lock too under 0055), then every later call is refused [33m 334[2mms[22m[39m
+     [33m[2m✓[22m[39m registration and promotion of the same user never interleave: 24 concurrent pairs end as worker XOR admin, never both [33m 462[2mms[22m[39m
+     [33m[2m✓[22m[39m deterministic write-skew check: a promotion arriving while a registration of the same user is still uncommitted WAITS, then is refused [33m 324[2mms[22m[39m
+     [33m[2m✓[22m[39m deterministic write-skew check: a registration arriving while a promotion of the same user is still uncommitted WAITS, then is refused [33m 447[2mms[22m[39m
+     [33m[2m✓[22m[39m two worker calls on the same identity do not block each other (shared lock); a promotion waits for both, then is refused [33m 398[2mms[22m[39m
+     [33m[2m✓[22m[39m F13 on real PostgreSQL: owner trigger-disable and superuser replica-role deletions (newest and middle) are detected against stored checkpoints; SQL head = TypeScript head [33m 386[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m15 passed[39m[22m[90m (15)[39m
+[2m   Start at [22m 04:51:22
+[2m   Duration [22m 8.76s[2m (transform 485ms, setup 420ms, import 644ms, tests 6.13s, environment 1.22s)[22m
+
+EXIT 0
