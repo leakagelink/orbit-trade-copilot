@@ -1,0 +1,11 @@
+Throwaway PostgreSQL 17.11 on 127.0.0.1:55475
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m/dev-server[39m
+
+ [32m✓[39m src/test/phase4h5-worker-security.pg.test.ts [2m([22m[2m15 tests[22m[2m)[22m[33m 3876[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m15 passed[39m[22m[90m (15)[39m
+[2m   Start at [22m 04:31:47
+[2m   Duration [22m 5.20s[2m (transform 229ms, setup 229ms, import 325ms, tests 3.88s, environment 563ms)[22m
+

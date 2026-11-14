@@ -238,8 +238,8 @@ describe("6. F13 (b) — checkpoints stored outside the database detect every ch
     const r2 = await cp(T, r1);
     const clean = await exported(T);
     expect((await verifyAuditTable(T, clean, [r1, r2])).ok).toBe(true);
-    expect(clean.some((x) => x.id === gap)).toBe(false);
-    const newest = clean.at(-1)!.id!, middle = clean[Math.floor(clean.length / 2)]!.id!, first = clean[0]!.id!;
+    expect(clean.some((x) => x["id"] === gap)).toBe(false);
+    const newest = clean.at(-1)!["id"]!, middle = clean[Math.floor(clean.length / 2)]!["id"]!, first = clean[0]!["id"]!;
     const check = async (sql: string) => { await tamper("futures_paper_worker_audit", sql); const v = await verifyAuditTable(T, await exported(T), [r1, r2]); return { codes: v.findings.map((f) => f.code), uncovered: v.uncheckpointedRows }; };
     // Each tamper is undone by restoring the exact original rows from the clean export (owner rights, test only).
     const restore = async () => { await tamper("futures_paper_worker_audit", `DELETE FROM public.futures_paper_worker_audit`); for (const row of clean) await db.query(`INSERT INTO public.futures_paper_worker_audit (id, account_id, user_id, code, actor, holder, fence, created_at) OVERRIDING SYSTEM VALUE VALUES ($1::bigint, $2::uuid, $3::uuid, $4, $5, $6::uuid, $7::bigint, to_timestamp($8::bigint / 1e6))`, [row["id"], row["account_id"], row["user_id"], row["code"], row["actor"], row["holder"], row["fence"], row["created_at_us"]]); expect((await verifyAuditTable(T, await exported(T), [r1, r2])).ok).toBe(true); };

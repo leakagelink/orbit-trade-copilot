@@ -420,7 +420,7 @@ export async function runWithWorkerSession<T>(o: SessionOptions, body: (call: Gu
     closed = true;
     try { if (!tickCtl.signal.aborted) tickCtl.abort(); } catch { /* */ }
     const access = issued;
-    residual = token?.expiryAt ?? null;
+    residual = (token as Token | null)?.expiryAt ?? null;
     token = null; issued = null;
     signedIn = access !== null;
     if (access !== null) signOut = await signOutOnce(access);

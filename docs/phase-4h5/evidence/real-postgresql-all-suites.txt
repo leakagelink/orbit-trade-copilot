@@ -1,0 +1,83 @@
+Throwaway PostgreSQL 17.11 on 127.0.0.1:55475
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m/dev-server[39m
+
+ [32m✓[39m src/test/phase4h5-worker-security.pg.test.ts [2m([22m[2m13 tests[22m[2m)[22m[33m 3756[2mms[22m[39m
+     [33m[2m✓[22m[39m registration and promotion of the same user never interleave: 24 concurrent pairs end as worker XOR admin, never both [33m 313[2mms[22m[39m
+     [33m[2m✓[22m[39m two worker calls on the same identity do not block each other (shared lock); a promotion waits for both, then is refused [33m 312[2mms[22m[39m
+     [33m[2m✓[22m[39m F13 on real PostgreSQL: owner trigger-disable and superuser replica-role deletions (newest and middle) are detected against stored checkpoints; SQL head = TypeScript head [33m 345[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m13 passed[39m[22m[90m (13)[39m
+[2m   Start at [22m 04:25:40
+[2m   Duration [22m 5.29s[2m (transform 235ms, setup 240ms, import 344ms, tests 3.76s, environment 682ms)[22m
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m/dev-server[39m
+
+ [32m✓[39m src/test/futures-paper-0051.pg.test.ts [2m([22m[2m4 tests[22m[2m)[22m[33m 3703[2mms[22m[39m
+     [33m[2m✓[22m[39m six sessions commit the same stop-out candle at once: one commit, one exit, one completeness record; all return the same sequence [33m 348[2mms[22m[39m
+     [33m[2m✓[22m[39m an omitting writer racing a correct writer (5 accounts): the omission never commits; every account ends stopped out [33m 685[2mms[22m[39m
+     [33m[2m✓[22m[39m two accounts of one owner stop out concurrently: both commit; strategy usage equals the closed losses in the ledger [33m 354[2mms[22m[39m
+     [33m[2m✓[22m[39m a backend killed while its commit waits on the account lock writes nothing; the retried candle commits once [33m 306[2mms[22m[39m
+ [32m✓[39m src/test/futures-paper-0052.pg.test.ts [2m([22m[2m5 tests[22m[2m)[22m[33m 3945[2mms[22m[39m
+     [33m[2m✓[22m[39m six sessions commit the same stop-out of a STOPPED account at once: one commit, one exit; the account stays stopped [33m 315[2mms[22m[39m
+     [33m[2m✓[22m[39m an omitted entry fill racing the correct writer (5 accounts): the omission never commits; each entry fills exactly once [33m 578[2mms[22m[39m
+     [33m[2m✓[22m[39m a stop request racing a commit that fills: either the fill commits before the stop, or the stopped account refuses the fill — never a fill after the stop [33m 442[2mms[22m[39m
+     [33m[2m✓[22m[39m a backend killed while its stopped-account exit waits on the account lock writes nothing; the retried candle commits once [33m 377[2mms[22m[39m
+ [32m✓[39m src/test/futures-paper-0054.pg.test.ts [2m([22m[2m4 tests[22m[2m)[22m[33m 981[2mms[22m[39m
+ [32m✓[39m src/test/futures-paper-ledger-v2-concurrency.pg.test.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 1226[2mms[22m[39m
+     [33m[2m✓[22m[39m racing workers commit every candle exactly once; the ledger and the database book reconcile with a single-threaded replay [33m 597[2mms[22m[39m
+     [33m[2m✓[22m[39m a worker killed before COMMIT leaves nothing behind; the retry commits exactly once; a lost response replays idempotently [33m 359[2mms[22m[39m
+ [32m✓[39m src/test/futures-paper-ledger-v3-concurrency.pg.test.ts [2m([22m[2m5 tests[22m[2m)[22m[33m 2435[2mms[22m[39m
+     [33m[2m✓[22m[39m racing workers commit every candle exactly once; approvals, fills, ledger and book reconcile with a single-threaded replay [33m 692[2mms[22m[39m
+     [33m[2m✓[22m[39m concurrent budget configuration writes cannot over-allocate a sub-budget (serialized on the account budget row) [33m 765[2mms[22m[39m
+     [33m[2m✓[22m[39m a worker killed before COMMIT leaves nothing behind (no approval, candle or event); the retry commits once; a lost response replays [33m 490[2mms[22m[39m
+[90mstdout[2m | src/test/futures-paper-worker-hosted.pg.test.ts[2m > [22m[2mhosted worker connection on real PostgreSQL sessions[2m > [22m[2mG3: on 0049 alone a REPEATABLE READ caller overspends a shared budget; READ COMMITTED does not; the 0050 gateway refuses REPEATABLE READ
+[22m[39mG3 ISOLATION LEVEL REPEATABLE READ {"outcome":"accepted","usage":19.99882044}
+
+[90mstdout[2m | src/test/futures-paper-worker-hosted.pg.test.ts[2m > [22m[2mhosted worker connection on real PostgreSQL sessions[2m > [22m[2mG3: on 0049 alone a REPEATABLE READ caller overspends a shared budget; READ COMMITTED does not; the 0050 gateway refuses REPEATABLE READ
+[22m[39mG3 ISOLATION LEVEL READ COMMITTED {"outcome":"strategy s1 budget 12 would be exceeded at approval (usage 19.998820440000000000","usage":9.99941022}
+
+ [32m✓[39m src/test/futures-paper-worker-hosted.pg.test.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 7413[2mms[22m[39m
+     [33m[2m✓[22m[39m four workers compete for one account: fenced lease rows serialize them; every candle commits exactly once; no lease is left held [33m 409[2mms[22m[39m
+     [33m[2m✓[22m[39m a stalled holder whose lease was taken over cannot commit (fencing); the new holder finishes; nothing is duplicated [33m 338[2mms[22m[39m
+     [33m[2m✓[22m[39m client timeout WITH server-side cancellation: nothing is written; the next tick commits each candle once [33m 1413[2mms[22m[39m
+     [33m[2m✓[22m[39m client timeout WITHOUT cancellation (the server finishes later): the first attempt commits, the resend replays it; the next tick continues — exactly once [33m 1550[2mms[22m[39m
+     [33m[2m✓[22m[39m a backend killed in the middle of a commit: the transaction rolls back; no halt; the candle is committed once later [33m 532[2mms[22m[39m
+     [33m[2m✓[22m[39m two independent accounts (different owners) processed concurrently: both complete; neither waits for the other's lease [33m 317[2mms[22m[39m
+     [33m[2m✓[22m[39m same-owner budget race through the gateway: one approval is refused and becomes a rejection — usage never exceeds the budget [33m 360[2mms[22m[39m
+     [33m[2m✓[22m[39m G3: on 0049 alone a REPEATABLE READ caller overspends a shared budget; READ COMMITTED does not; the 0050 gateway refuses REPEATABLE READ [33m 489[2mms[22m[39m
+[90mstdout[2m | src/test/futures-paper-worker.pg.test.ts[2m > [22m[2mFutures paper worker on real PostgreSQL sessions[2m > [22m[2mcross-account budget race: two workers on two accounts of one owner approve at once; the database serializes on the budget row, one approval is refused and becomes a rejection — usage never exceeds the budget
+[22m[39mRACE [33m0[39m {"approvals":1,"recomputes":["APPROVAL_STRATEGY_BUDGET"]}
+
+[90mstdout[2m | src/test/futures-paper-worker.pg.test.ts[2m > [22m[2mFutures paper worker on real PostgreSQL sessions[2m > [22m[2mcross-account budget race: two workers on two accounts of one owner approve at once; the database serializes on the budget row, one approval is refused and becomes a rejection — usage never exceeds the budget
+[22m[39mRACE [33m1[39m {"approvals":1,"recomputes":["APPROVAL_STRATEGY_BUDGET"]}
+
+[90mstdout[2m | src/test/futures-paper-worker.pg.test.ts[2m > [22m[2mFutures paper worker on real PostgreSQL sessions[2m > [22m[2mcross-account budget race: two workers on two accounts of one owner approve at once; the database serializes on the budget row, one approval is refused and becomes a rejection — usage never exceeds the budget
+[22m[39mRACE [33m2[39m {"approvals":1,"recomputes":["APPROVAL_STRATEGY_BUDGET"]}
+
+ [32m✓[39m src/test/futures-paper-worker.pg.test.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 3820[2mms[22m[39m
+     [33m[2m✓[22m[39m lease contention: four workers on one account — advisory-lock leases serialize them; every candle commits exactly once [33m 504[2mms[22m[39m
+     [33m[2m✓[22m[39m no lease at all: racing workers still commit every candle exactly once (compare-and-set + idempotent identical replay) [33m 623[2mms[22m[39m
+     [33m[2m✓[22m[39m crash BEFORE COMMIT (backend killed inside the transaction): nothing is written, the lease dies with the session, another worker continues [33m 450[2mms[22m[39m
+     [33m[2m✓[22m[39m crash AFTER COMMIT (process dies before reading the reply): the next worker reloads the committed cursor; nothing is duplicated [33m 420[2mms[22m[39m
+     [33m[2m✓[22m[39m restart recovery: a worker killed every few candles ends identical to an uninterrupted run [33m 1119[2mms[22m[39m
+ [32m✓[39m src/test/phase4d-concurrency.pg.test.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 1218[2mms[22m[39m
+     [33m[2m✓[22m[39m two simultaneous partial reductions of 0.6 against a 1.0 fill: exactly one commits [33m 530[2mms[22m[39m
+     [33m[2m✓[22m[39m the same evidence inserted simultaneously from two sessions is attributed once [33m 439[2mms[22m[39m
+ [32m✓[39m src/test/phase4e-attribution-concurrency.pg.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 4037[2mms[22m[39m
+     [33m[2m✓[22m[39m fill 1.0 restated to 0.5 vs a 0.6 reduction (correction first): exactly one commits; reductions never exceed effective fills [33m 580[2mms[22m[39m
+     [33m[2m✓[22m[39m fill 1.0 restated to 0.5 vs a 0.6 reduction (reduction first): exactly one commits; reductions never exceed effective fills [33m 584[2mms[22m[39m
+     [33m[2m✓[22m[39m two simultaneous revision-1 corrections of one fee (identical values): exactly one commits, the other is stale [33m 583[2mms[22m[39m
+     [33m[2m✓[22m[39m two simultaneous revision-1 corrections of one fee (different values): exactly one commits, the other is stale [33m 545[2mms[22m[39m
+     [33m[2m✓[22m[39m reduction 0.5 restated to 0.8 vs a new 0.4 reduction on a 1.0 fill (correction first): exactly one commits [33m 564[2mms[22m[39m
+     [33m[2m✓[22m[39m reduction 0.5 restated to 0.8 vs a new 0.4 reduction on a 1.0 fill (reduction first): exactly one commits [33m 531[2mms[22m[39m
+     [33m[2m✓[22m[39m two simultaneous 0.3 reductions against a fill corrected down to 0.5: exactly one commits [33m 584[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m9 passed[39m[22m[90m (9)[39m
+[2m      Tests [22m [1m[32m47 passed[39m[22m[90m (47)[39m
+[2m   Start at [22m 04:25:46
+[2m   Duration [22m 38.27s[2m (transform 362ms, setup 1.70s, import 1.19s, tests 28.78s, environment 4.78s)[22m
+
+EXIT 0

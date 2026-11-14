@@ -58,7 +58,7 @@ function backend(worker: string, o: { logoutStatus?: number } = {}) {
     }
     if (path === "/auth/v1/logout?scope=local") {
       const c = readTokenClaims((h.get("authorization") ?? "").replace(/^Bearer /, ""));
-      if ((o.logoutStatus ?? 204) >= 300) return new Response(null, { status: o.logoutStatus });
+      if ((o.logoutStatus ?? 204) >= 300) return new Response(null, { status: o.logoutStatus! });
       await db.query(`DELETE FROM auth.sessions WHERE id = $1`, [c!.sid]);
       return new Response(null, { status: 204 });
     }

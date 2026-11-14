@@ -1,0 +1,33 @@
+# Phase 4H.5 SHA-256 manifest (sha256sum format). Generated 2026-11-14T04:40:30Z. This file does not list itself.
+# Verify (PowerShell): Get-FileHash -Algorithm SHA256 <file>   |   (bash): sha256sum -c docs/phase-4h5/sha256-manifest.txt
+aff986b7b8c4e878b84447fdc30d4dadc38d3b79aadd8e86798ce1dea60eaf12  docs/phase-4h5/phase4h5-final-report.md
+8ef64263daea3647ca22bf9fdaa17791a39fc0a1b002cc61130510a5ec8c67b5  docs/phase-4h5/security-remediation-test-report.md
+be20fb40ad5a6fdaf83292731a146fe874c80f3dc9b7e599c904953766609ee8  docs/phase-4h5/migration-review.md
+969f89902ae3627a2cbf22677de01d16aca7b54b4b63aadab571e757c58d09d9  docs/phase-4h5/evidence/full-suite-summary.txt
+d4d61e24803d9357f7947f47e931c5e040e074fec2da6829bb31c43acb27d892  docs/phase-4h5/evidence/mutation-check-4h5.txt
+ae717ba9c03fc385ebc38d5495cbc18b96f0fde43d5e1815e0e2f2942d34d073  docs/phase-4h5/evidence/real-postgresql-4h5-suite.txt
+b88c1c403b4814cac90588a04dd1df0c9ce012cfed1af397488ab6f988100eea  docs/phase-4h5/evidence/real-postgresql-all-suites.txt
+ad442902b70478c7354bd403b4cb166ce425b8cfdd0a40be3b156efd059fb310  docs/phase-4h5/evidence/typecheck-and-build.txt
+b157a84482d35d98a7069f2c4dcb3f173211fa845a1985c929dd3513733ca3f7  docs/proposed-migrations/0055_futures_paper_worker_security_remediation.sql
+e05e410751d373f34201e05fc9be95848830d4c7b73c2778cb69ced5bcd15a17  docs/proposed-migrations/0055_futures_paper_worker_security_remediation.rollback.sql
+55d20793cef1cdf35f272764df047e92ecf26274283484d3df58180437106340  docs/proposed-migrations/0056_worker_identity_api_boundary.sql
+dc8fbaa49e39c67136863c4e35eb542ffd7c669bd346c70424d9241e1970d6ee  docs/proposed-migrations/0056_worker_identity_api_boundary.rollback.sql
+2f93476d3ac12ceaac4ef1c1a72364855b838ff98460e0bc4251e9cbbbceccad  src/lib/audit-checkpoint.ts
+e589eac97a71421406f0f0fcad58cf38c428db94ea7a8e6a5f14fff082a7ab20  src/lib/worker-auth-session.ts
+ba3ef63489176933949f0e4c2ceda4fd37ce74a03b6ef3791c5d0c8ca4fa0b1e  src/lib/futures-paper-worker-identity.ts
+fa68fa778b1dffffc654fb0e298b3290f750a4b8dfd5bdc50f1cae616b70a78f  src/lib/futures-paper-worker-identity.server.ts
+bed3ecb73a927d7d70dcc080c0a0ee65ce729ac38ea9d5e66cc2ca3e99ce45a0  src/lib/account-security.ts
+1cbca841f48026a112a20456fe1e0d01862e76efd89e649ce6ef14cd8a09d824  src/lib/futures-paper-worker-hosted.ts
+09e14eb9a66203ab15bc01aa9ae1311411f540faa9b95458f2d3fed9e01343d5  src/lib/futures-paper-worker-hosted.server.ts
+b37d4f979afb24e1c9c5be9c515f73a37c9d55c23a5ade64e238a405a980aa59  scripts/audit-checkpoint/audit-checkpoints.ts
+015a11b54acfa1805cc4db26da8da2e1716a4dbb27fd0688aeb247c87e327673  scripts/futures-paper/concurrency-check-4h5.sh
+66e2cb1c58f33298c46d0d50ae68a3c4b9edb7490c59475d4d79e78ed1a7a641  scripts/worker-auth/mutation-check-4h5.ts
+a43c452db934ca0fe2932c22cbe167317694f5f5a1d06bd69fde406f6b3244fb  src/test/helpers/fp-0055-harness.ts
+100832b62dfdf3f817007db11e341892f85a4744a1edb5e00a0b48e323e9ad21  src/test/phase4h5-audit-checkpoint.test.ts
+1e58db19a38a47b08d6600c99690df5cbab6c8ef11b10f75320ad4c5932b7bcc  src/test/phase4h5-binding-0055.test.ts
+8e042a383979a9e4803b6485a38d81b704001f25dbadcf9b48331be5f6125b7f  src/test/phase4h5-f15-server.test.ts
+fb601f4d8bf5c94d07cb787582c541866466f23b6980e77a1e3bced7acb1c45e  src/test/phase4h5-isolation.test.ts
+57b913002d199d84ef4ea63641c479c4121b00149e5d79c6f9ae7dee97caab23  src/test/phase4h5-migration-0055.test.ts
+c1f28459217408bd5233ca4920245a37e719375e3994891a66d1d192f4f1c824  src/test/phase4h5-migration-0056.test.ts
+d4e655f1b7c45b5322ef34cc53cef49da21453ba27aca7d7dac771ca6a60c5af  src/test/phase4h5-session.test.ts
+876827b7d146dcb820fa41222c534c18e9495651c0a5509af1500d0d47fd63ef  src/test/phase4h5-worker-security.pg.test.ts

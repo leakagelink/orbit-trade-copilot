@@ -55,7 +55,8 @@ describe("Phase 4H.1 change control", () => {
     expect(j.entries.at(-1)!.tag).toBe("0039_futures_pass_certification_and_autopilot_fencing");
     const re = /fpw_id_check|futures_paper_worker_identity_changes|futures_paper_0054_requires_0053|0054_futures_paper/;
     const places = [...walk("drizzle", /./), ...walk("supabase", /./), ...walk("src", /\.(ts|tsx)$/).filter((f) => !f.includes(join("src", "test")))];
-    expect(places.filter((f) => re.test(read(f))).map((f) => relative(process.cwd(), f))).toEqual([]);
+    // Phase 4H.5: the pure, unused checkpoint verifier names the identity-history table (phase4h5-isolation constrains it).
+    expect(places.filter((f) => re.test(read(f))).map((f) => relative(process.cwd(), f)).filter((f) => f !== "src/lib/audit-checkpoint.ts")).toEqual([]);
     for (const f of [".env", "wrangler.jsonc", "wrangler.toml", "vercel.json"].filter(existsSync)) expect(read(f)).not.toMatch(/FUTURES_PAPER_WORKER_(HOSTED|IDENTITY|EMAIL|PASSWORD)/);
     expect(walk("src/routes").filter((f) => /futures-paper-worker|runHostedFuturesPaperWorkerTick|identityFuturesPaperRpc/.test(read(f)))).toEqual([]);
     const sched = [...walk("supabase", /./), ...walk("scripts", /\.(ts|sh|sql)$/)].filter((f) => /cron\.schedule|create_http_schedule|net\.http_post/.test(read(f)) && /fpw_|futures-paper-worker/.test(read(f)));

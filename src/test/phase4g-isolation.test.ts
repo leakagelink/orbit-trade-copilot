@@ -61,7 +61,10 @@ describe("the hosted connection is disabled and isolated", () => {
   it("nothing in the app imports the Phase 4G modules; no route, cron entry or schedule names them or the gateway functions", () => {
     // Phase 4H finalization: the disabled signed-in identity binding (itself imported by nothing; phase4h-final-isolation.test.ts) builds on G.
     const ID = ["src/lib/futures-paper-worker-identity.ts", "src/lib/futures-paper-worker-identity.server.ts"];
-    const app = walk(resolve(ROOT, "src")).filter((f) => !f.includes(join("src", "test")) && ![...G, ...ID].some((g) => f.endsWith(g)));
+    // Phase 4H.5: the shared security check names the 0055 helper fpw_caller_is_worker (refusal message only) and the pure,
+    // unused checkpoint module names the audit tables; both are constrained by phase4h5-isolation / phase4h5-f15-server.
+    const H45 = ["src/lib/account-security.ts", "src/lib/audit-checkpoint.ts"];
+    const app = walk(resolve(ROOT, "src")).filter((f) => !f.includes(join("src", "test")) && ![...G, ...ID, ...H45].some((g) => f.endsWith(g)));
     expect(app.filter((f) => /futures-paper-worker-hosted|futures-paper-market-provenance|fpw_/.test(readFileSync(f, "utf8"))).map((f) => relative(ROOT, f))).toEqual([]);
     const places = [...walk("src/routes", /./), ...walk("supabase", /./), ...walk("scripts", /\.(ts|sh|sql)$/), ...["wrangler.toml", "wrangler.jsonc", "vercel.json"].filter(existsSync)];
     expect(places.filter((f) => /cron\.schedule|create_http_schedule|net\.http_post|setInterval/.test(readFileSync(f, "utf8")) && /fpw_|futures-paper-worker-hosted|runHostedFuturesPaperWorkerTick/.test(readFileSync(f, "utf8"))).map((f) => relative(ROOT, f))).toEqual([]);

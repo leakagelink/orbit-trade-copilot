@@ -61,7 +61,7 @@ export async function makeRecord(db: DbCheckpoint, prev: CheckpointRecord | null
   const base = { v: 1 as const, table: db.table, afterId: db.after_id, toId: db.to_id, count: db.count, head: db.head, triggers: { ...db.triggers }, takenAtUs: String(db.taken_at_us), prev: prev ? prev.sha : null };
   return { ...base, sha: await recordSha(base) };
 }
-async function hmacKey(key: Uint8Array) { return globalThis.crypto.subtle.importKey("raw", key, { name: "HMAC", hash: "SHA-256" }, false, ["sign", "verify"]); }
+async function hmacKey(key: Uint8Array) { return globalThis.crypto.subtle.importKey("raw", Uint8Array.from(key), { name: "HMAC", hash: "SHA-256" }, false, ["sign", "verify"]); }
 /** Optional seal with a key kept outside the database and outside the worker runtime. */
 export async function sealRecord(r: CheckpointRecord, key: Uint8Array): Promise<CheckpointRecord> {
   if (key.length < 32) throw new Error("audit checkpoint: seal key must be at least 32 bytes");
