@@ -1,5 +1,15 @@
 # Roadmap
 
+## Phase 4H.8 — live scalping infrastructure (no real or Testnet orders) — 14 November 2026
+- [ ] 1. Live USD-M market data: parsers, order-book sync, gaps/duplicates/stale, drift, rate limits, reconnecting client
+- [ ] 2. Live 1m/5m + microstructure signal pipeline (LONG/SHORT/NO TRADE/INSUFFICIENT_DATA, uncalibrated score)
+- [ ] 3. Real-market paper execution (book-walk market, queue-aware limit, partial/rejected, fees/funding/slippage, mark SL/TP, liquidation, dedupe, restart recovery)
+- [ ] 4. Central Risk Engine integration (proposal → context → sizing; owner-proposed values shown separately)
+- [ ] 5. Disabled execution adapter: plan, client IDs, allowlists, reconciliation, protection checks, hard server gate (constant false)
+- [ ] 6. Live Scalping Command Center page (PAPER labels), 7. monitoring with correlation IDs
+- [ ] 8. Tests on recorded public data + live verification run; full suite, typecheck, build
+- [ ] 9. Phase 4H.8 reports + manifest
+
 ## Phase 4C — shadow design, 0045 successor, risk-data contracts, EMA forward research — 12 November 2026
 - [x] A. Central Risk shadow design docs (design, input contract, safety invariants, source matrix, dependencies, approval checklist) — design only
 - [x] B. 0046 successor draft + rollback (not applied), 15 PGlite + 3 multi-session tests, local-only restore verifier + tests

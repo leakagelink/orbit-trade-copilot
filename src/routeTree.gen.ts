@@ -41,6 +41,7 @@ import { Route as AuthenticatedPlansRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedReferralsRouteImport } from './routes/_authenticated/referrals'
 import { Route as AuthenticatedResearchRouteImport } from './routes/_authenticated/research'
 import { Route as AuthenticatedRiskRouteImport } from './routes/_authenticated/risk'
+import { Route as AuthenticatedScalpCenterRouteImport } from './routes/_authenticated/scalp-center'
 import { Route as AuthenticatedScalpingRouteImport } from './routes/_authenticated/scalping'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedStatusRouteImport } from './routes/_authenticated/status'
@@ -221,6 +222,12 @@ const AuthenticatedRiskRoute = AuthenticatedRiskRouteImport.update({
   path: '/risk',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedScalpCenterRoute =
+  AuthenticatedScalpCenterRouteImport.update({
+    id: '/scalp-center',
+    path: '/scalp-center',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedScalpingRoute = AuthenticatedScalpingRouteImport.update({
   id: '/scalping',
   path: '/scalping',
@@ -336,6 +343,7 @@ export interface FileRoutesByFullPath {
   '/referrals': typeof AuthenticatedReferralsRoute
   '/research': typeof AuthenticatedResearchRoute
   '/risk': typeof AuthenticatedRiskRoute
+  '/scalp-center': typeof AuthenticatedScalpCenterRoute
   '/scalping': typeof AuthenticatedScalpingRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/status': typeof AuthenticatedStatusRoute
@@ -385,6 +393,7 @@ export interface FileRoutesByTo {
   '/referrals': typeof AuthenticatedReferralsRoute
   '/research': typeof AuthenticatedResearchRoute
   '/risk': typeof AuthenticatedRiskRoute
+  '/scalp-center': typeof AuthenticatedScalpCenterRoute
   '/scalping': typeof AuthenticatedScalpingRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/status': typeof AuthenticatedStatusRoute
@@ -436,6 +445,7 @@ export interface FileRoutesById {
   '/_authenticated/referrals': typeof AuthenticatedReferralsRoute
   '/_authenticated/research': typeof AuthenticatedResearchRoute
   '/_authenticated/risk': typeof AuthenticatedRiskRoute
+  '/_authenticated/scalp-center': typeof AuthenticatedScalpCenterRoute
   '/_authenticated/scalping': typeof AuthenticatedScalpingRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/status': typeof AuthenticatedStatusRoute
@@ -487,6 +497,7 @@ export interface FileRouteTypes {
     | '/referrals'
     | '/research'
     | '/risk'
+    | '/scalp-center'
     | '/scalping'
     | '/settings'
     | '/status'
@@ -536,6 +547,7 @@ export interface FileRouteTypes {
     | '/referrals'
     | '/research'
     | '/risk'
+    | '/scalp-center'
     | '/scalping'
     | '/settings'
     | '/status'
@@ -586,6 +598,7 @@ export interface FileRouteTypes {
     | '/_authenticated/referrals'
     | '/_authenticated/research'
     | '/_authenticated/risk'
+    | '/_authenticated/scalp-center'
     | '/_authenticated/scalping'
     | '/_authenticated/settings'
     | '/_authenticated/status'
@@ -849,6 +862,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRiskRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/scalp-center': {
+      id: '/_authenticated/scalp-center'
+      path: '/scalp-center'
+      fullPath: '/scalp-center'
+      preLoaderRoute: typeof AuthenticatedScalpCenterRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/scalping': {
       id: '/_authenticated/scalping'
       path: '/scalping'
@@ -988,6 +1008,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedReferralsRoute: typeof AuthenticatedReferralsRoute
   AuthenticatedResearchRoute: typeof AuthenticatedResearchRoute
   AuthenticatedRiskRoute: typeof AuthenticatedRiskRoute
+  AuthenticatedScalpCenterRoute: typeof AuthenticatedScalpCenterRoute
   AuthenticatedScalpingRoute: typeof AuthenticatedScalpingRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedStatusRoute: typeof AuthenticatedStatusRoute
@@ -1023,6 +1044,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedReferralsRoute: AuthenticatedReferralsRoute,
   AuthenticatedResearchRoute: AuthenticatedResearchRoute,
   AuthenticatedRiskRoute: AuthenticatedRiskRoute,
+  AuthenticatedScalpCenterRoute: AuthenticatedScalpCenterRoute,
   AuthenticatedScalpingRoute: AuthenticatedScalpingRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedStatusRoute: AuthenticatedStatusRoute,

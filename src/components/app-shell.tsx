@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState, type ReactNode } from "react";
 import {
   LayoutDashboard, Bot, Cable, Blocks, Settings, LogOut, Moon, Sun, Menu, MessageSquareText, Activity,
-  FlaskConical, ChartColumn, ShieldAlert, CandlestickChart, Wallet, Crown, Lock, ArrowLeftRight, Zap, ChevronRight, ArrowUpRight, Ellipsis,
+  FlaskConical, ChartColumn, ShieldAlert, CandlestickChart, Wallet, Crown, Lock, ArrowLeftRight, Zap, Radio, ChevronRight, ArrowUpRight, Ellipsis,
   Star, BookOpen, CalendarDays, Bell, LifeBuoy, HeartPulse, Mail, GraduationCap, Gift, Trophy, Store, ShieldCheck, Languages,
 } from "lucide-react";
 import { usePlan } from "@/hooks/use-plan";
@@ -31,6 +31,7 @@ const NAV = [
   { to: "/bots", label: "Trading Bots", icon: Bot },
   { to: "/paper", label: "Paper trading", icon: FlaskConical },
   { to: "/scalping", label: "Scalping", icon: Zap },
+  { to: "/scalp-center", label: "Live scalping center", icon: Radio },
   { to: "/arbitrage", label: "Arbitrage", icon: ArrowLeftRight },
   { to: "/backtests", label: "Backtests", icon: FlaskConical },
   { to: "/analytics", label: "Analytics", icon: ChartColumn },
