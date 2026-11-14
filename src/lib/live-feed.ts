@@ -18,7 +18,7 @@ export const FEED_HOSTS = Object.freeze({
 });
 /** Exact public REST paths with their request weight (limit ≤ 1000 for depth, ≤ 499 for klines). Nothing signed. */
 export const REST_WEIGHTS: Readonly<Record<string, number>> = Object.freeze({
-  "/fapi/v1/depth": 20, "/fapi/v1/klines": 2, "/fapi/v1/time": 1, "/fapi/v1/premiumIndex": 1, "/fapi/v1/exchangeInfo": 1,
+  "/fapi/v1/depth": 20, "/fapi/v1/aggTrades": 20, "/fapi/v1/klines": 2, "/fapi/v1/time": 1, "/fapi/v1/premiumIndex": 1, "/fapi/v1/exchangeInfo": 1,
 });
 const REST_PARAMS = new Set(["symbol", "limit", "interval", "startTime", "endTime"]);
 export type SocketKind = "market" | "public";
