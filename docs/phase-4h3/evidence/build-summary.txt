@@ -1,0 +1,9 @@
+command: bunx vite build --outDir /tmp/build4h3e
+exit code: 0
+638:✓ built in 6.83s
+983:✓ built in 3.93s
+986:[nitro] ✔ Generated public dist/client
+989: WARN  inlineDynamicImports option is ignored because the codeSplitting option is specified.
+1684:✓ built in 3.25s
+1691:[nitro] ✔ You can preview this build using npx vite preview
+1692:[nitro] ✔ You can deploy this build using npx nitro deploy --prebuilt

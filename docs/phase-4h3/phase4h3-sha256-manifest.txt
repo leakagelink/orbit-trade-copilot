@@ -1,0 +1,56 @@
+# Phase 4H.3 SHA-256 manifest
+# Algorithm: SHA-256 (sha256sum, hex). Format: <hash>  <path relative to the repository root>
+# Generated: 2026-11-14T03:07:36Z. Implementation commit 7695eab; Phase 4H.2 baseline commit 2463190.
+# This manifest cannot contain its own hash: see phase4h3-sha256-manifest.txt.sha256.
+
+# Changed source files (Phase 4H.3)
+8605ced84a9c42aae34e3d1a474eb45e53941da33c64b2b0aabed431618774b8  src/lib/worker-auth-session.ts
+e577e5a5246ad50d28f55467449d82ebc744275681e34ca98709206c2a8fd6e0  src/lib/futures-paper-worker-identity.server.ts
+0b6cbb4c658fa88a103a553dd7f4b08355e79a07832cb2acd2649b7527a972ef  src/lib/AGENTS.md
+
+# Changed test files (Phase 4H.3)
+119c6e33c76fbb04fb4d64186759d351df3a7e6415f4281217fbc784fa71368b  src/test/phase4h3-token-cleanup.test.ts
+7ab5edcea59de93885f0143bc28d9d82a504c6b72f8f16111c82f894c3e3a82d  src/test/worker-auth-session.test.ts
+cb09f7038e92af6abcb22a2832f44dfb93157ad7f6791dda68eecbc145052756  src/test/phase4h2-security-regression.test.ts
+
+# Test tooling (Phase 4H.3 and this package)
+7898fe9b0fe84ed21f345dc04e3a0cbcdab6a139967b7e2337e8935350391621  scripts/worker-auth/mutation-check-4h3.ts
+1f7f7f03d2ffdfaea9c4a47f910568b5c2fc0218e208e342df17ffb12db7c89e  scripts/worker-auth/mutation-redundancy-4h3.ts
+
+# Phase 4H.3 reports (the manifest itself: see sidecar)
+1612e59fd93d67949ddbd35de311c8158975017ae0c488a1a179259175ac87d1  docs/phase-4h3/phase4h3-final-report.md
+6d59203797e932ceeded19465148187d2ed5ec8f3e8636f96cc22eee75dc336b  docs/phase-4h3/phase4h3-execution-report.md
+e499a31e35c410b14271edc0089bd0704fc5c2e6ae7642fb3864dc6aff75047d  docs/phase-4h3/phase4h3-mutation-report.md
+
+# Evidence files (raw output of the 14 Nov 2026 runs)
+a7516f431f93474d6332f1b8ff79e78f78e2db9083f999fa1a41479800b1d0d1  docs/phase-4h3/evidence/build-summary.txt
+a2e19e7be45f5ef870661fff154af271941b176871c84f5319ad5af795d5e632  docs/phase-4h3/evidence/full-suite-summary.txt
+532aa99c0315c0ca3c0769bca733e7f9d118c154c4e286d0de3e0928e3c3039f  docs/phase-4h3/evidence/local-postgresql-4h1-runner.log
+278060f5983001c0de0d59bd46e73b4b32829bd2583d19b716c2117f2d7a8b83  docs/phase-4h3/evidence/mutation-check-4h3.log
+4b445ba24b1d2dfc3b93b18255f09a64a8b373353ce61c5892c40b91e8860514  docs/phase-4h3/evidence/mutation-redundancy-4h3.log
+b5fbff3389e7912822bfe4e179ba332a7e68761405fc3a98338a788c00a5fc9d  docs/phase-4h3/evidence/skipped-tests.md
+4eb9008f20ef82dc015db388c4cdf72eead5c56188a9ce2955355547b3f5aee1  docs/phase-4h3/evidence/typecheck.txt
+
+# Draft migrations 0049-0054 (unchanged, unapplied)
+fe4dd56c3f7542af6b9291d9ac33496892bca32d331821c05c2c3460a3abcd35  docs/proposed-migrations/0049_futures_paper_ledger_v3.sql
+40c2fdbf9bfbef3896dee5a3f6049cd35abf50a690a5fb1e20bc855d5fa4c0fa  docs/proposed-migrations/0050_futures_paper_worker_gateway.sql
+58828556c8709a9c7c4cbe64b5e6643af211db2e99e5a54c9ac6c7cb6280b788  docs/proposed-migrations/0051_futures_paper_event_completeness.sql
+e6ed1a01ca93e71cbf680edde7000be724621e0f81a1aae96aaf3886b4ef40d9  docs/proposed-migrations/0052_futures_paper_entry_completeness_and_exit_only.sql
+d436091177e43ab5bab3522fad29e633561966e9c6b6b1a370b3553f1d48d2bf  docs/proposed-migrations/0053_futures_paper_worker_identity.sql
+391beac68e7de77112542f7c84b2b58628bf634fc39c8ee56a670532d3c47177  docs/proposed-migrations/0054_futures_paper_worker_identity_lifecycle.sql
+
+# Rollback files 0049-0054 (unchanged)
+e593132115eeb6cbaafcb1f1d5011f6d508816dbfc1095f644c47e63941fb5fb  docs/proposed-migrations/0049_futures_paper_ledger_v3.rollback.sql
+93197b8c39b84c5858541335816679ab45369323edb3f51fb4b427f356aa346b  docs/proposed-migrations/0050_futures_paper_worker_gateway.rollback.sql
+41d1aa85f48621842a6f04a2a195d3800eeb2c7b766e0cedd5d30f057c0d94cf  docs/proposed-migrations/0051_futures_paper_event_completeness.rollback.sql
+562128f7033b21238af5fe54e78fbde0d7bea4438cfaa8a5e1b892f938ad84d3  docs/proposed-migrations/0052_futures_paper_entry_completeness_and_exit_only.rollback.sql
+11fec84bcca216a11ae581b1e36d2268742981c8a23e726356328cb0b41923d2  docs/proposed-migrations/0053_futures_paper_worker_identity.rollback.sql
+4e78cebeedf8794859206013b22b178aabb08e375dd52478a97cc0ec12d34569  docs/proposed-migrations/0054_futures_paper_worker_identity_lifecycle.rollback.sql
+
+# Related worker authentication and cleanup modules (unchanged in Phase 4H.3)
+8fb8f2241e0a662c66420e414d21b41182ea3cee4f187f99caefad380a54ee46  src/lib/futures-paper-worker-identity.ts
+1cbca841f48026a112a20456fe1e0d01862e76efd89e649ce6ef14cd8a09d824  src/lib/futures-paper-worker-hosted.ts
+09e14eb9a66203ab15bc01aa9ae1311411f540faa9b95458f2d3fed9e01343d5  src/lib/futures-paper-worker-hosted.server.ts
+b732a9e734a1d29e2c96da633020cc1586ed2dfc4cfc856d3423f3d3a357fc73  src/test/helpers/fake-auth.ts
+b29d333ed31ec93e28956a81c63eb930fc05d8a96fc0e65cb8567b1b57bb9c11  src/test/phase4h2-isolation.test.ts
+b03ba061346eeac98d459233a21b824b98ac4b05d7953bb0e441366ab833d520  scripts/futures-paper/concurrency-check-4h1.sh
