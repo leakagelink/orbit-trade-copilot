@@ -1,0 +1,109 @@
+{
+  "measuredAt": "2026-11-14T05:48:12.872Z",
+  "postgres": "17.11",
+  "limits": {
+    "budgetMs": 3600,
+    "safetyMarginMs": 1200,
+    "authTimeoutMs": 600,
+    "rpcTimeoutMs": 450,
+    "signOutTimeoutMs": 400,
+    "marketTimeoutMs": 600,
+    "intentsTimeoutMs": 200,
+    "leaseTtlSeconds": 15,
+    "scheduleIntervalMs": 60000,
+    "maxCandles": 6
+  },
+  "schedulerLimitMs": 5000,
+  "profiles": [
+    {
+      "latencyMsPerRequest": 0,
+      "invocations": 8,
+      "elapsedMs": {
+        "min": 209,
+        "p50": 217,
+        "p95": 357,
+        "max": 357
+      },
+      "committedPerInvocation": {
+        "min": 6,
+        "max": 6,
+        "total": 48
+      },
+      "statuses": {
+        "PROGRESS": 8
+      }
+    },
+    {
+      "latencyMsPerRequest": 25,
+      "invocations": 8,
+      "elapsedMs": {
+        "min": 648,
+        "p50": 659,
+        "p95": 706,
+        "max": 706
+      },
+      "committedPerInvocation": {
+        "min": 6,
+        "max": 6,
+        "total": 48
+      },
+      "statuses": {
+        "PROGRESS": 8
+      }
+    },
+    {
+      "latencyMsPerRequest": 75,
+      "invocations": 8,
+      "elapsedMs": {
+        "min": 1483,
+        "p50": 1540,
+        "p95": 1609,
+        "max": 1609
+      },
+      "committedPerInvocation": {
+        "min": 6,
+        "max": 6,
+        "total": 48
+      },
+      "statuses": {
+        "PROGRESS": 8
+      }
+    },
+    {
+      "latencyMsPerRequest": 150,
+      "invocations": 8,
+      "elapsedMs": {
+        "min": 2586,
+        "p50": 2600,
+        "p95": 2793,
+        "max": 2793
+      },
+      "committedPerInvocation": {
+        "min": 5,
+        "max": 5,
+        "total": 40
+      },
+      "statuses": {
+        "PROGRESS": 8
+      }
+    },
+    {
+      "latencyMsPerRequest": 300,
+      "invocations": 8,
+      "elapsedMs": {
+        "min": 2782,
+        "p50": 2807,
+        "p95": 3134,
+        "max": 3134
+      },
+      "committedPerInvocation": {
+        "min": 2,
+        "max": 2,
+        "total": 16
+      },
+      "statuses": {
+        "PROGRESS": 8
+      }
+    }
+  ]
+}

@@ -12,10 +12,13 @@
 # vs RENAMES, with their row counts at that moment); history preservation (before any rollback that drops tables, each
 # such table is exported with \copy to PRESERVE_DIR, row count and SHA-256 recorded); the rollback chain 0057 → 0049 as
 # far as it can go; the pre-existing objects and row counts unchanged; recovery (retired history archived under a dated
-# name, then the chain re-applied).
+# name, then the chain re-applied). Rolling back 0049 while retired 0055/0057 history exists needs one recovery step
+# (its append-only triggers re-bound to a stand-alone guard, no row touched); it is shown separately and, outside this
+# disposable copy, needs owner approval (docs/phase-4h7/migration-restore-report.md).
 #
 # Usage: scripts/db-export/verify-local-restore-0057.sh /path/to/export.backup
-#   Optional env: REPORT=/path/report.md; PRESERVE_DIR=/path/dir (default: inside the disposable work dir, deleted at exit).
+#   Optional env: REPORT=/path/report.md; PRESERVE_DIR=/path/dir (default: inside the disposable work dir, deleted at exit);
+#   SEED_HISTORY=0 to skip the synthetic worker-history rows written into the disposable copy (default 1).
 set -euo pipefail
 refuse(){ echo "REFUSED: $*" >&2; exit 2; }
 [[ $# -eq 1 ]] || refuse "exactly one argument (a local backup file) is required; connection targets are not accepted"
@@ -105,42 +108,61 @@ chk "Prerequisites of 0057 (auth.users / auth.identities sign-in columns)" "sele
 row "auth schema in the archive" INFO "$(grep -cE '^[0-9]+; [0-9]+ [0-9]+ TABLE auth ' "$TOC" || true) auth tables, $(awk '/^COPY auth\.users /{f=1;next} f&&/^\\\.$/{f=0} f' "$SCRIPT_SQL" | grep -c . || true) auth.users rows (counts only)"
 
 # --- fingerprints: pre-existing objects (worker objects excluded) and every public object ---
-W_REL="(relname like 'futures_paper%' or relname in ('strategy_risk_budgets','account_risk_budgets'))"; W_FN="(proname ~ '^(fp[2-5]_|fpw_|futures_paper_|guard_futures_paper|guard_account_risk_budget|guard_strategy_risk_budget)')"
-FP_PRE="select md5(coalesce(string_agg(x, E'\n' order by x),'')) from (
-  select 'col:'||c.relname||'.'||a.attname||':'||format_type(a.atttypid,a.atttypmod)||':'||a.attnotnull x from pg_attribute a join pg_class c on c.oid=a.attrelid join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and a.attnum>0 and not a.attisdropped and not $W_REL
+W_REL="(relname like 'futures_paper%' or relname like 'fpw\_%' or relname in ('strategy_risk_budgets','account_risk_budgets'))"; W_FN="(proname ~ '^(fp[2-5]_|fpw_|futures_paper_|guard_futures_paper|guard_account_risk_budget|guard_strategy_risk_budget)')"
+FP_PRE_LINES="select x from (
+  select 'col:'||c.relname||'.'||a.attname||':'||format_type(a.atttypid,a.atttypmod)||':'||a.attnotnull::text x from pg_attribute a join pg_class c on c.oid=a.attrelid join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and a.attnum>0 and not a.attisdropped and not $W_REL
   union all select 'pol:'||tablename||'.'||policyname||':'||coalesce(qual,'')||':'||coalesce(with_check,'') from pg_policies where schemaname='public' and tablename not like 'futures_paper%' and tablename not in ('strategy_risk_budgets','account_risk_budgets')
-  union all select 'acl:'||c.relname||':'||coalesce(c.relacl::text,'')||':'||c.relrowsecurity from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and not $W_REL
+  union all select 'acl:'||c.relname||':'||coalesce(c.relacl::text,'')||':'||c.relrowsecurity::text from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and not $W_REL
   union all select 'fn:'||p.proname||':'||md5(p.prosrc)||':'||coalesce(p.proacl::text,'') from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and not $W_FN
   union all select 'trg:'||tgrelid::regclass::text||'.'||tgname from pg_trigger t join pg_class c on c.oid=t.tgrelid where not tgisinternal and not (c.relname like 'futures_paper%' or c.relname in ('strategy_risk_budgets','account_risk_budgets'))
   union all select 'role:'||r.rolname||':'||coalesce(array_to_string(s.setconfig, ','),'') from pg_db_role_setting s join pg_roles r on r.oid=s.setrole
-) s"
-FP_ALL="select md5(coalesce(string_agg(x, E'\n' order by x),'')) from (
-  select 'rel:'||c.relname||':'||c.relkind||':'||coalesce(c.relacl::text,'')||':'||c.relrowsecurity x from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind in ('r','v','p','S') and c.relname not like '%\_retired' and c.relname not like '%\_archived\_%'
+) s order by x"
+FP_PRE="select md5(coalesce(string_agg(x, E'\\n' order by x),'')) from ($FP_PRE_LINES) z"
+FP_ALL_LINES="select x from (
+  select 'rel:'||c.relname||':'||c.relkind::text||':'||coalesce(c.relacl::text,'')||':'||c.relrowsecurity::text x from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind in ('r','v','p') and c.relname not like '%\_retired' and c.relname not like '%\_archived\_%'
   union all select 'col:'||c.relname||'.'||a.attname||':'||format_type(a.atttypid,a.atttypmod) from pg_attribute a join pg_class c on c.oid=a.attrelid join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind in ('r','v') and a.attnum>0 and not a.attisdropped and c.relname not like '%\_retired' and c.relname not like '%\_archived\_%'
-  union all select 'fn:'||p.oid::regprocedure::text||':'||md5(p.prosrc)||':'||coalesce(p.proacl::text,'')||':'||p.prosecdef from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public'
+  union all select 'fn:'||p.oid::regprocedure::text||':'||md5(p.prosrc)||':'||coalesce(p.proacl::text,'')||':'||p.prosecdef::text from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname not like '%\_retired' and p.proname <> 'fpw_retired_history_immutable'
   union all select 'pol:'||tablename||'.'||policyname||':'||coalesce(qual,'') from pg_policies where schemaname='public' and tablename not like '%\_retired' and tablename not like '%\_archived\_%'
   union all select 'trg:'||c.relname||'.'||t.tgname from pg_trigger t join pg_class c on c.oid=t.tgrelid join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and not t.tgisinternal and c.relname not like '%\_retired' and c.relname not like '%\_archived\_%'
   union all select 'role:'||r.rolname||':'||coalesce(array_to_string(s.setconfig, ','),'') from pg_db_role_setting s join pg_roles r on r.oid=s.setrole
-) s"
+) s order by x"
 rowcounts(){ local acc=""; for t in $(Q "select tablename from pg_tables where schemaname='public' and not (tablename like 'futures_paper%' or tablename in ('strategy_risk_budgets','account_risk_budgets')) order by 1"); do acc+="$t=$(Q "select count(*) from public.\"$t\"") "; done; echo "$acc"; }
-FP0=$(Q "$FP_PRE"); RC0=$(rowcounts)
+SNAPN=0
+snap(){ SNAPN=$((SNAPN+1)); local f="$WORK/snap.$SNAPN"; Q "$FP_ALL_LINES" > "$f"; echo "$f"; }
+same_snap(){ cmp -s "$1" "$2"; }
+# Differences as object kinds and names only (the part before the second colon); never bodies or row data.
+snapdiff(){ { comm -3 "$1" "$2" | sed -E 's/^\t/+ /; t; s/^/- /' | cut -d: -f1-2 | sort -u | head -8 | tr '\n' ';'; } || true; }
+FP0=$(Q "$FP_PRE"); RC0=$(rowcounts); Q "$FP_PRE_LINES" > "$WORK/pre0"
 # Configuration writes under 0052 need a reason; set for this disposable database only.
 Q "alter database verify set futures_paper.change_reason = 'local restore verification (disposable)'" >/dev/null
 
 # --- each draft is refused without its predecessor (on the restored base) ---
 for k in "${CHAIN[@]:1}"; do
-  B=$(Q "$FP_ALL")
+  B=$(snap)
   if APPLY "${MIGF[$k]}" >/dev/null; then row "Draft $k refused without its predecessor" FAIL "it applied on the base"; else
-    [[ "$(Q "$FP_ALL")" == "$B" ]] && row "Draft $k refused without its predecessor" PASS "$(LASTERR); rolled back, nothing left" || row "Draft $k refused without its predecessor" FAIL "refused but left objects behind"; fi
+    same_snap "$(snap)" "$B" && row "Draft $k refused without its predecessor" PASS "$(LASTERR); rolled back, nothing left" || row "Draft $k refused without its predecessor" FAIL "refused but left objects behind"; fi
 done
 
 # --- the chain, in order, each file in ONE transaction ---
 declare -A FPB TIMES
 for k in "${CHAIN[@]}"; do
-  FPB[$k]=$(Q "$FP_ALL")
+  FPB[$k]=$(snap)
   if ms=$(APPLY "${MIGF[$k]}"); then TIMES[$k]=$ms; row "Apply $k" PASS "$(basename "${MIGF[$k]}") in one transaction, ${ms} ms"; else row "Apply $k" FAIL "$(LASTERR)"; break; fi
 done
-FP_TOP=$(Q "$FP_ALL")
+FP_TOP=$(snap)
+# Synthetic history (disposable copy only; SEED_HISTORY=0 disables): a few rows in every worker history table, written
+# with triggers bypassed, so the rollback classification and the preserved copies below show non-zero row counts.
+if [[ "${SEED_HISTORY:-1}" == 1 ]]; then
+  Q "set session_replication_role = replica;
+     insert into public.futures_paper_worker_identities (worker_user_id, label, enabled, created_by, updated_by) values ('00000000-0000-4000-8000-00000000feed', 'seed-worker', false, '00000000-0000-4000-8000-00000000ad00', '00000000-0000-4000-8000-00000000ad00');
+     insert into public.futures_paper_worker_identity_changes (worker_user_id, old_enabled, new_enabled, old_label, new_label, actor) values ('00000000-0000-4000-8000-00000000feed', null, true, null, 'seed-worker', '00000000-0000-4000-8000-00000000ad00'), ('00000000-0000-4000-8000-00000000feed', true, false, 'seed-worker', 'seed-worker', '00000000-0000-4000-8000-00000000ad00');
+     insert into public.futures_paper_worker_audit (account_id, user_id, code, actor) select gen_random_uuid(), '00000000-0000-4000-8000-00000000beef', 'ID:SEED', 'seed' from generate_series(1, 3);
+     insert into public.futures_paper_worker_refusals (worker_user_id, fn, sqlstate, reason) select '00000000-0000-4000-8000-00000000feed', 'snapshot', 'P0001', 'seed' from generate_series(1, 4);
+     insert into public.futures_paper_worker_credential_events (worker_user_id, event, actor) values ('00000000-0000-4000-8000-00000000feed', 'PINNED', '00000000-0000-4000-8000-00000000ad00');
+     insert into public.futures_paper_worker_refusal_tally (worker_user_id, baseline_rows, recorded_total) values ('00000000-0000-4000-8000-00000000feed', 0, 4);
+     reset session_replication_role;" >/dev/null
+  row "Synthetic history seeded (disposable copy)" INFO "identities 1, identity changes 2, worker audit 3, refusals 4, credential events 1, tally 1"
+fi
 [[ "$(rowcounts)" == "$RC0" ]] && row "Pre-existing row counts unchanged after the chain" PASS "$(wc -w <<<"$RC0") tables" || row "Pre-existing row counts unchanged after the chain" FAIL "row counts changed"
 CHG=$(Q "select (select count(*) from pg_policies where schemaname='public' and policyname='fpw_worker_identity_guard')||' restrictive worker-guard policies; account_mfa_allowed replaced: '||(select (prosrc like '%futures_paper_worker_identities%')::text from pg_proc where proname='account_mfa_allowed')||'; user_roles guard trigger: '||exists(select 1 from pg_trigger where tgname='fpw_worker_role_guard')::text||'; data-API hook: '||exists(select 1 from pg_db_role_setting s, unnest(s.setconfig) c(v) where c.v='pgrst.db_pre_request=public.fpw_api_pre_request')::text")
 row "Intended changes to pre-existing objects (0055/0056)" INFO "$CHG"
@@ -149,14 +171,14 @@ row "Intended changes to pre-existing objects (0055/0056)" INFO "$CHG"
 for i in $(seq 0 $((${#CHAIN[@]}-2))); do
   k=${CHAIN[$i]}
   if APPLY "${RBF[$k]}" >/dev/null; then row "Rollback $k refused while ${CHAIN[$((i+1))]} is applied" FAIL "it ran"; break; fi
-  [[ "$(Q "$FP_ALL")" == "$FP_TOP" ]] && row "Rollback $k refused while ${CHAIN[$((i+1))]} is applied" PASS "$(LASTERR)" || row "Rollback $k refused while ${CHAIN[$((i+1))]} is applied" FAIL "refused but changed objects"
+  same_snap "$(snap)" "$FP_TOP" && row "Rollback $k refused while ${CHAIN[$((i+1))]} is applied" PASS "$(LASTERR)" || row "Rollback $k refused while ${CHAIN[$((i+1))]} is applied" FAIL "refused but changed objects"
 done
 
 # --- rollback chain 0057 → 0049 with destructive classification and history preservation ---
 for (( i=${#CHAIN[@]}-1; i>=0; i-- )); do
   k=${CHAIN[$i]}; f="${RBF[$k]}"
-  DROPS=$(grep -oiE 'DROP TABLE (IF EXISTS )?public\.[a-z0-9_]+' "$f" | sed -E 's/.*public\.//' | sort -u | tr '\n' ' ')
-  RENAMES=$(grep -oE 'RENAME TO [a-z0-9_]+' "$f" | sed 's/RENAME TO //' | sort -u | tr '\n' ' ')
+  DROPS=$( { grep -oiE 'DROP TABLE (IF EXISTS )?public\.[a-z0-9_]+' "$f" || true; } | sed -E 's/.*public\.//' | sort -u | tr '\n' ' ')
+  RENAMES=$( { grep -oE 'RENAME TO [a-z0-9_]+' "$f" || true; } | sed 's/RENAME TO //' | sort -u | tr '\n' ' ')
   rows_at=""; saved=""
   for t in $DROPS; do
     [[ "$(Q "select to_regclass('public.$t') is not null")" == t ]] || continue
@@ -170,24 +192,51 @@ for (( i=${#CHAIN[@]}-1; i>=0; i-- )); do
   if [[ -n "$DROPS" ]]; then CLS="DESTRUCTIVE"; elif [[ -n "$RENAMES" ]]; then CLS="PRESERVING (renames)"; else CLS="NO TABLES"; fi
   DESTR+="| $k | $CLS | ${DROPS:-—} | ${RENAMES:-—} | ${rows_at:-—} | ${saved:-—} |"$'\n'
   if ms=$(APPLY "$f"); then
-    if [[ "$(Q "$FP_ALL")" == "${FPB[$k]}" ]]; then row "Rollback $k" PASS "one transaction, ${ms} ms; every object of $k removed or restored exactly (retired tables kept)"; else row "Rollback $k" FAIL "ran, but the catalog differs from before $k was applied"; fi
-  else row "Rollback $k" FAIL "$(LASTERR)"; ROLLBACK_STOP=$k; break; fi
+    A=$(snap)
+    if same_snap "$A" "${FPB[$k]}"; then row "Rollback $k" PASS "one transaction, ${ms} ms; every object of $k removed or restored exactly (retired history excluded)"; else row "Rollback $k" FAIL "ran, but differs from before $k was applied: $(snapdiff "${FPB[$k]}" "$A")"; fi
+  else
+    ERRTXT=$(LASTERR)
+    # Recovery step (disposable copy; production needs owner approval): retired history tables of 0055/0057 keep
+    # append-only triggers that use 0049's futures_paper_history_immutable(), so 0049 cannot be dropped. Re-bind those
+    # triggers to a stand-alone guard (no row is touched), then retry. Only for this exact dependency.
+    if [[ "$k" == 0049 && "$ERRTXT" == *"futures_paper_history_immutable"* ]]; then
+      Q "create function public.fpw_retired_history_immutable() returns trigger language plpgsql set search_path to 'pg_catalog' as \$g\$ begin raise exception 'retired futures paper history is append-only'; end \$g\$" >/dev/null
+      Q "revoke all on function public.fpw_retired_history_immutable() from public" >/dev/null
+      REB=0
+      while IFS='|' read -r toid tname; do
+        [[ -z "$toid" ]] && continue
+        def=$(Q "select pg_get_triggerdef($toid)")
+        Q "drop trigger \"$tname\" on public.$(Q "select tgrelid::regclass::text from pg_trigger where oid=$toid" | sed 's/^public\.//')" >/dev/null 2>&1 || true
+        Q "${def/futures_paper_history_immutable()/fpw_retired_history_immutable()}" >/dev/null; REB=$((REB+1))
+      done < <(Q "select t.oid||'|'||t.tgname from pg_trigger t join pg_class c on c.oid=t.tgrelid where not t.tgisinternal and c.relname like '%\_retired' and t.tgfoid='public.futures_paper_history_immutable()'::regprocedure")
+      row "Recovery step: retired-history triggers re-bound" INFO "$REB trigger(s) moved to a stand-alone append-only guard; no rows touched"
+      if ms=$(APPLY "$f"); then A=$(snap); same_snap "$A" "${FPB[$k]}" && row "Rollback 0049 (after the recovery step)" PASS "one transaction, ${ms} ms" || row "Rollback 0049 (after the recovery step)" FAIL "differs: $(snapdiff "${FPB[$k]}" "$A")"
+      else row "Rollback 0049 (after the recovery step)" FAIL "$(LASTERR)"; ROLLBACK_STOP=$k; break; fi
+      row "Rollback 0049 without the recovery step" FAIL "$ERRTXT (retired history depends on 0049's guard)"
+    else row "Rollback $k" FAIL "$ERRTXT"; ROLLBACK_STOP=$k; break; fi
+  fi
 done
 RET=$(Q "select coalesce(string_agg(relname||'='||(xpath('/row/n/text()', query_to_xml(format('select count(*) n from public.%I', relname), false, true, '')))[1]::text, ' ' order by relname),'none') from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and relkind='r' and relname like '%\_retired'")
 row "Retired history tables kept" INFO "$RET"
 if [[ -z "${ROLLBACK_STOP:-}" ]]; then
-  [[ "$(Q "$FP_PRE")" == "$FP0" && "$(rowcounts)" == "$RC0" ]] && row "Pre-existing objects and row counts identical after the full rollback" PASS "fingerprint $FP0" || row "Pre-existing objects and row counts identical after the full rollback" FAIL "fingerprint or row counts changed"
+  [[ "$(Q "$FP_PRE")" == "$FP0" && "$(rowcounts)" == "$RC0" ]] && row "Pre-existing objects and row counts identical after the full rollback" PASS "fingerprint $FP0" || { Q "$FP_PRE_LINES" > "$WORK/pre1"; row "Pre-existing objects and row counts identical after the full rollback" FAIL "differs: $(snapdiff "$WORK/pre0" "$WORK/pre1") rows-equal=$([[ "$(rowcounts)" == "$RC0" ]] && echo yes || echo no)"; }
 else row "Full rollback" FAIL "stopped at $ROLLBACK_STOP (see the row above); objects below it remain applied"; fi
 
 # --- recovery: archive retired history under a dated name, then re-apply the chain from where the rollback stopped ---
 STAMP=$(date -u +%Y%m%d%H%M%S)
+# Index and sequence names are schema-wide: a retired table keeping them blocks re-creating the original objects.
+ARCH_N=0
 for t in $(Q "select relname from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and relkind='r' and relname like '%\_retired' order by 1"); do
-  Q "alter table public.\"$t\" rename to \"${t%_retired}_archived_$STAMP\"" >/dev/null
+  ARCH_N=$((ARCH_N+1)); tag="fpw_hist_${STAMP}_$ARCH_N"
+  for ix in $(Q "select indexrelid::regclass::text from pg_index where indrelid='public.\"$t\"'::regclass order by 1"); do Q "alter index $ix rename to \"${tag}_ix_$(Q "select md5('$ix')" | cut -c1-8)\"" >/dev/null; done
+  for sq in $(Q "select d.objid::regclass::text from pg_depend d join pg_class c on c.oid=d.objid where d.refobjid='public.\"$t\"'::regclass and c.relkind='S' order by 1"); do Q "alter sequence $sq rename to \"${tag}_seq_$(Q "select md5('$sq')" | cut -c1-8)\"" >/dev/null; done
+  Q "alter table public.\"$t\" rename to \"${tag}_archived_\"" >/dev/null
+  Q "comment on table public.\"${tag}_archived_\" is 'retired history of $t, archived $STAMP by the local recovery procedure'" >/dev/null
 done
 START=0; if [[ -n "${ROLLBACK_STOP:-}" ]]; then for i in "${!CHAIN[@]}"; do [[ "${CHAIN[$i]}" == "$ROLLBACK_STOP" ]] && START=$((i+1)); done; fi
 RECOK=1
 for k in "${CHAIN[@]:$START}"; do if ! APPLY "${MIGF[$k]}" >/dev/null; then row "Recovery: re-apply $k" FAIL "$(LASTERR)"; RECOK=0; break; fi; done
-[[ $RECOK == 1 ]] && { [[ "$(Q "$FP_ALL")" == "$FP_TOP" ]] && row "Recovery: chain re-applied" PASS "catalog equals the first application; archived history: $(Q "select coalesce(string_agg(relname, ' ' order by relname),'none') from pg_class where relname like '%\_archived\_$STAMP'")" || row "Recovery: chain re-applied" FAIL "catalog differs from the first application"; }
+[[ $RECOK == 1 ]] && { R=$(snap); same_snap "$R" "$FP_TOP" && row "Recovery: chain re-applied" PASS "catalog equals the first application; archived history tables: $(Q "select count(*) from pg_class where relkind='r' and relname like 'fpw\_hist\_${STAMP}\_%'")" || row "Recovery: chain re-applied" FAIL "differs from the first application: $(snapdiff "$FP_TOP" "$R")"; }
 
 VERDICT=PASS; [[ $FAIL -gt 0 || "${ERR_UNEXPECTED:-1}" != 0 ]] && VERDICT=FAIL
 mkdir -p "$(dirname "$OUT")"

@@ -46,7 +46,7 @@ async function setup(closed: number) {
 }
 type S = Awaited<ReturnType<typeof setup>>;
 const invoke = (s: S, be: ReturnType<typeof fakeBackend>, o: { limits?: InvocationLimits; journal?: unknown[] } = {}) =>
-  runBoundedIdentityInvocation({ enabled: true, accounts: [s.acct], limits: o.limits ?? L, market: s.market, intents: s.intents, clock: { now: () => Date.now() }, fetchImpl: be.fetchImpl as never, journal: o.journal ? (e) => o.journal!.push(e) : undefined });
+  runBoundedIdentityInvocation({ enabled: true, accounts: [s.acct], limits: o.limits ?? L, market: s.market, intents: s.intents, clock: { now: () => Date.now() }, fetchImpl: be.fetchImpl as never, ...(o.journal ? { journal: (e: unknown) => { o.journal!.push(e); } } : {}) });
 const seq = async (acct: string) => n(db, `SELECT seq::int n FROM public.futures_paper_accounts WHERE id=$1`, [acct]);
 const cursorBars = async (s: S) => (await n(db, `SELECT ((cursor_t - $2::bigint) / ${M})::int n FROM public.futures_paper_accounts WHERE id=$1`, [s.acct, s.t0 - M]));
 const sessionsLeft = (w: string) => n(db, `SELECT count(*)::int n FROM auth.sessions WHERE user_id=$1`, [w]);

@@ -1,0 +1,20 @@
+ ✓ src/test/phase4h7.pg.test.ts (3 tests) 68221ms
+     ✓ parallel invocations on separate connections: one lease holder at a time; every candle commits exactly once  1468ms
+     ✓ concurrent refusals on 4 connections: rows + dropped equals refusals; rows equal recorded_total; nothing silent  637ms
+     ✓ TIMING: elapsed time per invocation under injected network latency (written to FP_TIMING_OUT)  64108ms
+ ✓ src/test/phase4h5-worker-security.pg.test.ts (15 tests) 5745ms
+     ✓ F4 flipped (admin_promotion, in-flight acquire): the change WAITS for the in-flight call, then is REFUSED; the worker never holds the privilege  349ms
+     ✓ F4 flipped (super_admin_promotion, in-flight acquire): the change WAITS for the in-flight call, then is REFUSED; the worker never holds the privilege  371ms
+     ✓ F4 flipped (worker_owned_account, in-flight acquire): the change WAITS for the in-flight call, then is REFUSED; the worker never holds the privilege  356ms
+     ✓ a disable waits for an in-flight acquire (reads lock too under 0055), then every later call is refused  343ms
+     ✓ a revoke waits for an in-flight acquire (reads lock too under 0055), then every later call is refused  332ms
+     ✓ F4 flipped (admin_promotion, in-flight snapshot): the change WAITS for the in-flight call, then is REFUSED; the worker never holds the privilege  310ms
+     ✓ F4 flipped (super_admin_promotion, in-flight snapshot): the change WAITS for the in-flight call, then is REFUSED; the worker never holds the privilege  308ms
+     ✓ F4 flipped (worker_owned_account, in-flight snapshot): the change WAITS for the in-flight call, then is REFUSED; the worker never holds the privilege  418ms
+     ✓ a disable waits for an in-flight snapshot (reads lock too under 0055), then every later call is refused  427ms
+     ✓ a revoke waits for an in-flight snapshot (reads lock too under 0055), then every later call is refused  419ms
+     ✓ registration and promotion of the same user never interleave: 24 concurrent pairs end as worker XOR admin, never both  537ms
+     ✓ deterministic write-skew check: a promotion arriving while a registration of the same user is still uncommitted WAITS, then is refused  331ms
+     ✓ deterministic write-skew check: a registration arriving while a promotion of the same user is still uncommitted WAITS, then is refused  380ms
+     ✓ two worker calls on the same identity do not block each other (shared lock); a promotion waits for both, then is refused  394ms
+     ✓ F13 on real PostgreSQL: owner trigger-disable and superuser replica-role deletions (newest and middle) are detected against stored checkpoints; SQL head = TypeScript head  317ms

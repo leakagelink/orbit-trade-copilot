@@ -1,0 +1,1 @@
+tsgo -b --noEmit: exit 0, 0 errors (after fixing one test-only optional-property type error)

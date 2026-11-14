@@ -13,7 +13,7 @@ const walk = (d: string, re = /\.(ts|tsx)$/): string[] => (existsSync(d) ? readd
 const D = "docs/proposed-migrations/";
 export const PINS_4H7: Record<string, string> = {
   "0057_worker_credential_pin_and_refusal_tally.sql": "49353babb0b77114970b0f9a70162f4adc8f6fa34b0008b7d28be0ceb04d21e0",
-  "0057_worker_credential_pin_and_refusal_tally.rollback.sql": "86acce0361e693d01366b91244a22a7b6ea59f959b8df0047891367e0b5fc595",
+  "0057_worker_credential_pin_and_refusal_tally.rollback.sql": "9275ce3be0340e4be0722d3fa62b3022d3bf57f680efcf5ae99b6ebe71f714e6",
 };
 const body = (f: string) => read(D + f).replace(/--.*$/gm, "").trim();
 const NEW = ["src/lib/worker-invocation.ts", "src/lib/worker-refusal-audit.ts"];

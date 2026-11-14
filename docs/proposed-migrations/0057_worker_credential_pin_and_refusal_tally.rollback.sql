@@ -1,7 +1,10 @@
 -- Rollback for DRAFT 0057 (not applied). Run BEFORE the rollback of 0056. ONE statement (a single DO block).
 -- Restores byte-for-byte the 0055 bodies of fpw_admin_set_identity, fpw_id_check and fpw_record_refusal; drops the 0057
--- functions except the tally guard (still attached to the retired tally). History is NOT deleted: the three tables are
--- renamed to *_0057_retired, keep their append-only triggers and stay unreadable by the API roles. No CASCADE is used.
+-- functions; the tally guard is renamed (it still guards the retired tally). History is NOT deleted: the three tables are
+-- renamed to *_0057_retired (with their indexes and sequence, so 0057 can be re-applied), keep their append-only
+-- triggers and stay unreadable by the API roles. No CASCADE is used. NOTE: like 0055's retired refusal table, the
+-- retired tables' triggers use futures_paper_history_immutable() from 0049, so 0049 cannot be rolled back while any
+-- retired history exists (docs/phase-4h7/migration-restore-report.md, recovery procedure).
 -- WARNING: afterwards a worker whose password or email changed keeps worker authority again (F15.7 open) and refusals
 -- above the cap are dropped silently again (F13.3 open). Disable every worker identity before running it.
 DO $rb$
@@ -102,6 +105,13 @@ BEGIN
   DROP FUNCTION public.fpw_0057_requires_0056();
   DROP FUNCTION public.fpw_audit_refusal_completeness();
   DROP FUNCTION public.fpw_credential_pin(uuid);
+  -- Index and sequence names are schema-wide: renamed too, so 0057 can be re-applied after this history is reviewed.
+  ALTER INDEX public.futures_paper_worker_credential_pins_pkey RENAME TO fpw_cred_pins_0057_retired_pkey;
+  ALTER INDEX public.futures_paper_worker_credential_events_pkey RENAME TO fpw_cred_events_0057_retired_pkey;
+  ALTER INDEX public.futures_paper_worker_credential_events_worker RENAME TO fpw_cred_events_0057_retired_worker;
+  ALTER SEQUENCE public.futures_paper_worker_credential_events_id_seq RENAME TO fpw_cred_events_0057_retired_id_seq;
+  ALTER INDEX public.futures_paper_worker_refusal_tally_pkey RENAME TO fpw_refusal_tally_0057_retired_pkey;
+  ALTER FUNCTION public.fpw_refusal_tally_guard() RENAME TO fpw_refusal_tally_guard_0057_retired;  -- still guards the retired tally
   ALTER TABLE public.futures_paper_worker_credential_pins RENAME TO futures_paper_worker_credential_pins_0057_retired;
   ALTER TABLE public.futures_paper_worker_credential_events RENAME TO futures_paper_worker_credential_events_0057_retired;
   ALTER TABLE public.futures_paper_worker_refusal_tally RENAME TO futures_paper_worker_refusal_tally_0057_retired;

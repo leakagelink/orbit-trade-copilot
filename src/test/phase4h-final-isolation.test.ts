@@ -51,7 +51,9 @@ describe("Phase 4H finalization change control", () => {
     const places = [...walk("drizzle", /./), ...walk("supabase", /./), ...walk("src", /\.(ts|tsx)$/).filter((f) => !f.includes(join("src", "test"))), ...walk("scripts", /\.(ts|sh|sql)$/)];
     const allowed = new Set(["src/lib/futures-paper-worker-identity.ts", "scripts/db-export/verify-local-restore-0052.sh", "scripts/db-export/verify-local-restore-0054.sh", // 0054: Phase 4H.1 verifier
       "src/lib/audit-checkpoint.ts", // Phase 4H.5: pure checkpoint verifier (audit table names only; imported by nothing — phase4h5-isolation)
-      "scripts/worker-auth/mutation-check-4h5.ts"]); // Phase 4H.5: local mutation check (mutates temporary copies; throwaway servers only)
+      "scripts/worker-auth/mutation-check-4h5.ts", // Phase 4H.5: local mutation check (mutates temporary copies; throwaway servers only)
+      "scripts/db-export/verify-local-restore-0057.sh", // Phase 4H.7: local disposable restore verifier for 0049–0057
+      "scripts/worker-auth/mutation-check-4h7.ts"]); // Phase 4H.7: local mutation check (restores files by SHA-256; no network)
     expect(places.filter((f) => re.test(read(f))).map((f) => relative(process.cwd(), f)).filter((f) => !allowed.has(f))).toEqual([]);
   });
   it("the signed-in identity binding is disabled, never uses the service key and is imported by nothing in the app", () => {

@@ -1,0 +1,26 @@
+Q1	DETECTED	worker calls do not compare the credential pin
+Q2	DETECTED	a detected change does not disable the identity (not sticky)
+Q3	DETECTED	a detected change does not revoke enrollments
+Q4	DETECTED	sessions created before re-registration are accepted
+Q5	DETECTED	the fingerprint ignores the password hash
+Q6	DETECTED	the fingerprint ignores linked sign-in identities
+Q7	DETECTED	refusals above the cap are dropped silently
+Q8	DETECTED	recorded rows are not counted
+Q9	DETECTED	the tally counters may decrease
+Q10	DETECTED	0056 can be rolled back under 0057 (no tracked dependency)
+Q11	DETECTED	re-registration does not re-pin
+I1	DETECTED	limits are not checked against the scheduler limit
+I2	DETECTED	a full step need not fit the budget
+I3	DETECTED	an uncertain invocation is reported CAUGHT_UP
+I4	DETECTED	PROGRESS is reported as completed
+I5	DETECTED	a port call starts without budget
+I6	DETECTED	a pending email change is accepted
+B1	DETECTED	the invocation ignores maxCandles
+B2	DETECTED	the session budget is not the invocation budget
+B3	DETECTED	the server-side user check is not passed to the session
+B4	DETECTED	each call gets the old 8 s limit
+S1	DETECTED	the session ignores the user check at sign-in
+A1	DETECTED	cap drops are not used to explain unmatched refusals
+A2	DETECTED	deleted rows are not reported
+A3	DETECTED	a request-hook refusal is filed as a database record
+detected 25/25 run; 0 not run; all files restored (SHA-256 verified)
