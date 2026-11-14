@@ -31,7 +31,9 @@ let dbn = 0;
 /** PGlite-shaped adapter over ONE reserved connection (one database session, like PGlite). */
 async function session(sql: Sql): Promise<PGlite> {
   const c = await sql.reserve();
-  return { query: async (q: string, p: unknown[] = []) => ({ rows: await c.unsafe(q, p as never[]) }), exec: async (q: string) => { await c.unsafe(q); return []; } } as unknown as PGlite;
+  // Harness SQL passes JSON text to `$n::jsonb`; postgres.js would JSON-encode that text again, so it is cast through text.
+  const fix = (q: string) => q.replace(/(\$\d+)::jsonb/g, "$1::text::jsonb");
+  return { query: async (q: string, p: unknown[] = []) => ({ rows: await c.unsafe(fix(q), p as never[]) }), exec: async (q: string) => { await c.unsafe(q); return []; } } as unknown as PGlite;
 }
 async function freshDb() {
   const admin = postgres(URL!, { max: 1, onnotice: () => {} }); opened.push(admin);
@@ -73,9 +75,9 @@ const pct = (xs: number[], p: number) => { const s = [...xs].sort((a, b) => a - 
 describe.skipIf(!URL)("Phase 4H.7 on real PostgreSQL", () => {
   it("parallel invocations on separate connections: one lease holder at a time; every candle commits exactly once", async () => {
     const sql = await freshDb(), w = await world(sql, 10);
-    const reports: InvocationReport[] = [];
+    const reports: InvocationReport[] = [], conns = await Promise.all([0, 1, 2].map(() => session(sql)));
     for (let round = 0; round < 6 && (await w.bars()) < 10; round++) {
-      const rs = await Promise.all([0, 1, 2].map(async () => w.run(fakeBackend(await session(sql), { latencyMs: () => 15 }))));
+      const rs = await Promise.all(conns.map((c) => w.run(fakeBackend(c, { latencyMs: () => 15 }))));
       reports.push(...rs);
       expect(rs.filter((r) => r.committed > 0).length).toBeLessThanOrEqual(1);
       for (const r of rs) expect(r.elapsedMs).toBeLessThanOrEqual(PROPOSED_INVOCATION_LIMITS.budgetMs + 150);
@@ -94,12 +96,13 @@ describe.skipIf(!URL)("Phase 4H.7 on real PostgreSQL", () => {
     expect([rows, t["r"], t["d"]]).toEqual([120, 120, 20]);
   }, 180_000);
   it("TIMING: elapsed time per invocation under injected network latency (written to FP_TIMING_OUT)", async () => {
-    const sql = await freshDb(), w = await world(sql, 45);
-    const out: Record<string, unknown>[] = [];
+    const sql = await freshDb();
+    const out: Record<string, unknown>[] = [], conn = await session(sql);
     for (const lat of [0, 25, 75, 150, 300]) {
+      const w = await world(sql, 60); // its own backlog: every invocation below has work to do
       const el: number[] = [], com: number[] = [], st: Record<string, number> = {};
       for (let k = 0; k < 8; k++) {
-        const r = await w.run(fakeBackend(await session(sql), { latencyMs: () => lat }));
+        const r = await w.run(fakeBackend(conn, { latencyMs: () => lat }));
         el.push(r.elapsedMs); com.push(r.committed); st[r.status] = (st[r.status] ?? 0) + 1;
         expect(r.elapsedMs).toBeLessThanOrEqual(PROPOSED_INVOCATION_LIMITS.budgetMs + 150);
         expect(r.signOut === "SIGNED_OUT" || r.signOut === "NOT_REQUIRED").toBe(true);

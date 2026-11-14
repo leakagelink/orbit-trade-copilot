@@ -16,6 +16,6 @@ chown 65534:65534 "$WORK"
 "${AS[@]}" pg_ctl -D "$PGL" -o "-p $PORT -k $WORK -c listen_addresses=127.0.0.1 -c max_connections=300" -l "$WORK/pg.log" start -w >/dev/null
 echo "Throwaway PostgreSQL $(postgres --version | awk '{print $3}') on 127.0.0.1:$PORT"
 URL="postgres://postgres@127.0.0.1:$PORT/postgres"
-FUTURES_PAPER_PG_URL="$URL" bunx vitest run --no-file-parallelism ${ONLY:-src/test/phase4h7.pg.test.ts}
+FUTURES_PAPER_PG_URL="$URL" bunx vitest run --no-file-parallelism ${ONLY:-src/test/phase4h7.pg.test.ts} ${VT_ARGS:-}
 [ -n "${ONLY:-}" ] && exit 0
 FUTURES_PAPER_PG_URL="$URL" bunx vitest run --no-file-parallelism src/test/phase4h5-worker-security.pg.test.ts
