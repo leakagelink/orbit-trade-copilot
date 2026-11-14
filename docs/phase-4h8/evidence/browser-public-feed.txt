@@ -1,0 +1,2 @@
+signed-out final URL: http://localhost:8080/auth?redirect=%2Fscalp-center
+{"rest": {"status": 200, "lastUpdateId": 12109461310097, "bids": 5}, "market": 130, "pub": 3175, "kinds": {"btcusdt@aggTrade": 111, "btcusdt@markPrice@1s": 7, "btcusdt@kline_1m": 12, "btcusdt@depth@100ms": 63, "btcusdt@bookTicker": 3112}}

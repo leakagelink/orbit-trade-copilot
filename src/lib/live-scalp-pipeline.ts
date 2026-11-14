@@ -8,7 +8,7 @@ import { evaluateSignalRisk, strategyLossToday, type PaperRiskConfig } from "./l
 import { evaluateLiveSignal, PROPOSED_SIGNAL_CONFIG, snapshotFor, type LiveSignal, type LiveSignalConfig } from "./live-scalp-signal";
 
 export interface DecisionRecord { at: number; signalId: string; symbol: LiveSymbol; action: LiveSignal["action"]; verdict: RiskDecision["verdict"] | "SKIPPED"; failed: string[]; qty: number | null; leverage: number | null; orderStatus: string | null; correlationId: string }
-export interface PipelineOptions { signal?: LiveSignalConfig; sim?: PaperSimConfig; limits: PaperRiskConfig; filters: Partial<Record<LiveSymbol, SymbolFilters>>; autoPaper: boolean; killSwitch: boolean; maxSignalLatencyMs?: number }
+export interface PipelineOptions { signal?: LiveSignalConfig; sim?: PaperSimConfig; limits: PaperRiskConfig; filters: Partial<Record<LiveSymbol, SymbolFilters>>; autoPaper: boolean; /** paper switch OR account emergency stop; null = unknown → INSUFFICIENT_DATA */ killSwitch: boolean | null; maxSignalLatencyMs?: number }
 
 export class LiveScalpPipeline {
   readonly paper: PaperBook; readonly latest: Partial<Record<LiveSymbol, LiveSignal>> = {}; readonly decisions: DecisionRecord[] = [];

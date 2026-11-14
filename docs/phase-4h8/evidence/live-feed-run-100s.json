@@ -1,0 +1,1310 @@
+{
+ "source": "binance-public-usdm (live)",
+ "startedAt": "2026-11-14T06:30:37.781Z",
+ "seconds": 100,
+ "filters": {
+  "BTCUSDT": {
+   "symbol": "BTCUSDT",
+   "tickSize": 0.1,
+   "stepSize": 0.001,
+   "minQty": 0.001,
+   "maxQty": 120,
+   "minNotional": 50,
+   "maintMarginRate": 0.025,
+   "liquidationFeeRate": 0.0125,
+   "source": "public exchangeInfo (maintMarginPercent is the symbol's generic rate, not the account's leverage bracket)"
+  },
+  "ETHUSDT": {
+   "symbol": "ETHUSDT",
+   "tickSize": 0.01,
+   "stepSize": 0.001,
+   "minQty": 0.001,
+   "maxQty": 2000,
+   "minNotional": 20,
+   "maintMarginRate": 0.025,
+   "liquidationFeeRate": 0.0125,
+   "source": "public exchangeInfo (maintMarginPercent is the symbol's generic rate, not the account's leverage bracket)"
+  }
+ },
+ "samples": [
+  {
+   "label": "warm",
+   "t": 9,
+   "health": [
+    {
+     "s": "BTCUSDT",
+     "ready": true,
+     "book": "SYNCED",
+     "reasons": [],
+     "counters": {
+      "resyncs": 0,
+      "gaps": 0,
+      "bookDuplicates": 0,
+      "tradeGaps": 0,
+      "tradeDuplicates": 0,
+      "missingCandles": 0
+     },
+     "latencyP50Ms": 121,
+     "top": {
+      "bid": 67342.3,
+      "bidQty": 2.5,
+      "ask": 67342.4,
+      "askQty": 3.233,
+      "source": "book",
+      "exchangeTs": 1794637846334,
+      "receivedAt": 1794637846455
+     },
+     "sizes": {
+      "bids": 1171,
+      "asks": 1152,
+      "buffer": 0,
+      "trades": 17,
+      "candles1m": 199
+     }
+    },
+    {
+     "s": "ETHUSDT",
+     "ready": true,
+     "book": "SYNCED",
+     "reasons": [],
+     "counters": {
+      "resyncs": 0,
+      "gaps": 0,
+      "bookDuplicates": 0,
+      "tradeGaps": 0,
+      "tradeDuplicates": 0,
+      "missingCandles": 0
+     },
+     "latencyP50Ms": 121,
+     "top": {
+      "bid": 1906.73,
+      "bidQty": 55.789,
+      "ask": 1906.74,
+      "askQty": 117.54,
+      "source": "book",
+      "exchangeTs": 1794637846374,
+      "receivedAt": 1794637846495
+     },
+     "sizes": {
+      "bids": 1082,
+      "asks": 1097,
+      "buffer": 0,
+      "trades": 12,
+      "candles1m": 199
+     }
+    }
+   ],
+   "clock": {
+    "offsetMs": 2,
+    "rttMs": 239,
+    "measuredAt": 1794637838788,
+    "drift": false
+   },
+   "metrics": {
+    "sockets": {
+     "market": {
+      "state": "open",
+      "connectedAt": 1794637839258,
+      "lastMessageAt": 1794637846509,
+      "reconnects": 0,
+      "attempts": 0
+     },
+     "public": {
+      "state": "open",
+      "connectedAt": 1794637839266,
+      "lastMessageAt": 1794637846551,
+      "reconnects": 0,
+      "attempts": 0
+     }
+    },
+    "processing": {
+     "count": 1048,
+     "p50Ms": 0,
+     "p95Ms": 1,
+     "maxMs": 2
+    },
+    "rest": {
+     "requests": 7,
+     "errors": 0,
+     "limited": 0,
+     "backoffUntil": 0
+    }
+   }
+  },
+  {
+   "label": "before public disconnect",
+   "t": 36,
+   "health": [
+    {
+     "s": "BTCUSDT",
+     "ready": true,
+     "book": "SYNCED",
+     "reasons": [],
+     "counters": {
+      "resyncs": 0,
+      "gaps": 0,
+      "bookDuplicates": 0,
+      "tradeGaps": 0,
+      "tradeDuplicates": 0,
+      "missingCandles": 0
+     },
+     "latencyP50Ms": 121,
+     "top": {
+      "bid": 67361.7,
+      "bidQty": 3.117,
+      "ask": 67361.8,
+      "askQty": 4.693,
+      "source": "book",
+      "exchangeTs": 1794637873364,
+      "receivedAt": 1794637873485
+     },
+     "sizes": {
+      "bids": 1121,
+      "asks": 1101,
+      "buffer": 0,
+      "trades": 607,
+      "candles1m": 200
+     }
+    },
+    {
+     "s": "ETHUSDT",
+     "ready": true,
+     "book": "SYNCED",
+     "reasons": [],
+     "counters": {
+      "resyncs": 0,
+      "gaps": 0,
+      "bookDuplicates": 0,
+      "tradeGaps": 0,
+      "tradeDuplicates": 0,
+      "missingCandles": 0
+     },
+     "latencyP50Ms": 121,
+     "top": {
+      "bid": 1906.94,
+      "bidQty": 155.016,
+      "ask": 1906.95,
+      "askQty": 29.913,
+      "source": "book",
+      "exchangeTs": 1794637873368,
+      "receivedAt": 1794637873489
+     },
+     "sizes": {
+      "bids": 1181,
+      "asks": 1003,
+      "buffer": 0,
+      "trades": 265,
+      "candles1m": 200
+     }
+    }
+   ],
+   "clock": {
+    "offsetMs": 2,
+    "rttMs": 239,
+    "measuredAt": 1794637838788,
+    "drift": false
+   },
+   "metrics": {
+    "sockets": {
+     "market": {
+      "state": "open",
+      "connectedAt": 1794637839258,
+      "lastMessageAt": 1794637873500,
+      "reconnects": 0,
+      "attempts": 0
+     },
+     "public": {
+      "state": "open",
+      "connectedAt": 1794637839266,
+      "lastMessageAt": 1794637873522,
+      "reconnects": 0,
+      "attempts": 0
+     }
+    },
+    "processing": {
+     "count": 21735,
+     "p50Ms": 0,
+     "p95Ms": 0,
+     "maxMs": 5
+    },
+    "rest": {
+     "requests": 7,
+     "errors": 0,
+     "limited": 0,
+     "backoffUntil": 0
+    }
+   }
+  },
+  {
+   "label": "6 s after public disconnect",
+   "t": 42,
+   "health": [
+    {
+     "s": "BTCUSDT",
+     "ready": true,
+     "book": "SYNCED",
+     "reasons": [],
+     "counters": {
+      "resyncs": 1,
+      "gaps": 0,
+      "bookDuplicates": 0,
+      "tradeGaps": 0,
+      "tradeDuplicates": 0,
+      "missingCandles": 0
+     },
+     "latencyP50Ms": 122,
+     "top": {
+      "bid": 67357.8,
+      "bidQty": 2.242,
+      "ask": 67357.9,
+      "askQty": 6.702,
+      "source": "book",
+      "exchangeTs": 1794637879382,
+      "receivedAt": 1794637879504
+     },
+     "sizes": {
+      "bids": 1045,
+      "asks": 1171,
+      "buffer": 0,
+      "trades": 646,
+      "candles1m": 200
+     }
+    },
+    {
+     "s": "ETHUSDT",
+     "ready": true,
+     "book": "SYNCED",
+     "reasons": [],
+     "counters": {
+      "resyncs": 1,
+      "gaps": 0,
+      "bookDuplicates": 0,
+      "tradeGaps": 0,
+      "tradeDuplicates": 0,
+      "missingCandles": 0
+     },
+     "latencyP50Ms": 122,
+     "top": {
+      "bid": 1906.72,
+      "bidQty": 92.864,
+      "ask": 1906.73,
+      "askQty": 70.915,
+      "source": "book",
+      "exchangeTs": 1794637879394,
+      "receivedAt": 1794637879517
+     },
+     "sizes": {
+      "bids": 1097,
+      "asks": 1118,
+      "buffer": 0,
+      "trades": 321,
+      "candles1m": 200
+     }
+    }
+   ],
+   "clock": {
+    "offsetMs": 2,
+    "rttMs": 239,
+    "measuredAt": 1794637838788,
+    "drift": false
+   },
+   "metrics": {
+    "sockets": {
+     "market": {
+      "state": "open",
+      "connectedAt": 1794637839258,
+      "lastMessageAt": 1794637879355,
+      "reconnects": 0,
+      "attempts": 0
+     },
+     "public": {
+      "state": "open",
+      "connectedAt": 1794637874597,
+      "lastMessageAt": 1794637879548,
+      "reconnects": 1,
+      "attempts": 0
+     }
+    },
+    "processing": {
+     "count": 26909,
+     "p50Ms": 0,
+     "p95Ms": 0,
+     "maxMs": 5
+    },
+    "rest": {
+     "requests": 9,
+     "errors": 0,
+     "limited": 0,
+     "backoffUntil": 0
+    }
+   }
+  },
+  {
+   "label": "before market disconnect",
+   "t": 61,
+   "health": [
+    {
+     "s": "BTCUSDT",
+     "ready": true,
+     "book": "SYNCED",
+     "reasons": [],
+     "counters": {
+      "resyncs": 1,
+      "gaps": 0,
+      "bookDuplicates": 0,
+      "tradeGaps": 0,
+      "tradeDuplicates": 0,
+      "missingCandles": 0
+     },
+     "latencyP50Ms": 122,
+     "top": {
+      "bid": 67383,
+      "bidQty": 0.479,
+      "ask": 67383.1,
+      "askQty": 19.021,
+      "source": "book",
+      "exchangeTs": 1794637898354,
+      "receivedAt": 1794637898475
+     },
+     "sizes": {
+      "bids": 1166,
+      "asks": 1105,
+      "buffer": 0,
+      "trades": 1490,
+      "candles1m": 200
+     }
+    },
+    {
+     "s": "ETHUSDT",
+     "ready": true,
+     "book": "SYNCED",
+     "reasons": [],
+     "counters": {
+      "resyncs": 1,
+      "gaps": 0,
+      "bookDuplicates": 0,
+      "tradeGaps": 0,
+      "tradeDuplicates": 0,
+      "missingCandles": 0
+     },
+     "latencyP50Ms": 122,
+     "top": {
+      "bid": 1907.3,
+      "bidQty": 42.355,
+      "ask": 1907.31,
+      "askQty": 115.289,
+      "source": "book",
+      "exchangeTs": 1794637898400,
+      "receivedAt": 1794637898521
+     },
+     "sizes": {
+      "bids": 1152,
+      "asks": 1157,
+      "buffer": 0,
+      "trades": 556,
+      "candles1m": 200
+     }
+    }
+   ],
+   "clock": {
+    "offsetMs": 2,
+    "rttMs": 239,
+    "measuredAt": 1794637838788,
+    "drift": false
+   },
+   "metrics": {
+    "sockets": {
+     "market": {
+      "state": "open",
+      "connectedAt": 1794637839258,
+      "lastMessageAt": 1794637898186,
+      "reconnects": 0,
+      "attempts": 0
+     },
+     "public": {
+      "state": "open",
+      "connectedAt": 1794637874597,
+      "lastMessageAt": 1794637898538,
+      "reconnects": 1,
+      "attempts": 0
+     }
+    },
+    "processing": {
+     "count": 45293,
+     "p50Ms": 0,
+     "p95Ms": 0,
+     "maxMs": 5
+    },
+    "rest": {
+     "requests": 9,
+     "errors": 0,
+     "limited": 0,
+     "backoffUntil": 0
+    }
+   }
+  },
+  {
+   "label": "6 s after market disconnect",
+   "t": 67,
+   "health": [
+    {
+     "s": "BTCUSDT",
+     "ready": true,
+     "book": "SYNCED",
+     "reasons": [],
+     "counters": {
+      "resyncs": 1,
+      "gaps": 0,
+      "bookDuplicates": 0,
+      "tradeGaps": 1,
+      "tradeDuplicates": 0,
+      "missingCandles": 0
+     },
+     "latencyP50Ms": 122,
+     "top": {
+      "bid": 67381.3,
+      "bidQty": 0.303,
+      "ask": 67381.4,
+      "askQty": 16.5,
+      "source": "book",
+      "exchangeTs": 1794637904372,
+      "receivedAt": 1794637904494
+     },
+     "sizes": {
+      "bids": 1129,
+      "asks": 1126,
+      "buffer": 0,
+      "trades": 1854,
+      "candles1m": 200
+     }
+    },
+    {
+     "s": "ETHUSDT",
+     "ready": true,
+     "book": "SYNCED",
+     "reasons": [],
+     "counters": {
+      "resyncs": 1,
+      "gaps": 0,
+      "bookDuplicates": 0,
+      "tradeGaps": 1,
+      "tradeDuplicates": 0,
+      "missingCandles": 0
+     },
+     "latencyP50Ms": 123,
+     "top": {
+      "bid": 1907.15,
+      "bidQty": 0.077,
+      "ask": 1907.16,
+      "askQty": 99.691,
+      "source": "book",
+      "exchangeTs": 1794637904430,
+      "receivedAt": 1794637904552
+     },
+     "sizes": {
+      "bids": 1118,
+      "asks": 1125,
+      "buffer": 0,
+      "trades": 629,
+      "candles1m": 200
+     }
+    }
+   ],
+   "clock": {
+    "offsetMs": 2,
+    "rttMs": 239,
+    "measuredAt": 1794637838788,
+    "drift": false
+   },
+   "metrics": {
+    "sockets": {
+     "market": {
+      "state": "open",
+      "connectedAt": 1794637899666,
+      "lastMessageAt": 1794637904506,
+      "reconnects": 1,
+      "attempts": 0
+     },
+     "public": {
+      "state": "open",
+      "connectedAt": 1794637874597,
+      "lastMessageAt": 1794637904552,
+      "reconnects": 1,
+      "attempts": 0
+     }
+    },
+    "processing": {
+     "count": 52689,
+     "p50Ms": 0,
+     "p95Ms": 0,
+     "maxMs": 5
+    },
+    "rest": {
+     "requests": 9,
+     "errors": 0,
+     "limited": 0,
+     "backoffUntil": 0
+    }
+   }
+  },
+  {
+   "label": "end",
+   "t": 101,
+   "health": [
+    {
+     "s": "BTCUSDT",
+     "ready": true,
+     "book": "SYNCED",
+     "reasons": [],
+     "counters": {
+      "resyncs": 1,
+      "gaps": 0,
+      "bookDuplicates": 0,
+      "tradeGaps": 1,
+      "tradeDuplicates": 0,
+      "missingCandles": 0
+     },
+     "latencyP50Ms": 122,
+     "top": {
+      "bid": 67345,
+      "bidQty": 0.159,
+      "ask": 67345.1,
+      "askQty": 9.3,
+      "source": "book",
+      "exchangeTs": 1794637938338,
+      "receivedAt": 1794637938460
+     },
+     "sizes": {
+      "bids": 1121,
+      "asks": 1139,
+      "buffer": 0,
+      "trades": 2759,
+      "candles1m": 201
+     }
+    },
+    {
+     "s": "ETHUSDT",
+     "ready": true,
+     "book": "SYNCED",
+     "reasons": [],
+     "counters": {
+      "resyncs": 1,
+      "gaps": 0,
+      "bookDuplicates": 0,
+      "tradeGaps": 1,
+      "tradeDuplicates": 0,
+      "missingCandles": 0
+     },
+     "latencyP50Ms": 122,
+     "top": {
+      "bid": 1905.91,
+      "bidQty": 13.801,
+      "ask": 1905.92,
+      "askQty": 148.033,
+      "source": "book",
+      "exchangeTs": 1794637938346,
+      "receivedAt": 1794637938467
+     },
+     "sizes": {
+      "bids": 1057,
+      "asks": 1104,
+      "buffer": 0,
+      "trades": 1050,
+      "candles1m": 201
+     }
+    }
+   ],
+   "clock": {
+    "offsetMs": 2,
+    "rttMs": 239,
+    "measuredAt": 1794637838788,
+    "drift": false
+   },
+   "metrics": {
+    "sockets": {
+     "market": {
+      "state": "open",
+      "connectedAt": 1794637899666,
+      "lastMessageAt": 1794637938513,
+      "reconnects": 1,
+      "attempts": 0
+     },
+     "public": {
+      "state": "open",
+      "connectedAt": 1794637874597,
+      "lastMessageAt": 1794637938552,
+      "reconnects": 1,
+      "attempts": 0
+     }
+    },
+    "processing": {
+     "count": 89049,
+     "p50Ms": 0,
+     "p95Ms": 0,
+     "maxMs": 5
+    },
+    "rest": {
+     "requests": 9,
+     "errors": 0,
+     "limited": 0,
+     "backoffUntil": 0
+    }
+   }
+  }
+ ],
+ "monitorCounts": {
+  "WS_CONNECTED": 4,
+  "RECONCILIATION_OK": 2,
+  "BOOK_SYNCED": 4,
+  "SIGNAL_EMITTED": 4,
+  "BOOK_RESYNC": 2,
+  "WS_DISCONNECTED": 2,
+  "WS_RECONNECT_SCHEDULED": 2,
+  "TRADE_ID_GAP": 2
+ },
+ "monitorEvents": [
+  {
+   "id": "ev_ee8481f9-5f8e-45d3-a1c1-000135542613",
+   "correlationId": "corr_6ed25f16-edc8-4486-b780-c801626cadc8",
+   "seq": 1,
+   "at": 1794637839258,
+   "type": "WS_CONNECTED",
+   "severity": "info",
+   "symbol": null,
+   "detail": {
+    "socket": "market",
+    "reconnects": 0
+   }
+  },
+  {
+   "id": "ev_27139b77-07cb-477d-a83e-e0ed58138dde",
+   "correlationId": "corr_6994df5b-44b2-4ba7-a14d-655bc581bf7b",
+   "seq": 2,
+   "at": 1794637839266,
+   "type": "WS_CONNECTED",
+   "severity": "info",
+   "symbol": null,
+   "detail": {
+    "socket": "public",
+    "reconnects": 0
+   }
+  },
+  {
+   "id": "ev_04bb97cc-7fad-4e3b-ba3b-e2485f96e8c9",
+   "correlationId": "corr_d82ac52c-8002-4df3-9111-5d7fd7d1ebb3",
+   "seq": 3,
+   "at": 1794637839553,
+   "type": "RECONCILIATION_OK",
+   "severity": "info",
+   "symbol": null,
+   "detail": {
+    "checked": 4,
+    "mismatches": ""
+   }
+  },
+  {
+   "id": "ev_9c7b4f89-dd69-4fcb-800c-691e31d91ab8",
+   "correlationId": "corr_882e85ba-fc70-40a6-b291-aa1b93d66825",
+   "seq": 4,
+   "at": 1794637839621,
+   "type": "BOOK_SYNCED",
+   "severity": "info",
+   "symbol": "BTCUSDT",
+   "detail": {
+    "lastUpdateId": 12109362231951,
+    "u": 12109362235696,
+    "resyncs": 0
+   }
+  },
+  {
+   "id": "ev_bb3434f2-333f-4a2f-86d0-55b296eb6e1e",
+   "correlationId": "corr_5ee76950-ff8b-41bd-9543-1b096d45fe6f",
+   "seq": 5,
+   "at": 1794637839732,
+   "type": "BOOK_SYNCED",
+   "severity": "info",
+   "symbol": "ETHUSDT",
+   "detail": {
+    "lastUpdateId": 12109362240462,
+    "u": 12109362240997,
+    "resyncs": 0
+   }
+  },
+  {
+   "id": "ev_234c446a-99db-448c-bb3f-d5ffefd99faa",
+   "correlationId": "corr_BTCUSDT_mwg11xn5_1",
+   "seq": 8,
+   "at": 1794637873554,
+   "type": "BOOK_RESYNC",
+   "severity": "warn",
+   "symbol": "BTCUSDT",
+   "detail": {
+    "reason": "SOCKET_CLOSED",
+    "lastU": 12109364972534,
+    "lastUpdateId": 12109362231951
+   }
+  },
+  {
+   "id": "ev_86a1203b-67de-4315-8c41-7b0a5443bd34",
+   "correlationId": "corr_ETHUSDT_mwg11xn6_1",
+   "seq": 9,
+   "at": 1794637873554,
+   "type": "BOOK_RESYNC",
+   "severity": "warn",
+   "symbol": "ETHUSDT",
+   "detail": {
+    "reason": "SOCKET_CLOSED",
+    "lastU": 12109364972708,
+    "lastUpdateId": 12109362240462
+   }
+  },
+  {
+   "id": "ev_95d3da01-a5e0-4da0-a144-fdf0eb730f75",
+   "correlationId": "corr_d53c274a-d0d7-4488-97fa-46c5a46832ef",
+   "seq": 10,
+   "at": 1794637873554,
+   "type": "WS_DISCONNECTED",
+   "severity": "warn",
+   "symbol": null,
+   "detail": {
+    "socket": "public",
+    "why": "verification: forced disconnect"
+   }
+  },
+  {
+   "id": "ev_5607f01a-e159-4498-9986-e301b31b498b",
+   "correlationId": "corr_4541eb89-276a-4cd2-bca2-30b4d3e6559d",
+   "seq": 11,
+   "at": 1794637873554,
+   "type": "WS_RECONNECT_SCHEDULED",
+   "severity": "info",
+   "symbol": null,
+   "detail": {
+    "socket": "public",
+    "delayMs": 327,
+    "attempt": 1
+   }
+  },
+  {
+   "id": "ev_21f3e6b3-bb09-4378-8f9a-301e263aa89a",
+   "correlationId": "corr_de3fb523-0036-4035-a7bb-31ba3506314e",
+   "seq": 12,
+   "at": 1794637874597,
+   "type": "WS_CONNECTED",
+   "severity": "info",
+   "symbol": null,
+   "detail": {
+    "socket": "public",
+    "reconnects": 1
+   }
+  },
+  {
+   "id": "ev_0502438a-e3f7-41d0-9bdb-846a28f5ccfb",
+   "correlationId": "corr_BTCUSDT_mwg11xn5_1",
+   "seq": 13,
+   "at": 1794637875423,
+   "type": "BOOK_SYNCED",
+   "severity": "info",
+   "symbol": "BTCUSDT",
+   "detail": {
+    "lastUpdateId": 12109365058607,
+    "u": 12109365080913,
+    "resyncs": 1
+   }
+  },
+  {
+   "id": "ev_62564db5-4d44-4e01-a030-e1bbe3bdba06",
+   "correlationId": "corr_ETHUSDT_mwg11xn6_1",
+   "seq": 14,
+   "at": 1794637875424,
+   "type": "BOOK_SYNCED",
+   "severity": "info",
+   "symbol": "ETHUSDT",
+   "detail": {
+    "lastUpdateId": 12109365067614,
+    "u": 12109365081927,
+    "resyncs": 1
+   }
+  },
+  {
+   "id": "ev_2537b068-27f2-44c4-9297-f6a78e8e303f",
+   "correlationId": "corr_2cadfc20-ffb1-402b-adbe-89a9374724f0",
+   "seq": 15,
+   "at": 1794637898553,
+   "type": "WS_DISCONNECTED",
+   "severity": "warn",
+   "symbol": null,
+   "detail": {
+    "socket": "market",
+    "why": "verification: forced disconnect"
+   }
+  },
+  {
+   "id": "ev_ea4cafb0-2aa1-409f-9707-869067edd820",
+   "correlationId": "corr_74eb7cc1-58a4-4833-848e-3518a5d7a213",
+   "seq": 16,
+   "at": 1794637898553,
+   "type": "WS_RECONNECT_SCHEDULED",
+   "severity": "info",
+   "symbol": null,
+   "detail": {
+    "socket": "market",
+    "delayMs": 397,
+    "attempt": 1
+   }
+  },
+  {
+   "id": "ev_d48113b8-c9f3-4ccb-aebd-1422f3bc9f84",
+   "correlationId": "corr_a3ef2a2d-cbcb-4bff-a0c6-73e8fbbf81c1",
+   "seq": 17,
+   "at": 1794637899612,
+   "type": "RECONCILIATION_OK",
+   "severity": "info",
+   "symbol": null,
+   "detail": {
+    "checked": 4,
+    "mismatches": ""
+   }
+  },
+  {
+   "id": "ev_dd391145-9be5-44dd-9e60-829089b550c7",
+   "correlationId": "corr_eab6bf80-7331-4337-af67-8b501bebeaf1",
+   "seq": 18,
+   "at": 1794637899666,
+   "type": "WS_CONNECTED",
+   "severity": "info",
+   "symbol": null,
+   "detail": {
+    "socket": "market",
+    "reconnects": 1
+   }
+  },
+  {
+   "id": "ev_eac4e6e2-f8b7-45a4-824f-76ceaadf42b9",
+   "correlationId": "corr_c0b53a9f-ea96-4108-a211-5e257b9fce1a",
+   "seq": 19,
+   "at": 1794637899805,
+   "type": "TRADE_ID_GAP",
+   "severity": "warn",
+   "symbol": "BTCUSDT",
+   "detail": {
+    "from": 3521569906,
+    "to": 3521569909,
+    "missing": 4
+   }
+  },
+  {
+   "id": "ev_9c2c4a57-3300-4f81-b0ce-62893d73348e",
+   "correlationId": "corr_650bdcdb-2224-499a-9bfa-002b5580f16c",
+   "seq": 20,
+   "at": 1794637899964,
+   "type": "TRADE_ID_GAP",
+   "severity": "warn",
+   "symbol": "ETHUSDT",
+   "detail": {
+    "from": 3152997145,
+    "to": 3152997149,
+    "missing": 5
+   }
+  }
+ ],
+ "counts": {
+  "messages": 89049,
+  "malformed": 0,
+  "accepted": 89047
+ },
+ "signals": {
+  "pipelineLatest": {
+   "BTCUSDT": {
+    "id": "futures-scalp-live:live-scalp-v1:BTCUSDT:1794637860000",
+    "strategyId": "futures-scalp-live",
+    "strategyVersion": "live-scalp-v1",
+    "featureVersion": "live-scalp-features-v1",
+    "symbol": "BTCUSDT",
+    "action": "INSUFFICIENT_DATA",
+    "decidedAt": 1794637920225,
+    "decisionCandleT": 1794637860000,
+    "expiresAt": 1794637935225,
+    "validation": "UNVALIDATED",
+    "entryReference": null,
+    "stopReference": null,
+    "takeProfitReference": null,
+    "costs": null,
+    "confidence": {
+     "score": null,
+     "agreeing": 0,
+     "total": 8,
+     "calibration": "UNCALIBRATED",
+     "label": "Share of rule factors that agree — uncalibrated, not a probability"
+    },
+    "freshness": {
+     "ready": true,
+     "bookAgeMs": 23,
+     "tradeAgeMs": 219,
+     "markAgeMs": 42,
+     "candle1mAgeMs": 225,
+     "candle5mAgeMs": 120225,
+     "bookSource": "book"
+    },
+    "features": {},
+    "reasons": [],
+    "rejections": [
+     "trade flow window contains a trade-id gap"
+    ]
+   },
+   "ETHUSDT": {
+    "id": "futures-scalp-live:live-scalp-v1:ETHUSDT:1794637860000",
+    "strategyId": "futures-scalp-live",
+    "strategyVersion": "live-scalp-v1",
+    "featureVersion": "live-scalp-features-v1",
+    "symbol": "ETHUSDT",
+    "action": "INSUFFICIENT_DATA",
+    "decidedAt": 1794637920226,
+    "decisionCandleT": 1794637860000,
+    "expiresAt": 1794637935226,
+    "validation": "UNVALIDATED",
+    "entryReference": null,
+    "stopReference": null,
+    "takeProfitReference": null,
+    "costs": null,
+    "confidence": {
+     "score": null,
+     "agreeing": 0,
+     "total": 8,
+     "calibration": "UNCALIBRATED",
+     "label": "Share of rule factors that agree — uncalibrated, not a probability"
+    },
+    "freshness": {
+     "ready": true,
+     "bookAgeMs": 46,
+     "tradeAgeMs": 67,
+     "markAgeMs": 43,
+     "candle1mAgeMs": 226,
+     "candle5mAgeMs": 120226,
+     "bookSource": "book"
+    },
+    "features": {},
+    "reasons": [],
+    "rejections": [
+     "trade flow window contains a trade-id gap"
+    ]
+   }
+  },
+  "timings": {
+   "signals": 4,
+   "lastSignalMs": 0,
+   "maxSignalMs": 4,
+   "lastLatencyMs": 226
+  },
+  "finalSignals": [
+   {
+    "id": "futures-scalp-live:live-scalp-v1:BTCUSDT:1794637860000",
+    "strategyId": "futures-scalp-live",
+    "strategyVersion": "live-scalp-v1",
+    "featureVersion": "live-scalp-features-v1",
+    "symbol": "BTCUSDT",
+    "action": "INSUFFICIENT_DATA",
+    "decidedAt": 1794637938559,
+    "decisionCandleT": 1794637860000,
+    "expiresAt": 1794637953559,
+    "validation": "UNVALIDATED",
+    "entryReference": null,
+    "stopReference": null,
+    "takeProfitReference": null,
+    "costs": null,
+    "confidence": {
+     "score": null,
+     "agreeing": 0,
+     "total": 8,
+     "calibration": "UNCALIBRATED",
+     "label": "Share of rule factors that agree — uncalibrated, not a probability"
+    },
+    "freshness": {
+     "ready": true,
+     "bookAgeMs": 99,
+     "tradeAgeMs": 46,
+     "markAgeMs": 389,
+     "candle1mAgeMs": 18559,
+     "candle5mAgeMs": 138559,
+     "bookSource": "book"
+    },
+    "features": {},
+    "reasons": [],
+    "rejections": [
+     "trade flow window contains a trade-id gap"
+    ]
+   },
+   {
+    "id": "futures-scalp-live:live-scalp-v1:ETHUSDT:1794637860000",
+    "strategyId": "futures-scalp-live",
+    "strategyVersion": "live-scalp-v1",
+    "featureVersion": "live-scalp-features-v1",
+    "symbol": "ETHUSDT",
+    "action": "INSUFFICIENT_DATA",
+    "decidedAt": 1794637938560,
+    "decisionCandleT": 1794637860000,
+    "expiresAt": 1794637953560,
+    "validation": "UNVALIDATED",
+    "entryReference": null,
+    "stopReference": null,
+    "takeProfitReference": null,
+    "costs": null,
+    "confidence": {
+     "score": null,
+     "agreeing": 0,
+     "total": 8,
+     "calibration": "UNCALIBRATED",
+     "label": "Share of rule factors that agree — uncalibrated, not a probability"
+    },
+    "freshness": {
+     "ready": true,
+     "bookAgeMs": 93,
+     "tradeAgeMs": 128,
+     "markAgeMs": 390,
+     "candle1mAgeMs": 18560,
+     "candle5mAgeMs": 138560,
+     "bookSource": "book"
+    },
+    "features": {},
+    "reasons": [],
+    "rejections": [
+     "trade flow window contains a trade-id gap"
+    ]
+   }
+  ]
+ },
+ "decisions": [],
+ "paperState": {
+  "version": "live-paper-v1",
+  "accountId": "verify",
+  "createdAt": 1794637837781,
+  "startingEquity": 10000,
+  "wallet": 10000,
+  "totals": {
+   "fees": 0,
+   "realized": 0,
+   "funding": 0,
+   "slippage": 0,
+   "liquidationFees": 0
+  },
+  "trimmed": {
+   "fees": 0,
+   "realized": 0,
+   "funding": 0,
+   "slippage": 0,
+   "liquidationFees": 0,
+   "fills": 0
+  },
+  "positions": {},
+  "orders": [],
+  "fills": [],
+  "proposals": [],
+  "processed": {
+   "BTCUSDT": {
+    "lastTradeId": 3521571178,
+    "lastMarkE": 1794637938000,
+    "fundingTime": 1794643200000,
+    "fundingRate": 0.00005566
+   },
+   "ETHUSDT": {
+    "lastTradeId": 3152997643,
+    "lastMarkE": 1794637938000,
+    "fundingTime": 1794643200000,
+    "fundingRate": 0.00000951
+   }
+  },
+  "day": {
+   "key": 20771,
+   "startEquity": 10000
+  },
+  "peakEquity": 10000,
+  "maxDrawdown": 0,
+  "seq": 0,
+  "duplicatesIgnored": 0,
+  "restarts": 0
+ },
+ "reconcile": {
+  "ok": true,
+  "mismatches": [],
+  "checked": 4
+ },
+ "testProposal": {
+  "note": "TEST proposal built by this script (not a strategy signal), evaluated by the unchanged Central Risk Engine and filled by the paper simulator against the live book",
+  "proposal": {
+   "proposalId": "verify-test-1794637938553",
+   "engine": "scalp_intraday",
+   "strategyId": "verification-test-proposal",
+   "symbol": "ETHUSDT",
+   "market": "usdm_futures",
+   "environment": "paper",
+   "side": "LONG",
+   "referencePrice": 1905.92,
+   "stopPrice": 1900.20224,
+   "takeProfitPrice": 1914.49664,
+   "createdAt": 1794637938553
+  },
+  "decision": {
+   "version": "central-risk-v1",
+   "proposalId": "verify-test-1794637938553",
+   "verdict": "ACCEPT",
+   "checks": [
+    {
+     "id": "proposal_schema",
+     "status": "pass",
+     "detail": "Proposal is well-formed and carries no quantity, leverage or authorization"
+    },
+    {
+     "id": "emergency_stop",
+     "status": "pass",
+     "detail": "No emergency stop"
+    },
+    {
+     "id": "duplicate",
+     "status": "pass",
+     "detail": "New proposal"
+    },
+    {
+     "id": "unknown_outcomes",
+     "status": "pass",
+     "detail": "No unresolved orders"
+    },
+    {
+     "id": "one_position_per_symbol",
+     "status": "pass",
+     "detail": "No position on this symbol"
+    },
+    {
+     "id": "proposal_fresh",
+     "status": "pass",
+     "detail": "Proposal age 0 s (max 60 s)"
+    },
+    {
+     "id": "market_data",
+     "status": "pass",
+     "detail": "Price age 383 ms (max 5000 ms); AI reference prices are ignored"
+    },
+    {
+     "id": "stop_loss",
+     "status": "pass",
+     "detail": "Stop 0.307% from the verified price"
+    },
+    {
+     "id": "take_profit",
+     "status": "pass",
+     "detail": "Target is beyond the verified price"
+    },
+    {
+     "id": "daily_loss",
+     "status": "pass",
+     "detail": "50.00 of daily loss allowance left"
+    },
+    {
+     "id": "strategy_budget",
+     "status": "pass",
+     "detail": "20.00 of strategy risk budget left"
+    },
+    {
+     "id": "loss_per_trade",
+     "status": "pass",
+     "detail": "Max loss per trade 5"
+    },
+    {
+     "id": "position_count",
+     "status": "pass",
+     "detail": "0 open of 2 allowed"
+    },
+    {
+     "id": "exposure",
+     "status": "pass",
+     "detail": "2000.00 of account exposure left"
+    },
+    {
+     "id": "liquidation_buffer",
+     "status": "pass",
+     "detail": "Stop 13.86% before estimated liquidation at 6×"
+    },
+    {
+     "id": "leverage",
+     "status": "pass",
+     "detail": "6× (maximum 10×), chosen by the Risk Engine"
+    },
+    {
+     "id": "min_notional",
+     "status": "pass",
+     "detail": "Size 1143.63 meets the exchange minimum"
+    }
+   ],
+   "sizing": {
+    "qty": 0.6,
+    "notional": 1143.6341547719999,
+    "margin": 190.60569246199998,
+    "leverage": 6,
+    "riskAmount": 4.999535173203566,
+    "entryEstimate": 1906.05692462,
+    "liquidationPrice": 1636.0321936321668,
+    "binding": "max loss per trade"
+   },
+   "executionAuthorized": false,
+   "note": "Risk evaluation only. ACCEPT is not an execution authorization; no order has been placed."
+  },
+  "order": {
+   "id": "po_verify-test-1794637938553",
+   "proposalId": "verify-test-1794637938553",
+   "signalId": "test",
+   "symbol": "ETHUSDT",
+   "side": "LONG",
+   "type": "MARKET",
+   "qty": 0.6,
+   "filledQty": 0.6,
+   "limitPrice": null,
+   "queueAhead": 0,
+   "status": "FILLED",
+   "reason": null,
+   "createdAt": 1794637938553,
+   "expiresAt": 1794637938553,
+   "leverage": 6,
+   "stop": 1900.20224,
+   "takeProfit": 1914.49664
+  },
+  "fills": [
+   {
+    "orderId": "po_verify-test-1794637938553",
+    "positionId": "pos_verify-test-1794637938553",
+    "symbol": "ETHUSDT",
+    "action": "BUY",
+    "qty": 0.6,
+    "price": 1905.9199999999998,
+    "fee": 0.571776,
+    "liquidity": "TAKER",
+    "slippage": 0,
+    "realizedPnl": 0,
+    "reason": "ENTRY",
+    "source": "book-walk",
+    "at": 1794637938553,
+    "id": "po_verify-test-1794637938553:1"
+   }
+  ],
+  "position": {
+   "id": "pos_verify-test-1794637938553",
+   "symbol": "ETHUSDT",
+   "side": "LONG",
+   "qty": 0.6,
+   "entryPrice": 1905.9199999999998,
+   "leverage": 6,
+   "margin": 190.592,
+   "stop": 1900.20224,
+   "takeProfit": 1914.49664,
+   "liquidationPrice": 1635.9146666666666,
+   "openedAt": 1794637938553,
+   "proposalId": "verify-test-1794637938553",
+   "fundingPaid": 0,
+   "feesPaid": 0.571776,
+   "exitPending": null
+  },
+  "reconcile": {
+   "ok": true,
+   "mismatches": [],
+   "checked": 6
+  }
+ }
+}

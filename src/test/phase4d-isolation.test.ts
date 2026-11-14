@@ -46,7 +46,10 @@ describe("Phase 4D change control", () => {
     expect(journal).not.toMatch(/0040|0041|0042|0043|0044|0045|0046|0047/);
     const listed = new Set(START.map((m) => m.path));
     expect(walk("drizzle/migrations", /\.sql$/).map((f) => relative(ROOT, f)).filter((f) => !listed.has(f))).toEqual([]);
-    expect(walk("src/routes", /./).map((f) => relative(ROOT, f)).filter((f) => !listed.has(f))).toEqual([]);
+    // Phase 4H.8 brief §6 authorized exactly one new page (Live Scalping Command Center: UI only, no endpoint);
+    // src/test/phase4h8-gate.test.ts pins that it never calls the order request and only reads the gate status.
+    const LATER_AUTHORIZED_ROUTES = new Set(["src/routes/_authenticated/scalp-center.tsx"]);
+    expect(walk("src/routes", /./).map((f) => relative(ROOT, f)).filter((f) => !listed.has(f) && !LATER_AUTHORIZED_ROUTES.has(f))).toEqual([]);
   });
 });
 

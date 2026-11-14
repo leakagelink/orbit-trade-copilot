@@ -1,0 +1,30 @@
+dist/server/_libs/ai-sdk__gateway+vercel__oidc.mjs                151.42 kB │ gzip:    30.55 kB
+dist/server/_libs/lodash.mjs                                      161.80 kB │ gzip:    29.45 kB
+dist/server/_libs/mdast-util-from-markdown+[...].mjs              181.13 kB │ gzip:    33.65 kB
+dist/server/_libs/@streamdown/cjk+[...].mjs                       181.56 kB │ gzip:    44.79 kB
+dist/server/_libs/@shikijs/core+[...].mjs                         235.93 kB │ gzip:    55.63 kB
+dist/server/_libs/streamdown+[...].mjs                            244.34 kB │ gzip:    56.54 kB
+dist/server/_libs/supabase__auth-js.mjs                           320.16 kB │ gzip:    64.97 kB
+dist/server/_libs/cose-base+layout-base.mjs                       369.86 kB │ gzip:    69.14 kB
+dist/server/_libs/@ai-sdk/react+[...].mjs                         378.45 kB │ gzip:    77.77 kB
+dist/server/_libs/framer-motion+[...].mjs                         387.84 kB │ gzip:   105.83 kB
+dist/server/_libs/recharts+[...].mjs                              562.61 kB │ gzip:   102.60 kB
+dist/server/_libs/@ai-sdk/anthropic+[...].mjs                     626.06 kB │ gzip:   135.61 kB
+dist/server/_libs/@tanstack/react-router+[...].mjs                749.25 kB │ gzip:   158.56 kB
+dist/server/_libs/@streamdown/math+[...].mjs                      846.17 kB │ gzip:   192.34 kB
+dist/server/_libs/cytoscape.mjs                                   869.28 kB │ gzip:   199.63 kB
+dist/server/_libs/mermaid-js__parser+unenv.mjs                  1,189.20 kB │ gzip:   207.54 kB
+dist/server/_libs/@streamdown/mermaid+[...].mjs                 1,230.79 kB │ gzip:   236.75 kB
+dist/server/_libs/shikijs__themes.mjs                           1,475.97 kB │ gzip:   173.64 kB
+dist/server/_libs/mermaid+uuid.mjs                              1,770.71 kB │ gzip:   389.31 kB
+dist/server/_libs/shikijs__langs.mjs                            8,581.37 kB │ gzip: 1,300.76 kB
+
+✓ built in 4.10s
+[nitro] ℹ Using auto generated worker name: tanstack-start-ts
+ℹ Generated dist/server/wrangler.json
+ℹ Generated .wrangler/deploy/config.json
+ℹ Generated dist/client/_headers
+ℹ Generated dist/nitro.json
+
+[nitro] ✔ You can preview this build using npx vite preview
+[nitro] ✔ You can deploy this build using npx nitro deploy --prebuilt

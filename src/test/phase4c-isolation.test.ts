@@ -43,7 +43,10 @@ describe("Phase 4C change control", () => {
   });
   it("no new route (endpoint) file and no new applied migration exists", () => {
     const listed = new Set(MANIFEST.map((m) => m.path));
-    expect(walk("src/routes", /./).map((f) => relative(ROOT, f)).filter((f) => !listed.has(f))).toEqual([]);
+    // Phase 4H.8 brief §6 authorized exactly one new page (Live Scalping Command Center: UI only, no endpoint);
+    // src/test/phase4h8-gate.test.ts pins that it never calls the order request and only reads the gate status.
+    const LATER_AUTHORIZED_ROUTES = new Set(["src/routes/_authenticated/scalp-center.tsx"]);
+    expect(walk("src/routes", /./).map((f) => relative(ROOT, f)).filter((f) => !listed.has(f) && !LATER_AUTHORIZED_ROUTES.has(f))).toEqual([]);
     expect(walk("drizzle/migrations", /\.sql$/).map((f) => relative(ROOT, f)).filter((f) => !listed.has(f))).toEqual([]);
   });
   it("the 0045 draft is byte-for-byte unchanged (hashes given in the Phase 4C brief)", () => {

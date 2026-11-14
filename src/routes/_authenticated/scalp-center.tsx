@@ -34,7 +34,7 @@ function ScalpCenterPage() {
           <p className="flex gap-2 rounded-lg border border-warning/50 bg-warning/10 p-3 text-xs"><FlaskConical className="h-4 w-4 shrink-0 text-warning" /><span><b>PAPER.</b> {PAPER_LABEL}. Signals are UNVALIDATED: earlier research found no positive net expectancy for 1–5 minute rules after costs.</span></p>
           <p className="flex gap-2 rounded-lg border bg-card p-3 text-xs"><Lock className="h-4 w-4 shrink-0 text-loss" /><span><b>Real-money and Testnet execution: DISABLED</b> by a server-side gate{gate.data ? ` (${gate.data.version}, transport ${gate.data.transport})` : ""}. No control on this page can submit an exchange order.</span></p>
         </div>
-        <ClientOnly fallback={<Skeleton className="h-96" />}><LiveCenter /></ClientOnly>
+        <ClientOnly fallback={<Skeleton className="h-96" />}><LiveCenter accountStop={gate.isError ? null : gate.data ? gate.data.accountEmergencyStop : undefined} /></ClientOnly>
       </div>
     </div>
   );
@@ -51,7 +51,7 @@ const Panel = ({ title, icon, children }: { title: string; icon?: React.ReactNod
 );
 const LIMIT_FIELDS: [keyof PaperRiskConfig, string][] = [["maxExposure", "Max exposure (USDT)"], ["maxDailyLoss", "Daily loss limit (USDT)"], ["maxPositions", "Max open positions"], ["maxLossPerTrade", "Max loss per trade (USDT)"], ["maxMarginPerTrade", "Max margin per trade (USDT)"], ["maxLeverage", "Max leverage (×)"], ["strategyBudget", "Strategy risk budget (USDT)"], ["liquidationBufferPct", "Liquidation buffer (%)"], ["maxDataAgeMs", "Max mark-price age (ms)"], ["maxProposalAgeMs", "Proposal expiry (ms)"], ["roundTripCostPct", "Round-trip cost (%)"]];
 
-function LiveCenter() {
+function LiveCenter({ accountStop }: { accountStop: boolean | null | undefined }) {
   const [userId, setUserId] = useState<string | null>(null);
   const [, setVersion] = useState(0);
   const [autoPaper, setAutoPaper] = useState(false);
@@ -63,7 +63,9 @@ function LiveCenter() {
   const ref = useRef<{ engine: FeedEngine; client: LiveFeedClient; pipe: LiveScalpPipeline } | null>(null);
   const key = userId ? `algovirt.paper-scalp.v1.${userId}` : null;
 
-  useEffect(() => { void supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? "anonymous")); }, []);
+  const [userError, setUserError] = useState(false);
+  // Fail closed: no verified user id → no ledger and nothing persisted (never a shared "anonymous" browser ledger).
+  useEffect(() => { void supabase.auth.getUser().then(({ data }) => { if (data.user?.id) setUserId(data.user.id); else setUserError(true); }).catch(() => setUserError(true)); }, []);
   useEffect(() => {
     if (!key) return;
     const engine = new FeedEngine(LIVE_SYMBOLS), client = new LiveFeedClient(engine, platformDeps());
@@ -88,7 +90,9 @@ function LiveCenter() {
     }, 1000);
     return () => { window.clearInterval(t); client.stop(); try { window.localStorage.setItem(key, serializePaper(pipe.paper.state)); } catch { /* ignore */ } ref.current = null; };
   }, [key]);
-  useEffect(() => { const r = ref.current; if (r) r.pipe.o = { ...r.pipe.o, autoPaper, killSwitch, limits, filters }; }, [autoPaper, killSwitch, limits, filters]);
+  // Effective stop = the paper switch OR the account emergency stop (read-only); an unknown account stop stays unknown.
+  const effectiveStop: boolean | null = killSwitch ? true : (accountStop ?? null);
+  useEffect(() => { const r = ref.current; if (r) r.pipe.o = { ...r.pipe.o, autoPaper, killSwitch: effectiveStop, limits, filters }; }, [autoPaper, effectiveStop, limits, filters]);
 
   const r = ref.current;
   const now = Date.now();
@@ -96,6 +100,7 @@ function LiveCenter() {
   const st = r?.pipe.paper.state;
   const m = r?.client.metrics();
   const missingLimits = useMemo(() => LIMIT_FIELDS.filter(([k]) => limits[k] === null).map(([, l]) => l), [limits]);
+  if (userError) return <p className="rounded-lg border bg-card p-4 text-sm text-muted-foreground">Your sign-in could not be confirmed, so no paper ledger was opened. Reload the page or sign in again.</p>;
   if (!r || !st || !m) return <Skeleton className="h-96" />;
   const setLimit = (k: keyof PaperRiskConfig, v: string) => setLimits((x) => ({ ...x, [k]: v.trim() === "" || !Number.isFinite(Number(v)) ? null : Number(v) }));
   const resetPaper = () => { const eq = Number(startEquity); if (!(eq > 0) || !key) return; r.pipe.paper.state = newPaperState(key, eq, Date.now()); window.localStorage.setItem(key, serializePaper(r.pipe.paper.state)); setRecovery(`New paper ledger with ${eq} USDT.`); };
@@ -161,6 +166,7 @@ function LiveCenter() {
         <Panel title="Paper risk limits & controls" icon={<ShieldCheck className="h-4 w-4 text-primary" />}>
           <div className="flex items-center justify-between gap-2 text-xs"><Label htmlFor="auto">Auto-paper from signals (this tab only)</Label><Switch id="auto" checked={autoPaper} onCheckedChange={setAutoPaper} /></div>
           <div className="mt-2 flex items-center justify-between gap-2 text-xs"><Label htmlFor="kill">Paper emergency stop</Label><Switch id="kill" checked={killSwitch} onCheckedChange={setKillSwitch} /></div>
+          <p className="mt-1 text-[11px] text-muted-foreground">Account emergency stop (read-only): <b>{accountStop === undefined ? "loading" : accountStop === null ? "unknown — paper entries return INSUFFICIENT_DATA" : accountStop ? "ON — paper entries refused" : "off"}</b></p>
           <div className="mt-3 grid grid-cols-2 gap-2">{LIMIT_FIELDS.map(([k, l]) => <div key={k}><Label className="text-[11px]" htmlFor={k}>{l}</Label><Input id={k} className="h-8 text-xs" inputMode="decimal" value={limits[k] ?? ""} placeholder="not set" onChange={(e) => setLimit(k, e.target.value)} /></div>)}</div>
           <div className="mt-2 flex flex-wrap gap-2">
             <Button size="sm" variant="outline" onClick={() => setLimits((x) => ({ ...x, ...OWNER_PROPOSED_PAPER_VALUES }))}>Fill owner-proposed paper values</Button>

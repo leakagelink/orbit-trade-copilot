@@ -1,0 +1,318 @@
+
+ RUN  v4.1.11 /dev-server
+
+ ✓ src/test/testnet-stop-migration.test.ts (21 tests) 11331ms
+     ✓ restores today's behaviour and removes the Testnet stop objects  3409ms
+ ✓ src/test/migration-0053-worker-identity.test.ts (5 tests) 12823ms
+     ✓ a full hosted tick commits every candle through the 0053 wrappers and audits each commit  398ms
+     ✓ 0053 needs 0052; 0052's rollback is blocked while 0053 exists; 0053's rollback restores the service-role gateway grants  4215ms
+ ✓ src/test/phase4h5-migration-0056.test.ts (6 tests) 13123ms
+     ✓ ordinary users, anonymous callers and the service role are never affected  304ms
+     ✓ refuses to replace an existing hook; rollback removes only its own hook; 0055 cannot roll back first  4252ms
+ ✓ src/test/paper-ledger-migration.test.ts (17 tests) 14336ms
+     ✓ processes only closed candles, reconciles cash and stores every signal, fill and settlement  328ms
+     ✓ a crash before commit loses nothing and recovery reproduces the uninterrupted ledger  738ms
+     ✓ a stopped strategy never restarts or commits, and cannot stop while holding a position  1048ms
+     ✓ the rollback removes every paper object and leaves nothing behind  3914ms
+ ✓ src/test/futures-paper-ledger-v3-migration.test.ts (21 tests) 16766ms
+     ✓ approval → fill → exit: the database recomputes approval and fill risk itself and everything reconciles  373ms
+     ✓ cannot be applied on top of 0046 (same objects); the rollback removes every object it created  7746ms
+ ✓ src/test/migration-0052-entry-completeness.test.ts (29 tests) 18727ms
+     ✓ 0052 needs 0051; 0051's rollback is blocked while 0052 exists; 0052's rollback restores 0049's v3 and 0051's gateway byte-for-byte  8186ms
+ ✓ src/test/migration-0051-completeness.test.ts (24 tests) 19252ms
+     ✓ 1. a recorded stop crossing with NO exit is refused; the engine's own exit then commits  493ms
+     ✓ 0051 needs 0050; 0050's rollback is blocked while 0051 exists; 0051's rollback restores 0050's gateway byte-for-byte  8266ms
+ ✓ src/test/ai-decision-ledger-migration.test.ts (54 tests) 19402ms
+     ✓ removes the new objects and restores ordinary behaviour of existing tables  3443ms
+     ✓ does NOT give browser roles back write, TRUNCATE or visitor-read privileges (deliberate deviation)  4054ms
+     ✓ relabels runs with statuses the original list does not allow  3896ms
+ ✓ src/test/futures-paper-worker-gateway.test.ts (14 tests) 21073ms
+     ✓ refuses to apply without 0049  3541ms
+     ✓ browser roles cannot read leases; owners read only their own provenance and audit rows  318ms
+     ✓ 0050 rollback restores the 0049 grant; 0050 then 0049 rollback leaves no paper object behind  4453ms
+     ✓ 0049 rollback alone is refused while 0050 depends on it (rollback order is enforced)  4027ms
+ ✓ src/test/migration-0054-identity-lifecycle.test.ts (17 tests) 22171ms
+     ✓ an admin registers a separate plain user; the owner enrolls it; a full hosted tick commits every candle; history records the registration  703ms
+     ✓ 0054 needs 0053; 0053's rollback fails as a whole while 0054 exists; 0054's rollback restores every 0053 body and grant exactly  11830ms
+ ✓ src/test/futures-paper-engine-v3.test.ts (57 tests) 6769ms
+ ✓ src/test/futures-paper-fill-revalidation.test.ts (19 tests) 5506ms
+ ✓ src/test/phase4h2-security-regression.test.ts (11 tests) 7538ms
+     ✓ a full signed-in tick commits every candle, signs in and out once, and only ever requests allowlisted endpoints  895ms
+     ✓ revoking the enrollment between ticks has the same effect; re-enrolling resumes without duplicates  359ms
+     ✓ promotion to admin in the MIDDLE of a tick refuses every later call of that tick; demotion resumes without duplicates  390ms
+     ✓ promotion to super_admin in the MIDDLE of a tick refuses every later call of that tick; demotion resumes without duplicates  399ms
+ ✓ src/test/phase4h7-credential-0057.test.ts (16 tests) 28868ms
+     ✓ have no pin: refused (not disabled) until an admin re-registers them  3740ms
+     ✓ every refusal row is counted; above the cap an explicit dropped counter is kept — never a silent drop  430ms
+     ✓ refusals recorded before 0057 become the tally baseline  3628ms
+     ✓ 0056 cannot be rolled back while 0057 is applied; 0057's rollback restores the 0055 bodies exactly and keeps all history  4172ms
+     ✓ 0057 refuses without 0056 and without the auth sign-in tables  7736ms
+ ✓ src/test/futures-paper-worker.test.ts (14 tests) 9032ms
+     ✓ catches up in bounded batches, commits every candle exactly once, then waits for the next close  982ms
+     ✓ crash BEFORE commit: nothing is written; the next tick recomputes the identical candle and commits it  352ms
+     ✓ crash AFTER commit (both replies lost): the next tick reloads the committed cursor and continues; nothing is duplicated  333ms
+     ✓ restart recovery is deterministic: a run interrupted every 3 candles ends byte-identical to an uninterrupted run  629ms
+ ✓ src/test/phase4h5-binding-0055.test.ts (4 tests) 8443ms
+     ✓ one tick: sign-in, only the six fpw_id2_* operations, every candle committed, sign-out removes the session; nothing refused  930ms
+     ✓ L2/L3: the access token of a finished tick is refused by the database at once (session gone) and the attempt is recorded  354ms
+     ✓ L4/L5: when sign-out is not acknowledged the leftover session is usable for worker calls only until the worker maximum session age  321ms
+ ✓ src/test/strategy-attribution-0047-migration.test.ts (13 tests) 6240ms
+ ✓ src/test/futures-paper-ledger-v2-migration.test.ts (15 tests) 6953ms
+ ✓ src/test/phase4h5-migration-0055.test.ts (22 tests) 32254ms
+     ✓ a full hosted tick over fpw_id2_* commits every candle; a second tick finds nothing new; no refusal is recorded  706ms
+     ✓ no session id, an unknown (signed-out) session, another user's session, an old session, an expired session or an expired token: all six refused  350ms
+     ✓ ordinary users: account_mfa_allowed() gives exactly the 0011 answer in every case (no auth setting changed)  4286ms
+     ✓ callers that are not registered identities get the envelope but no record; recording is capped per identity  363ms
+     ✓ for all four audit tables the database head equals the independent TypeScript recomputation; untouched data verifies clean  554ms
+     ✓ deleting the NEWEST row, a middle row, modifying, inserting or swapping rows (as the owner, triggers disabled) is detected; a later incremental checkpoint stays chained  1663ms
+     ✓ rewriting the 0052 configuration hash chain consistently (owner rights) still fails the stored checkpoint; a disabled trigger is visible in the checkpoint  356ms
+     ✓ is all-or-nothing: a failure late in the file leaves no 0055 object behind; a changed account_mfa_allowed() body refuses the whole draft  7073ms
+     ✓ rollback order is enforced; the 0055 rollback restores 0011 and 0054 byte-for-byte, re-opens the 0054 wrappers and KEEPS the refusal history  7752ms
+ ✓ src/test/futures-cert-grants.test.ts (8 tests) 5487ms
+ ✓ src/test/phase4h6-independent-probes.test.ts (7 tests) 5720ms
+     ✓ GAP: after the per-identity cap, a different refused operation is dropped silently — no marker row says records were dropped  365ms
+ ✓ src/test/futures-paper-worker-hosted.test.ts (22 tests) 8621ms
+     ✓ catches up, records provenance for every candle, creates approvals and releases the lease  767ms
+ ✓ src/test/strategy-attribution-0048-migration.test.ts (13 tests) 4904ms
+ ✓ src/test/phase4e-accounting-characterization.test.ts (3 tests) 4558ms
+ ✓ src/test/futures-paper-ledger-migration.test.ts (8 tests) 4390ms
+ ✓ src/test/futures-db-guard.test.ts (11 tests) 4522ms
+stderr | src/test/futures-execution.test.ts > Futures failure injection > uses lookup after an entry timeout and never resubmits
+[TESTNET] Futures entry submit outcome uncertain; lookup only Error: timeout
+
+stderr | src/test/futures-execution.test.ts > Futures failure injection > keeps unknown entry status locked and blocks later entries
+[TESTNET] Futures entry submit outcome uncertain; lookup only Error: timeout
+
+stderr | src/test/futures-execution.test.ts > Futures failure injection > immediately contains exposure after a protective-order timeout
+[TESTNET] Futures protection acknowledgement unavailable; verifying actual broker order Error: timeout
+
+stderr | src/test/futures-execution.test.ts > Futures failure injection > immediately contains exposure after a protective-order timeout
+[TESTNET] Futures protection acknowledgement unavailable; verifying actual broker order Error: timeout
+
+ ✓ src/test/phase4f-isolation.test.ts (7 tests) 2751ms
+     ✓ the checker reports a different file and a ZIP container as DIFFERENT and refuses URLs  2520ms
+ ✓ src/test/migration-0049-review.test.ts (3 tests) 4720ms
+ ✓ src/test/phase4h8-feed.test.ts (27 tests) 815ms
+stderr | src/test/futures-execution.test.ts > exit acknowledgement uncertainty > settles an exit timeout by lookup without a second exit
+[TESTNET] Futures exit submit outcome uncertain; lookup only Error: timeout
+
+ ✓ src/test/futures-execution.test.ts (36 tests) 1818ms
+     ✓ adds positive funding exactly once  767ms
+     ✓ immediately contains exposure after a protective-order timeout  409ms
+     ✓ does not accept acknowledged protection with wrong reduce semantics  417ms
+ ✓ src/test/phase4h2-isolation.test.ts (7 tests) 722ms
+     ✓ no execution, wallet, credential or Autopilot module can reach the worker or the lifecycle module  350ms
+ ✓ src/test/scalp-research.test.ts (11 tests) 2621ms
+     ✓ leakage: changing candles inside the unseen test window cannot change the selection for that fold  462ms
+     ✓ captures an interaction the logistic baseline cannot, deterministically  604ms
+     ✓ runs inside the same purged walk-forward as the logistic baseline  1359ms
+ ✓ src/test/phase4f-alignment-isolation.test.ts (5 tests) 529ms
+ ✓ src/test/phase4h-final-isolation.test.ts (5 tests) 481ms
+ ✓ src/test/worker-auth-session.test.ts (19 tests) 787ms
+     ✓ a body that outlives the deadline is cut off: the session closes, the tick signal aborts and sign-out still runs within budget  602ms
+ ✓ src/test/futures-env-adapters.test.ts (33 tests) 638ms
+     ✓ Spot+Futures Testnet verification never contacts a production host  541ms
+ ✓ src/test/phase4h7-invocation.test.ts (14 tests) 46478ms
+     ✓ commits at most maxCandles per invocation, resumes from the database next time; only CAUGHT_UP is completed  25557ms
+     ✓ timeout BEFORE the database ran the commit: nothing written, invocation ends in budget, the next commits the candle once  1125ms
+     ✓ timeout AFTER the database committed: outcome unknown, never reported complete, the next invocation never repeats the candle  1057ms
+     ✓ overlapping invocations: exactly one holds the lease, the other is SKIPPED_BUSY; each candle commits once  607ms
+     ✓ partial completion under slow calls (250 ms each): the budget ends the invocation in time; durable progress, never completed  8894ms
+     ✓ every data call slower than its own limit: nothing commits, the invocation still ends in budget and signs out  508ms
+ ✓ src/test/scalp-intraday.test.ts (12 tests) 763ms
+     ✓ walk-forward signals appear only inside test windows, and training rows stop before validation  549ms
+ ✓ src/test/verify-local-restore-0046.test.ts (18 tests) 381ms
+ ✓ src/test/central-risk-shadow.test.ts (23 tests) 299ms
+ ✓ src/test/engine-b-isolation.test.ts (7 tests) 179ms
+ ✓ src/test/phase4h5-session.test.ts (14 tests) 418ms
+ ✓ src/test/phase4g-isolation.test.ts (6 tests) 306ms
+ ✓ src/test/phase4h8-signal.test.ts (20 tests) 255ms
+ ✓ src/test/phase4h7-isolation.test.ts (8 tests) 295ms
+ ✓ src/test/phase4h1-isolation.test.ts (4 tests) 211ms
+stderr | src/test/research-run.test.ts > research run audit record > a failed agent is recorded once, without a retry, and the run is partial
+Research agent trader failed: provider error
+
+stderr | src/test/research-run.test.ts > research run audit record > a data failure still writes a failed record with every agent not_run
+Research run failed Error: Yahoo down
+    at Object.loadResearchData (/dev-server/src/test/research-run.test.ts:136:102)
+    at executeResearchRun (/dev-server/src/lib/research-run.server.ts:127:27)
+    at /dev-server/src/test/research-run.test.ts:136:17
+    at file:///dev-server/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20
+
+stderr | src/test/research-run.test.ts > spending limits stop further calls > makes no AI call when usage evidence is unavailable
+Research run failed Error: Research usage evidence unavailable; no AI calls were made
+    at usageTokensSince (/dev-server/src/lib/research-run.server.ts:59:35)
+    at async Promise.all (index 0)
+    at executeResearchRun (/dev-server/src/lib/research-run.server.ts:114:49)
+    at /dev-server/src/test/research-run.test.ts:167:17
+    at file:///dev-server/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20
+
+stderr | src/test/research-run.test.ts > spending limits block the next provider call (run level) > format-correction limit: a correction beyond the limit is never sent, and only that agent fails
+Research agent fundamentals failed: Format correction not attempted: this run reached its limit of 1 corrections
+
+stderr | src/test/research-run.test.ts > atomic spending reservations (database ledger) > a provider failure settles the reservation in full (usage unknown, never assumed lower)
+Research agent market failed: provider error
+
+stderr | src/test/research-run.test.ts > worker ownership > if ownership cannot be verified, no AI call is made and the failure is recorded
+Research run failed Error: Research run ownership could not be verified; no AI calls were made
+    at executeResearchRun (/dev-server/src/lib/research-run.server.ts:112:24)
+    at /dev-server/src/test/research-run.test.ts:366:17
+    at file:///dev-server/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20
+
+stderr | src/test/research-run.test.ts > cancellation fails closed > if the cancel state cannot be read before the first call, no AI call is made
+Research cancel check failed timeout
+Research cancel check failed timeout
+Research cancel check failed timeout
+
+stderr | src/test/research-run.test.ts > cancellation fails closed > if the cancel check starts failing mid-run, the next call never starts and completed reports are kept
+Research cancel check failed timeout
+
+stderr | src/test/research-run.test.ts > cancellation fails closed > if the cancel check starts failing mid-run, the next call never starts and completed reports are kept
+Research cancel check failed timeout
+Research cancel check failed timeout
+
+stderr | src/test/research-run.test.ts > a run is never reported complete unless it really finished > all 12 agents succeed but the proposal cannot be stored: the run and its record are partial, never completed
+Research run failed { code: 'XX000', message: 'write failed' }
+
+stderr | src/test/research-run.test.ts > a run is never reported complete unless it really finished > an unverifiable cancel state after the last call closes the run as partial (fail closed)
+Research cancel check failed timeout
+
+stderr | src/test/research-run.test.ts > a run is never reported complete unless it really finished > an unverifiable cancel state after the last call closes the run as partial (fail closed)
+Research cancel check failed timeout
+
+stderr | src/test/research-run.test.ts > a failed run says why > when every analyst call fails, the run keeps the provider's failure reason, not a blank error
+Research agent market failed: provider error
+
+stderr | src/test/research-run.test.ts > a failed run says why > when every analyst call fails, the run keeps the provider's failure reason, not a blank error
+Research agent fundamentals failed: provider error
+
+stderr | src/test/research-run.test.ts > a failed run says why > when every analyst call fails, the run keeps the provider's failure reason, not a blank error
+Research agent news failed: provider error
+
+ ✓ src/test/research-run.test.ts (34 tests) 273ms
+ ✓ src/test/historical-backtest.test.ts (39 tests) 133ms
+ ✓ src/test/ema-forward-research.test.ts (14 tests) 79ms
+ ✓ src/test/phase4h5-isolation.test.ts (7 tests) 192ms
+ ✓ src/test/phase4h-isolation.test.ts (3 tests) 189ms
+ ✓ src/test/phase4h8-paper.test.ts (19 tests) 105ms
+ ✓ src/test/phase4h3-token-cleanup.test.ts (21 tests) 138ms
+ ✓ src/test/phase4h5-f15-server.test.ts (8 tests) 306ms
+stdout | src/test/futures-paper-0051-replay.test.ts > synthetic long replays through 0051 (MARK and CONTRACT triggers, partial fills, gaps, shocks, grid funding) > 1 m: 1,200 candles × 2 accounts — zero refusals; every exit reason equals the database's outcome
+SYNTHETIC_1M_0051 {"timeframe":"1m","candles":1200,"accounts":2,"commits":2400,"databaseRefusals":0,"events":{"order_accepted":259,"entry_fill":338,"order_rejected":427,"funding":5,"exit_fill":255,"entry_cancelled":39,"liquidation":2},"databaseOutcomes":{"none":2168,"stop":172,"time":36,"target":46,"liquidation_open":2,"target_open":1},"engineExitReasons":{"stop":172,"time":36,"target":47,"liquidation":2},"fundingChargesRequired":5,"reasonMismatches":0}
+
+ ✓ src/test/phase4h7-units.test.ts (28 tests) 157ms
+ ✓ src/test/phase4h8-gate.test.ts (19 tests) 138ms
+ ✓ src/test/phase4h8-client.test.ts (9 tests) 136ms
+ ✓ src/test/billing.test.ts (7 tests) 14ms
+ ✓ src/test/futures-harness.test.ts (23 tests) 38ms
+ ✓ src/test/phase4h8-risk.test.ts (14 tests) 133ms
+ ✓ src/test/phase4h5-audit-checkpoint.test.ts (6 tests) 84ms
+ ✓ src/test/phase4c-isolation.test.ts (7 tests) 355ms
+ ✓ src/test/phase4e-isolation.test.ts (4 tests) 87ms
+ ✓ src/test/autopilot-live.test.ts (17 tests) 37ms
+ ✓ src/test/futures-testnet-isolation.test.ts (19 tests) 96ms
+ ✓ src/test/central-risk-shadow-remediation.test.ts (18 tests) 120ms
+ ✓ src/test/central-risk-context.test.ts (14 tests) 37ms
+ ✓ src/test/futures-inventory.test.ts (3 tests) 24ms
+ ✓ src/test/phase4d-isolation.test.ts (5 tests) 183ms
+ ✓ src/test/research-phase1-logic.test.ts (22 tests) 62ms
+ ✓ src/test/paper-engine.test.ts (27 tests) 45ms
+ ✓ src/test/research-command-center-rules.test.ts (25 tests) 63ms
+ ✓ src/test/lowfreq-research.test.ts (13 tests) 72ms
+stderr | src/test/research-analyst-tools.test.ts > provider timeout and overload: one request, no retry, no correction > an HTTP 529 overloaded reply fails the agent after exactly one request and never asks for a correction
+AI Prime Tech request failed [529]: {"type":"error","error":{"type":"overloaded_error","message":"Overloaded"}}
+
+stderr | src/test/research-analyst-tools.test.ts > provider timeout and overload: one request, no retry, no correction > a stream that reports overload mid-reply fails after one request
+AI Prime Tech stream error: {"type":"error","error":{"type":"overloaded_error","message":"Overloaded"}}
+
+ ✓ src/test/research-analyst-tools.test.ts (12 tests) 64ms
+ ✓ src/test/replay-evidence.test.ts (4 tests) 111ms
+ ✓ src/test/research-phase-two.test.ts (9 tests) 37ms
+ ✓ src/test/futures-paper-hardening.test.ts (9 tests) 42ms
+ ✓ src/test/central-risk.test.ts (16 tests) 26ms
+ ✓ src/test/research-execution-isolation.test.ts (7 tests) 45ms
+ ✓ src/test/paper-isolation.test.ts (6 tests) 93ms
+ ✓ src/test/arbitrage-execution.test.ts (5 tests) 22ms
+ ✓ src/test/futures-paper-worker-hosted-classify.test.ts (24 tests) 41ms
+stdout | src/test/futures-paper-v3-replay.test.ts > synthetic long replay (1 m, two symbols, two accounts, shared budgets) > 1,200 candles × 2 accounts: zero database refusals; engine ledger == database usage after every commit; reconciles
+SYNTHETIC {"candles":1200,"accounts":2,"commits":2400,"databaseRefusals":0,"budgetEqualityChecks":7200,"maxBudgetDifference":2.5579538487363607e-13,"events":{"order_accepted":297,"entry_fill":383,"order_rejected":389,"entry_cancelled":43,"exit_fill":295,"funding":13},"engineRefusals":{"approval:APPROVAL_BUDGET_MISSING:engine-v3":172,"expiry:APPROVAL_EXPIRED:engine-v3":26,"approval:APPROVAL_STRATEGY_BUDGET:engine-v3":99}}
+
+stdout | src/test/futures-paper-0051-replay.test.ts > synthetic long replays through 0051 (MARK and CONTRACT triggers, partial fills, gaps, shocks, grid funding) > 5 m: 600 candles × 2 accounts (≈ 50 h, six funding times) — zero refusals; funding charged at every grid point held
+SYNTHETIC_5M_0051 {"timeframe":"5m","candles":600,"accounts":2,"commits":1200,"databaseRefusals":0,"events":{"order_accepted":128,"entry_fill":127,"entry_cancelled":50,"order_rejected":215,"funding":7,"exit_fill":125,"liquidation":1},"databaseOutcomes":{"none":1159,"time":21,"stop":79,"target":24,"liquidation_open":1,"stop_open":1},"engineExitReasons":{"stop":80,"time":21,"target":24,"liquidation":1},"fundingChargesRequired":7,"reasonMismatches":0}
+
+ ✓ src/test/strategy-rules.test.ts (6 tests) 21ms
+ ✓ src/test/research-phase-three.test.ts (11 tests) 39ms
+ ✓ src/test/research.test.ts (6 tests) 14ms
+ ✓ src/test/futures-paper-engine.test.ts (12 tests) 38ms
+ ✓ src/test/arbitrage-lookup.test.ts (4 tests) 26ms
+ ✓ src/test/scalping.test.ts (10 tests) 13ms
+ ✓ src/test/market-candles.test.ts (4 tests) 30ms
+ ✓ src/test/risk-data-contracts.test.ts (42 tests) 19ms
+ ✓ src/test/autopilot.test.ts (6 tests) 20ms
+ ✓ src/test/deriv.test.ts (5 tests) 20ms
+ ✓ src/test/evaluation.test.ts (11 tests) 21ms
+ ✓ src/test/futures-paper-market-provenance.test.ts (11 tests) 29ms
+ ✓ src/test/account-security.test.ts (4 tests) 12ms
+ ✓ src/test/chart-feed.test.ts (2 tests) 13ms
+ ✓ src/test/autopilot-fence.test.ts (9 tests) 14ms
+ ✓ src/test/governance.test.ts (23 tests) 17ms
+stdout | src/test/futures-paper-v3-replay.test.ts > historical replay — 3 days of public Binance USD-M 5 m candles through the worker > every candle passes provenance checks and commits; zero database refusals, halts or data errors
+HISTORICAL {"candles":864,"timeframe":"5m","symbols":["BTCUSDT","ETHUSDT"],"window":["2026-11-10T00:00:00.000Z","2026-11-13T00:00:00.000Z"],"committed":864,"databaseRefusals":0,"workerCodes":{"COMMITTED":864,"CATCH_UP_LIMIT":28,"WAIT_CANDLE_NOT_CLOSED":3},"events":{"order_accepted":22,"entry_fill":22,"order_rejected":266,"exit_fill":22},"engineRefusals":{"approval:APPROVAL_STRATEGY_BUDGET:engine-v3":173},"finalWallet":919.2336157815594}
+
+ ✓ src/test/futures-paper-v3-replay.test.ts (2 tests) 77899ms
+     ✓ 1,200 candles × 2 accounts: zero database refusals; engine ledger == database usage after every commit; reconciles  61550ms
+     ✓ every candle passes provenance checks and commits; zero database refusals, halts or data errors  8296ms
+ ✓ src/test/scalp-microstructure.test.ts (7 tests) 9ms
+ ✓ src/test/research-paper.test.ts (9 tests) 21ms
+stdout | src/test/futures-paper-0051-replay.test.ts > historical replay — 3 days of public Binance USD-M 5 m candles (real funding times with ms jitter) through the worker > every candle commits through 0051; zero refusals, halts or data errors; exit reasons equal database outcomes
+HISTORICAL_0051 {"candles":864,"timeframe":"5m","window":["2026-11-10T00:00:00.000Z","2026-11-13T00:00:00.000Z"],"committed":864,"databaseRefusals":0,"events":{"order_accepted":27,"entry_fill":27,"order_rejected":261,"exit_fill":27,"funding":2},"databaseOutcomes":{"none":372,"stop":12,"time":13,"target":2},"fundingChargesRequired":2,"exposedSymbolCandlesChecked":399}
+
+ ✓ src/test/futures-paper-0051-replay.test.ts (3 tests) 78698ms
+     ✓ 1 m: 1,200 candles × 2 accounts — zero refusals; every exit reason equals the database's outcome  46945ms
+     ✓ 5 m: 600 candles × 2 accounts (≈ 50 h, six funding times) — zero refusals; funding charged at every grid point held  14768ms
+     ✓ every candle commits through 0051; zero refusals, halts or data errors; exit reasons equal database outcomes  8944ms
+ ✓ src/test/futures.test.ts (9 tests) 12ms
+ ✓ src/test/arbitrage-reconciliation.test.ts (4 tests) 16ms
+ ✓ src/test/futures-authorization.test.ts (13 tests) 13ms
+ ✓ src/test/mailbox.test.ts (5 tests) 11ms
+ ✓ src/test/arbitrage.test.ts (4 tests) 8ms
+ ✓ src/test/futures-paper-market-data.test.ts (9 tests) 17ms
+ ✓ src/test/wallet-plans.test.ts (13 tests) 16ms
+ ✓ src/test/arbitrage-recovery.test.ts (7 tests) 11ms
+ ✓ src/test/account-risk-budget.test.ts (10 tests) 13ms
+ ✓ src/test/paper-scheduler.test.ts (4 tests) 13ms
+ ✓ src/test/retention-policy.test.ts (11 tests) 11ms
+ ✓ src/test/alerts.test.ts (3 tests) 17ms
+ ✓ src/test/emergency-recovery.test.ts (7 tests) 11ms
+ ✓ src/test/backtest.test.ts (5 tests) 13ms
+ ✓ src/test/trading-authority.test.ts (7 tests) 15ms
+ ✓ src/test/toolkit.test.ts (5 tests) 11ms
+ ✓ src/test/research-allowance.test.ts (4 tests) 7ms
+ ✓ src/test/verified-costs.test.ts (7 tests) 8ms
+ ✓ src/test/order-recovery.test.ts (7 tests) 11ms
+ ✓ src/test/exchange-account-types.test.ts (4 tests) 14ms
+ ✓ src/lib/futures-score.test.ts (3 tests) 7ms
+ ✓ src/test/indicators.test.ts (4 tests) 8ms
+ ✓ src/test/orders.test.ts (1 test) 14ms
+ ✓ src/test/growth-access.test.ts (2 tests) 9ms
+ ↓ src/test/futures-paper-0051.pg.test.ts (4 tests | 4 skipped)
+ ↓ src/test/futures-paper-0052.pg.test.ts (5 tests | 5 skipped)
+ ↓ src/test/futures-paper-0054.pg.test.ts (4 tests | 4 skipped)
+ ↓ src/test/futures-paper-ledger-concurrency.pg.test.ts (2 tests | 2 skipped)
+ ↓ src/test/futures-paper-ledger-v2-concurrency.pg.test.ts (3 tests | 3 skipped)
+ ↓ src/test/futures-paper-ledger-v3-concurrency.pg.test.ts (5 tests | 5 skipped)
+ ↓ src/test/futures-paper-worker-hosted.pg.test.ts (8 tests | 8 skipped)
+ ↓ src/test/phase4e-attribution-concurrency.pg.test.ts (7 tests | 7 skipped)
+ ↓ src/test/paper-ledger-concurrency.pg.test.ts (7 tests | 7 skipped)
+ ↓ src/test/futures-paper-worker.pg.test.ts (8 tests | 8 skipped)
+ ↓ src/test/phase4d-concurrency.pg.test.ts (3 tests | 3 skipped)
+ ↓ src/test/phase4h5-worker-security.pg.test.ts (15 tests | 15 skipped)
+ ↓ src/test/research-budget-concurrency.pg.test.ts (10 tests | 10 skipped)
+ ↓ src/test/phase4h7.pg.test.ts (3 tests | 3 skipped)
+ ✓ src/test/app-routing.test.tsx (1 test) 14ms
+
+ Test Files  127 passed | 14 skipped (141)
+      Tests  1583 passed | 84 skipped (1667)
+   Start at  06:47:23
+   Duration  106.40s (transform 12.74s, setup 255.23s, import 67.54s, tests 545.33s, environment 526.97s)
+
