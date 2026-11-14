@@ -19,6 +19,10 @@
 import { runHostedFuturesPaperWorkerTick, type HostedRpc, type HostedTickOptions } from "./futures-paper-worker-hosted";
 import { decodeIdentityEnvelope, IDENTITY_RPC, IDENTITY_RPC_V2, identityRpcName, identityRpcNameV2, WorkerIdentityError } from "./futures-paper-worker-identity";
 import { runWithWorkerSession, type AuthReply, type DataReply, type DataTransport, type SessionLimits, type SessionResult, type WorkerAuthTransport } from "./worker-auth-session";
+import { boundedCall, classifyInvocation, pickAccount, validateInvocationLimits, workerUserCheck, InvocationRefusal, type FitReport, type InvocationClassification, type InvocationLimits } from "./worker-invocation";
+import { createJournal, type JournalEvent } from "./worker-refusal-audit";
+import type { FPTimeframe, RawSymbolBundle } from "./futures-paper-market-data";
+import type { FPIntent } from "./futures-paper-engine";
 
 type Fetch = (input: string, init: RequestInit) => Promise<Response>;
 export type IdentityGateway = "0054" | "0055";
@@ -66,3 +70,68 @@ export async function runIdentityFuturesPaperTick(o: IdentityTickOptions): Promi
   return runWithWorkerSession({ auth, data, resolveFn: gateway === "0055" ? identityRpcNameV2 : identityRpcName, clock: o.clock, limits: { ...o.session, rpcTimeoutMs }, expectedUserId: workerUserId },
     (call) => runHostedFuturesPaperWorkerTick({ ...o, rpc: call as HostedRpc, hosted: { ...(o.hosted ?? {}), timeoutMs: rpcTimeoutMs } }));
 }
+
+// ---------- Phase 4H.7: one bounded, resumable invocation inside the measured 5,000 ms scheduler limit ----------
+/** Market and intent sources must honour the signal; the invocation also stops waiting at their own limits. */
+export interface BoundedMarket { candles(symbols: string[], timeframe: FPTimeframe, barT: number, signal: AbortSignal): Promise<RawSymbolBundle[]> }
+export interface BoundedIntents { forCandle(accountId: string, barT: number, signal: AbortSignal): Promise<FPIntent[]> }
+export interface InvocationOptions {
+  enabled?: boolean; accounts: string[]; limits: InvocationLimits; market: BoundedMarket; intents: BoundedIntents;
+  clock: { now(): number }; fetchImpl?: Fetch; gateway?: IdentityGateway;
+  /** Per-invocation lease holder; a fresh random id by default, so an overlapping invocation can never share a fence. */
+  holder?: string;
+  /** Caller's logger for the invocation journal (category B evidence). It never blocks or fails the invocation. */
+  journal?: (e: JournalEvent) => void;
+  schedulerLimitMs?: number;
+}
+export interface InvocationReport extends InvocationClassification {
+  accountId: string | null; holder: string | null; elapsedMs: number; budgetMs: number | null; fit: FitReport | null;
+  sessionOutcome: string | null; signOut: string | null; journal: JournalEvent[];
+}
+const freshHolder = (): string => globalThis.crypto.randomUUID();
+/**
+ * ONE bounded invocation: refuses any limit profile that cannot finish inside the scheduler limit, picks one account for
+ * the time slot, runs one session with no refresh, at most `maxCandles` candles, one market attempt, no backoff sleep
+ * and per-port limits, then signs out. Disabled unless both environment flags are set; nothing schedules it.
+ */
+export async function runBoundedIdentityInvocation(o: InvocationOptions): Promise<InvocationReport> {
+  if (process.env["FUTURES_PAPER_WORKER_HOSTED"] !== "enabled" || process.env["FUTURES_PAPER_WORKER_IDENTITY"] !== "signed-in") throw new WorkerIdentityError("IDENTITY_DISABLED");
+  const t0 = o.clock.now();
+  const base = { accountId: null, holder: null, budgetMs: null, fit: null, sessionOutcome: null, signOut: null, journal: [] as JournalEvent[] };
+  if (o.enabled !== true) return { ...base, status: "DISABLED", completed: false, committed: 0, reasons: ["DISABLED"], elapsedMs: 0 };
+  const chk = validateInvocationLimits(o.limits, o.schedulerLimitMs);
+  if (!chk.ok) return { ...base, status: "CONFIG_INVALID", completed: false, committed: 0, reasons: [chk.code], elapsedMs: 0 };
+  const L = chk.limits;
+  const url = process.env["SUPABASE_URL"], key = process.env["SUPABASE_PUBLISHABLE_KEY"];
+  const email = process.env["FUTURES_PAPER_WORKER_EMAIL"], password = process.env["FUTURES_PAPER_WORKER_PASSWORD"];
+  const workerUserId = process.env["FUTURES_PAPER_WORKER_USER_ID"];
+  if (!url || !key || !email || !password || !workerUserId || !UUID.test(workerUserId)) throw new WorkerIdentityError("IDENTITY_NOT_CONFIGURED");
+  const accountId = pickAccount(o.accounts, t0, L.scheduleIntervalMs);
+  if (!accountId) return { ...base, status: "NO_ACCOUNT", completed: false, committed: 0, reasons: ["NO_ACCOUNT"], elapsedMs: 0, budgetMs: L.budgetMs, fit: chk.fit };
+  const holder = o.holder && UUID.test(o.holder) ? o.holder : freshHolder();
+  const j = createJournal(holder, () => o.clock.now(), o.journal);
+  j.start();
+  const gateway: IdentityGateway = o.gateway === "0054" ? "0054" : "0055";
+  const { auth, data } = identityTransports({ url, key, email, password }, o.fetchImpl, gateway);
+  const now = () => o.clock.now();
+  const session = await runWithWorkerSession({
+    auth, data, resolveFn: gateway === "0055" ? identityRpcNameV2 : identityRpcName, clock: o.clock, expectedUserId: workerUserId,
+    limits: { tickBudgetMs: L.budgetMs, rpcTimeoutMs: L.rpcTimeoutMs, authTimeoutMs: L.authTimeoutMs, signOutTimeoutMs: L.signOutTimeoutMs, maxRefreshes: 0 },
+    verifyUser: workerUserCheck(email),
+  }, (call, ctx) => {
+    // Ports wait only while the commit that follows them can still fit; the session refuses any later call anyway.
+    const portDeadline = () => ctx.callDeadlineAt - L.rpcTimeoutMs;
+    const market = { candles: (symbols: string[], timeframe: FPTimeframe, barT: number) => boundedCall((s) => o.market.candles(symbols, timeframe, barT, s), { timeoutMs: L.marketTimeoutMs, deadlineAt: portDeadline(), now, parent: ctx.signal }) };
+    const intents = { forCandle: (acct: string, barT: number) => boundedCall((s) => o.intents.forCandle(acct, barT, s), { timeoutMs: L.intentsTimeoutMs, deadlineAt: portDeadline(), now, parent: ctx.signal }) };
+    return runHostedFuturesPaperWorkerTick({
+      enabled: true, holder, accounts: [accountId], maxAccounts: 1, maxCandlesPerAccount: L.maxCandles, fetchAttempts: 1, fetchBackoffMs: 0, maxReloads: 1, maxRecompute: 1,
+      rpc: call as HostedRpc, market, intents, clock: { now, sleep: async () => undefined },
+      hosted: { timeoutMs: L.rpcTimeoutMs, leaseTtlSeconds: L.leaseTtlSeconds },
+      monitor: { record: (m) => { if ("fn" in m || "pgCode" in m) j.hosted(m as { code: string; fn?: string | null; pgCode?: string | null }); } },
+    });
+  });
+  const c = classifyInvocation({ session, summary: session.result ?? null });
+  j.end(c.status);
+  return { ...c, accountId, holder, elapsedMs: o.clock.now() - t0, budgetMs: L.budgetMs, fit: chk.fit, sessionOutcome: session.outcome, signOut: session.signOut, journal: [...j.events] };
+}
+export { InvocationRefusal };

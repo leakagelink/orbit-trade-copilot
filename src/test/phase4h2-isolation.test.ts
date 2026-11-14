@@ -46,10 +46,12 @@ describe("Phase 4H.2 change control", () => {
       "0054_futures_paper_worker_identity_lifecycle.rollback.sql": "4e78cebeedf8794859206013b22b178aabb08e375dd52478a97cc0ec12d34569",
     };
     for (const [f, h] of Object.entries(pins)) expect(sha(D + f), f).toBe(h);
-    // Phase 4H.5 adds exactly the successor drafts 0055 and 0056 (pinned in phase4h5-isolation.test.ts); nothing else.
+    // Phase 4H.5 adds exactly the successor drafts 0055 and 0056 (pinned in phase4h5-isolation.test.ts); Phase 4H.7 adds
+    // exactly 0057 (pinned in phase4h7-isolation.test.ts); nothing else.
     expect(readdirSync(D).filter((f) => /^(\d{4})_/.test(f) && Number(f.slice(0, 4)) > 54).sort()).toEqual([
       "0055_futures_paper_worker_security_remediation.rollback.sql", "0055_futures_paper_worker_security_remediation.sql",
       "0056_worker_identity_api_boundary.rollback.sql", "0056_worker_identity_api_boundary.sql",
+      "0057_worker_credential_pin_and_refusal_tally.rollback.sql", "0057_worker_credential_pin_and_refusal_tally.sql",
     ]);
     const j = JSON.parse(read("drizzle/migrations/meta/_journal.json")) as { entries: { tag: string }[] };
     expect(j.entries.at(-1)!.tag).toBe("0039_futures_pass_certification_and_autopilot_fencing");
@@ -75,6 +77,8 @@ describe("Phase 4H.2 token lifecycle code (layer B)", () => {
       BINDING, "src/lib/account-risk-budget.ts", "src/lib/central-risk.ts", "src/lib/futures-paper-engine-v3.ts", "src/lib/futures-paper-engine.ts",
       "src/lib/futures-paper-ledger-v3.ts", "src/lib/futures-paper-market-data.ts", "src/lib/futures-paper-market-provenance.ts",
       "src/lib/futures-paper-worker-hosted.ts", "src/lib/futures-paper-worker-identity.ts", "src/lib/futures-paper-worker.ts", SESSION, "pkg:zod",
+      // Phase 4H.7: pure invocation planner and refusal journal (no imports of their own; phase4h7-isolation.test.ts)
+      "src/lib/worker-invocation.ts", "src/lib/worker-refusal-audit.ts",
     ].sort());
   });
   it("no worker module can reach exchange, wallet, credential, order, Autopilot, AI, bot, admin-client or server-function modules", () => {

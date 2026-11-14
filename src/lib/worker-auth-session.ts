@@ -29,6 +29,10 @@
 //     the same session id. A sign-out that is not acknowledged reports the local token expiry as `residualTokenUntil`.
 //     None of this proves the signature or the server-side session state: draft 0055 re-checks the live session in
 //     the database on every call.
+//   - Phase 4H.7: an optional `verifyUser` check runs on the `user` object of every issued session (sign-in and
+//     refresh). A refusal (bounded code) ends the tick as TOKEN_USER_REFUSED and signs the session out; a check that
+//     throws or returns anything but null or a bounded code also refuses. It is a server-side early stop only: draft
+//     0057 re-checks the worker's sign-in details in the database on every call.
 
 export const SESSION_CODES = [
   "CONFIG_INVALID", "AUTH_INVALID_CREDENTIALS", "AUTH_RATE_LIMITED", "AUTH_UNAVAILABLE", "AUTH_TIMEOUT", "AUTH_MALFORMED_REPLY",
@@ -39,6 +43,8 @@ export const SESSION_CODES = [
   "SIGNED_OUT", "SIGN_OUT_FAILED",
   // Phase 4H.5
   "TOKEN_STALE", "CALL_REFUSED_TIMER", "CALL_REFUSED_IN_FLIGHT_LIMIT", "CALL_ABORTED", "CALL_COALESCED",
+  // Phase 4H.7
+  "TOKEN_USER_REFUSED",
 ] as const;
 export type SessionCode = (typeof SESSION_CODES)[number];
 /** `detail` is a bounded code (HTTP status, allowlisted auth error code or a fixed word) — never free text. */
@@ -85,6 +91,8 @@ export interface SessionOptions {
   /** REQUIRED (Phase 4H.3): the enrolled worker's user id; the token subject and the reply's user id must equal it. */
   expectedUserId: string;
   monitor?: { record(m: SessionMetric): void };
+  /** Phase 4H.7: checks the reply's `user` object (frozen copy); null = accept, a code /^[A-Z][A-Z0-9_]{0,39}$/ = refuse. */
+  verifyUser?: (user: Readonly<Record<string, unknown>>) => string | null;
 }
 /** Where an unexpected exception happened (bounded). */
 export type SessionStage = "SIGN_IN" | "VERIFY" | "REFRESH" | "CALL" | "BODY";
@@ -188,7 +196,7 @@ const FAILURE_CODES: ReadonlySet<SessionCode> = new Set<SessionCode>([
   "CONFIG_INVALID", "AUTH_INVALID_CREDENTIALS", "AUTH_RATE_LIMITED", "AUTH_UNAVAILABLE", "AUTH_TIMEOUT", "AUTH_MALFORMED_REPLY",
   "TOKEN_NOT_WORKER_ROLE", "TOKEN_WRONG_IDENTITY", "TOKEN_EXPIRED", "TOKEN_LIFETIME_TOO_SHORT", "CLOCK_SKEW",
   "TOKEN_REFRESH_FAILED", "TOKEN_REJECTED", "TICK_DEADLINE_EXCEEDED", "TICK_BODY_FAILED", "TICK_INTERNAL_ERROR",
-  "TOKEN_STALE", "CALL_REFUSED_TIMER",
+  "TOKEN_STALE", "CALL_REFUSED_TIMER", "TOKEN_USER_REFUSED",
 ]);
 
 /**
@@ -257,6 +265,16 @@ export async function runWithWorkerSession<T>(o: SessionOptions, body: (call: Gu
   const tickCtl = new AbortController();
   const vopts = (sub: string, sid: string | null = null) => ({ minTokenLifetimeMs: lim.minTokenLifetimeMs, maxClockSkewMs: lim.maxClockSkewMs, expectedSub: sub, expectedSid: sid });
   const inFlight = new Map<string, Promise<DataReply>>();
+  /** Phase 4H.7: bounded result of the optional user check (null = accepted). Never throws. */
+  const userRefusal = (b: unknown): string | null => {
+    if (!o.verifyUser) return null;
+    try {
+      const u = isPlainObject(b) ? b["user"] : null;
+      if (!isPlainObject(u)) return "USER_MISSING";
+      const d = o.verifyUser(Object.freeze({ ...u }));
+      return d === null ? null : typeof d === "string" && /^[A-Z][A-Z0-9_]{0,39}$/.test(d) ? d : "OTHER";
+    } catch { return "CHECK_FAILED"; }
+  };
 
   async function signInAndRun(): Promise<{ result?: T; retryAfterMs?: number }> {
     const t0 = now(), bodyEnd = t0 + lim.tickBudgetMs - lim.signOutTimeoutMs; // the sign-out reserve keeps the whole tick inside its budget
@@ -280,6 +298,8 @@ export async function runWithWorkerSession<T>(o: SessionOptions, body: (call: Gu
     issued = typeof rawAccess === "string" && rawAccess.length <= 8192 && JWT.test(rawAccess) ? rawAccess : null;
     const v = verifyIssuedSession(replyBody, now(), vopts(expectedSub));
     if (!v.ok) { rec({ code: v.code, detail: v.detail ?? null }); return {}; }
+    const ur = userRefusal(replyBody);
+    if (ur !== null) { rec({ code: "TOKEN_USER_REFUSED", detail: ur }); return {}; } // a session exists: signed out in finally
     token = v.token; issued = token.access; callDeadlineAt = deadlineFor(token);
     rec({ code: "SIGNED_IN", latencyMs: si.latencyMs });
 
@@ -299,6 +319,8 @@ export async function runWithWorkerSession<T>(o: SessionOptions, body: (call: Gu
         }
         const nv = verifyIssuedSession(r.reply.body, now(), vopts(cur.sub, cur.sid));
         if (!nv.ok) { rec({ code: "TOKEN_REFRESH_FAILED", detail: nv.code }); closed = true; return false; }
+        const ru = userRefusal(r.reply.body);
+        if (ru !== null) { rec({ code: "TOKEN_USER_REFUSED", detail: ru }); closed = true; return false; }
         token = nv.token; issued = token.access; callDeadlineAt = deadlineFor(token);
         rec({ code: "TOKEN_REFRESHED", latencyMs: r.latencyMs });
         return true;
